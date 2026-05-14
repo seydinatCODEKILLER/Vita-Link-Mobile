@@ -1,0 +1,45 @@
+{
+  "cli": {
+    "version": ">= 13.2.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "development-prod": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ton-api-render.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://ton-api-render.onrender.com"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ton-api-render.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://ton-api-render.onrender.com"
+      },
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://ton-api-render.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://ton-api-render.onrender.com"
+      },
+      "channel": "production"
+    }
+  }
+}
