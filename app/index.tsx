@@ -1,5 +1,5 @@
 import { Redirect } from "expo-router";
-import { useIsAuthenticated, useUserRole } from "@/src/hooks/useAuth";
+import { useIsAuthenticated, useUserRole } from "@/src/hooks/useAuthStore";
 
 export default function Index() {
   const isAuthenticated = useIsAuthenticated();
@@ -7,6 +7,10 @@ export default function Index() {
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/welcome" />;
+  }
+
+  if (role === "ADMIN") {
+    return <Redirect href="/unauthorized" />;
   }
 
   if (role === "HEALTH_STRUCTURE") {

@@ -8,6 +8,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { queryClient } from "@/src/config/query-client.config";
 import { SplashScreen } from "@/src/components/ui/SplashScreen";
 import { useAuthStore } from "@/src/store/auth.store";
+import Toast from "react-native-toast-message";
+import { toastConfig } from "@/src/config/toast.config";
 
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
@@ -32,7 +34,12 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="auto" />
-          <Stack screenOptions={{ headerShown: false }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: "#080808" },
+            }}
+          >
             <Stack.Screen name="index" /> {/* L'aiguilleur */}
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(donor)" />
@@ -40,6 +47,7 @@ export default function RootLayout() {
             <Stack.Screen name="+not-found" />
           </Stack>
           {/* Ici tu pourras ajouter le Toast ou les modales globales plus tard */}
+          <Toast config={toastConfig} />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
