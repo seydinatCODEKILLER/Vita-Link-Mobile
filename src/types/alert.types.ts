@@ -1,4 +1,10 @@
-import { AlertResponseStatus, AlertStatus, BloodType, ServiceUnit, UrgencyLevel } from "./shared.types";
+import {
+  AlertResponseStatus,
+  AlertStatus,
+  BloodType,
+  ServiceUnit,
+  UrgencyLevel,
+} from "./shared.types";
 
 // ─── Alert ────────────────────────────────────────────────────
 
@@ -25,7 +31,7 @@ export interface Alert {
   expiresAt: string | null;
   createdAt: string;
   healthStructure: AlertStructure;
-  distance_km?: number; // Présent uniquement sur les alertes géolocalisées
+  distance_km?: number;
 }
 
 // ─── Alert Response ───────────────────────────────────────────

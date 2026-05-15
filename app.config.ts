@@ -47,6 +47,23 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     "expo-secure-store",
+    [
+      "expo-location",
+      {
+        locationAlwaysAndWhenInUsePermission:
+          "Vita-Link a besoin de votre position pour vous alerter des besoins en sang à proximité.",
+        locationWhenInUsePermission:
+          "Vita-Link a besoin de votre position pour vous alerter des besoins en sang à proximité.",
+      },
+    ],
+    [
+      "expo-notifications",
+      {
+        color: "#DC1E1E",
+        defaultChannel: "default",
+        sounds: [],
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
