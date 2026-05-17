@@ -3,11 +3,13 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { usersApi } from "@/src/api/users.api";
-import { useAuthStore } from "@/src/store/auth.store";
+import { useAppStore } from "@/src/store/alerts.store";
 import logger from "@/src/utils/logger.utils";
+import { useRouter } from "expo-router";
 
 // ─── Config globale Expo Notifications ───────────────────────
-// À appeler une seule fois au niveau app/_layout.tsx
+// À appeler une seule fois — idéalement dans app/_layout.tsx
+// mais le mettre ici fonctionne aussi car le module est un singleton
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -18,50 +20,47 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export interface InAppNotification {
-  id: string;
-  title: string;
-  body: string;
-  data: Record<string, any>;
-  receivedAt: Date;
-}
-
 interface NotificationsState {
   granted: boolean;
   expoPushToken: string | null;
   error: string | null;
-  // Notifications reçues en foreground (pour InAppAlert)
-  foregroundNotification: InAppNotification | null;
 }
 
 export const useNotifications = () => {
-  const { updateUser } = useAuthStore();
+  const router = useRouter();
 
   const [state, setState] = useState<NotificationsState>({
     granted: false,
     expoPushToken: null,
     error: null,
-    foregroundNotification: null,
   });
 
-  // Ref pour le listener foreground
-  const notifListenerRef = useRef<Notifications.Subscription | null>(null);
+  // ✅ Un ref par listener pour un cleanup propre
+  const foregroundListenerRef = useRef<Notifications.Subscription | null>(null);
   const responseListenerRef = useRef<Notifications.Subscription | null>(null);
 
-  /**
-   * Demande la permission push et enregistre le token Expo.
-   * Appelé au montage du layout donneur.
-   */
+  // ── Helper navigation depuis une notif ──
+  const handleNavigation = useCallback(
+    (data: Record<string, any>) => {
+      if (data?.alertId) {
+        setTimeout(() => {
+          router.push(`/(donor)/alerts/${data.alertId}` as any);
+        }, 500);
+      }
+    },
+    [router],
+  );
+
+  // ── Demande permission + enregistrement token ──
   const requestAndRegister = useCallback(async () => {
-    // Les push ne fonctionnent pas sur simulateur
     if (!Device.isDevice) {
-      logger.warn("Push notifications non disponibles sur simulateur");
+      logger.warn("Push notifications non disponibles sur simulateur/Expo Go");
       setState((prev) => ({ ...prev, error: "Simulateur — push ignoré" }));
       return;
     }
 
     try {
-      // Android : créer le canal de notification
+      // Canal Android
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
           name: "Vita-Link Alertes",
@@ -72,12 +71,11 @@ export const useNotifications = () => {
         });
       }
 
-      // Vérifier / demander la permission
+      // Permission
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
 
       let finalStatus = existingStatus;
-
       if (existingStatus !== "granted") {
         const { status } = await Notifications.requestPermissionsAsync();
         finalStatus = status;
@@ -95,7 +93,7 @@ export const useNotifications = () => {
 
       setState((prev) => ({ ...prev, granted: true }));
 
-      // Récupérer le token Expo
+      // Token Expo
       const tokenData = await Notifications.getExpoPushTokenAsync({
         projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
       });
@@ -103,15 +101,11 @@ export const useNotifications = () => {
       const token = tokenData.data;
       setState((prev) => ({ ...prev, expoPushToken: token }));
 
-      // Envoyer au backend — fire and forget
+      // Sync backend — fire and forget
       usersApi
         .updateExpoToken(token)
-        .then(() => {
-          logger.info("Expo push token synchronisé");
-        })
-        .catch((err) => {
-          logger.warn("Échec sync expo token", err);
-        });
+        .then(() => logger.info("Expo push token synchronisé"))
+        .catch((err) => logger.warn("Échec sync expo token", err));
     } catch (err: any) {
       setState((prev) => ({
         ...prev,
@@ -121,50 +115,65 @@ export const useNotifications = () => {
     }
   }, []);
 
-  /**
-   * Écoute les notifications reçues en foreground (app ouverte).
-   * Déclenche l'affichage d'une InAppAlert dans le layout.
-   */
+  // ── Listeners foreground + tap ──
   const startForegroundListener = useCallback(() => {
-    // Listener : notification reçue pendant que l'app est ouverte
-    notifListenerRef.current = Notifications.addNotificationReceivedListener(
-      (notification) => {
+    // ✅ Bug 1 corrigé : foreground listener séparé du response listener
+    // Notification reçue pendant que l'app est OUVERTE → InAppAlert
+    foregroundListenerRef.current =
+      Notifications.addNotificationReceivedListener((notification) => {
         const { title, body, data } = notification.request.content;
 
-        const inApp: InAppNotification = {
+        logger.info("🔔 Notification foreground reçue", { title, data });
+
+        // Pousser vers le store global → InAppAlert s'affiche dans le layout
+        useAppStore.getState().setInAppAlert({
           id: notification.request.identifier,
           title: title ?? "Vita-Link",
           body: body ?? "",
           data: (data as Record<string, any>) ?? {},
           receivedAt: new Date(),
-        };
+        });
+      });
 
-        setState((prev) => ({ ...prev, foregroundNotification: inApp }));
-        logger.info("Notification foreground reçue", { title, data });
-      },
-    );
-
-    // Listener : l'utilisateur tape sur la notification (background/killed)
+    // ✅ Bug 2 corrigé : response listener correctement assigné
+    // Utilisateur tape sur la notification (app en BACKGROUND ou KILLED)
     responseListenerRef.current =
       Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data as Record<
           string,
           any
         >;
-        logger.info("Notification tappée", { data });
-        // La navigation est gérée dans le layout via le data.type
-        // Ex: data.type === "ALERT_NEW" → naviguer vers alerts/[id]
+        logger.info("👆 Notification tappée (background/killed)", { data });
+        handleNavigation(data);
       });
-  }, []);
+  }, [handleNavigation]);
 
-  const clearForegroundNotification = useCallback(() => {
-    setState((prev) => ({ ...prev, foregroundNotification: null }));
-  }, []);
+  // ── Cold Start : app totalement fermée, ouverte via notif ──
+  useEffect(() => {
+    const checkColdStart = async () => {
+      try {
+        const lastResponse =
+          await Notifications.getLastNotificationResponseAsync();
+        if (lastResponse) {
+          const data = lastResponse.notification.request.content.data as Record<
+            string,
+            any
+          >;
+          logger.info("🧊 Cold Start via notification", { data });
+          handleNavigation(data);
+        }
+      } catch (err) {
+        logger.warn("Erreur vérification cold start notification", err);
+      }
+    };
 
-  // Cleanup listeners
+    checkColdStart();
+  }, [handleNavigation]);
+
+  // ── Cleanup ──
   useEffect(() => {
     return () => {
-      notifListenerRef.current?.remove();
+      foregroundListenerRef.current?.remove();
       responseListenerRef.current?.remove();
     };
   }, []);
@@ -173,6 +182,5 @@ export const useNotifications = () => {
     ...state,
     requestAndRegister,
     startForegroundListener,
-    clearForegroundNotification,
   };
 };

@@ -8,6 +8,8 @@ import { useLocation } from "@/src/hooks/useLocation";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { InAppAlert } from "@/src/components/ui/InAppAlert";
 import logger from "@/src/utils/logger.utils";
+import { useSocket } from "@/src/hooks/useSocket";
+import { useAppStore } from "@/src/store/alerts.store";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -64,69 +66,60 @@ export default function DonorLayout() {
     }
   }, [isAuthenticated, user]);
 
-  // ── Étape 9 : Permissions ──
+  // ── Permissions & Notifications ──
   const { requestAndSync: syncLocation } = useLocation();
-  const {
-    requestAndRegister,
-    startForegroundListener,
-    foregroundNotification,
-    clearForegroundNotification,
-  } = useNotifications();
+  const { requestAndRegister, startForegroundListener } = useNotifications(); // ✅ Plus besoin du state local ici
+
+  // ✅ Socket & Store Global
+  useSocket();
+  const inAppAlert = useAppStore((s) => s.inAppAlert);
+  const setInAppAlert = useAppStore((s) => s.setInAppAlert);
 
   const hasInitialized = useRef(false);
 
   useEffect(() => {
     if (!user || hasInitialized.current) return;
-
     hasInitialized.current = true;
-    logger.info("Initialisation permissions donneur...");
 
+    logger.info("Initialisation permissions donneur...");
     const init = async () => {
       syncLocation();
       await requestAndRegister();
       startForegroundListener();
       logger.info("Permissions initialisées");
     };
-
     init();
   }, [user?.id]);
 
-  // ── Calcul Safe Area pour la Tab Bar ──
   const safeBottom = Platform.select({
     ios: insets.bottom,
     android: insets.bottom > 0 ? insets.bottom : 20,
     default: 8,
   });
-
   const tabBarHeight = 64 + safeBottom;
 
-  // ── Guard : ne pas rendre les tabs si non authentifié ──
   if (!isAuthenticated || !user || user.role !== "DONOR") {
     return null;
   }
 
   return (
     <View style={styles.container}>
-      {/* InAppAlert — notification reçue en foreground */}
-      {foregroundNotification && (
+      {/* ✅ InAppAlert unifiée (Socket + Push) */}
+      {inAppAlert && (
         <View style={styles.alertOverlay} pointerEvents="box-none">
           <InAppAlert
-            notification={foregroundNotification}
-            onDismiss={clearForegroundNotification}
+            notification={inAppAlert}
+            onDismiss={() => setInAppAlert(null)}
           />
         </View>
       )}
 
-      {/* Tab Navigator */}
       <Tabs
         screenOptions={{
           headerShown: false,
           tabBarStyle: [
             styles.tabBar,
-            {
-              height: tabBarHeight,
-              paddingBottom: safeBottom,
-            },
+            { height: tabBarHeight, paddingBottom: safeBottom },
           ],
           tabBarActiveTintColor: COLORS.red,
           tabBarInactiveTintColor: COLORS.textMuted,
@@ -135,7 +128,6 @@ export default function DonorLayout() {
           tabBarBackground: () => <View style={styles.tabBarBg} />,
         }}
       >
-        {/* ── 4 onglets visibles ── */}
         {TABS.map((tab) => (
           <Tabs.Screen
             key={tab.name}
@@ -153,7 +145,7 @@ export default function DonorLayout() {
           />
         ))}
 
-        {/* ── Routes cachées de la tab bar (fantômes) ── */}
+        {/* Routes cachées */}
         <Tabs.Screen name="alerts/[id]" options={{ href: null }} />
         <Tabs.Screen name="qrcode" options={{ href: null }} />
         <Tabs.Screen name="jambaar/badges" options={{ href: null }} />
@@ -167,12 +159,7 @@ export default function DonorLayout() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-
-  // ── Tab bar ──
+  container: { flex: 1, backgroundColor: COLORS.bg },
   tabBar: {
     backgroundColor: "transparent",
     borderTopWidth: 1,
@@ -182,24 +169,16 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    elevation: 0, // Android — pas d'ombre native
+    elevation: 0,
   },
-  tabBarBg: {
-    position: "absolute",
-    inset: 0,
-    backgroundColor: COLORS.tabBg,
-  },
+  tabBarBg: { position: "absolute", inset: 0, backgroundColor: COLORS.tabBg },
   tabLabel: {
     fontSize: 10,
     fontWeight: "600",
     letterSpacing: 0.3,
     marginTop: 2,
   },
-  tabItem: {
-    paddingTop: 4,
-  },
-
-  // ── InAppAlert overlay ──
+  tabItem: { paddingTop: 4 },
   alertOverlay: {
     position: "absolute",
     top: Platform.OS === "ios" ? 56 : 44,

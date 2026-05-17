@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { InAppNotification } from "@/src/hooks/useNotifications";
+import { InAppAlertData } from "@/src/store/alerts.store"; // ✅ MODIFIÉ : Import depuis le store
 
 const COLORS = {
   bg: "#1A1A1A",
@@ -24,7 +24,7 @@ const COLORS = {
 const AUTO_DISMISS_MS = 5000;
 
 interface InAppAlertProps {
-  notification: InAppNotification;
+  notification: InAppAlertData; // ✅ MODIFIÉ : Utilise le type du store
   onDismiss: () => void;
 }
 
@@ -173,7 +173,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderLeftWidth: 4,
     overflow: "hidden",
-    // Ombre
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
