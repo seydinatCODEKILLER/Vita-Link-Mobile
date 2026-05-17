@@ -196,7 +196,6 @@ export default function AlertDetailScreen() {
   const confirmAnim = useRef(new Animated.Value(1)).current;
 
   console.log(hasConfirmedThisAlert);
-  
 
   // ── Confirmer ──
   const handleConfirm = useCallback(
@@ -506,12 +505,10 @@ export default function AlertDetailScreen() {
 
         {/* ── Boutons fixes en bas ── */}
         <View
-          style={[
-            styles.actionsBlock,
-            { paddingBottom: 12 + tabBarHeight },
-          ]}
+          style={[styles.actionsBlock, { paddingBottom: 12 + tabBarHeight }]}
         >
           {hasConfirmedThisAlert ? (
+            // ── CAS 1 : Donnéur engagé sur CETTE alerte ──
             <>
               <TouchableOpacity
                 onPress={() =>
@@ -566,8 +563,34 @@ export default function AlertDetailScreen() {
                 )}
               </TouchableOpacity>
             </>
+          ) : hasActiveConfirmation ? (
+            // ── CAS 2 : Donnéur engagé sur une AUTRE alerte (Bouton pleine largeur) ──
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: "/(donor)/qrcode" as any,
+                  params: { qrCode: activeEngagement?.qrCode },
+                })
+              }
+              activeOpacity={0.7}
+              style={[
+                styles.confirmBtn,
+                styles.confirmBtnDisabled,
+                { flex: 1 },
+              ]}
+            >
+              <View style={styles.confirmIcon}>
+                <Ionicons name="lock-closed" size={18} color={COLORS.white} />
+              </View>
+              <View>
+                <Text style={styles.confirmBtnText}>Déjà engagé ailleurs</Text>
+                <Text style={styles.confirmBtnSub}>
+                  Voir mon QR Code en cours
+                </Text>
+              </View>
+            </TouchableOpacity>
           ) : (
-            // Cas 2 : Pas confirmé cette alerte
+            // ── CAS 3 : Aucun engagement (Layout normal J'y vais + Indisponible) ──
             <>
               <Animated.View
                 style={[{ flex: 1 }, { transform: [{ scale: confirmAnim }] }]}
@@ -575,63 +598,25 @@ export default function AlertDetailScreen() {
                 <TouchableOpacity
                   onPress={() => setShowEtaModal(true)}
                   activeOpacity={0.85}
-                  disabled={isConfirming || hasActiveConfirmation}
-                  style={[
-                    styles.confirmBtn,
-                    isVital && styles.confirmBtnVital,
-                    (isConfirming || hasActiveConfirmation) &&
-                      styles.confirmBtnDisabled,
-                  ]}
+                  style={[styles.confirmBtn, isVital && styles.confirmBtnVital]}
                 >
-                  {hasActiveConfirmation ? (
-                    // Cas 2b : QR code actif sur UNE AUTRE alerte
-                    <>
-                      <View style={styles.confirmIcon}>
-                        <Ionicons
-                          name="lock-closed"
-                          size={18}
-                          color={COLORS.white}
-                        />
-                      </View>
-                      <View>
-                        <Text style={styles.confirmBtnText}>Déjà engagé</Text>
-                        <Text style={styles.confirmBtnSub}>
-                          Terminez votre don en cours
-                        </Text>
-                      </View>
-                    </>
-                  ) : isConfirming ? (
-                    <>
-                      <ActivityIndicator
-                        color="rgba(255,255,255,0.7)"
-                        size="small"
-                      />
-                      <Text style={styles.confirmBtnText}>En cours...</Text>
-                    </>
-                  ) : (
-                    <>
-                      <View style={styles.confirmIcon}>
-                        <Ionicons name="heart" size={18} color={COLORS.white} />
-                      </View>
-                      <View>
-                        <Text style={styles.confirmBtnText}>
-                          J&apos;y vais !
-                        </Text>
-                        <Text style={styles.confirmBtnSub}>Don de sang</Text>
-                      </View>
-                    </>
-                  )}
+                  <View style={styles.confirmIcon}>
+                    <Ionicons name="heart" size={18} color={COLORS.white} />
+                  </View>
+                  <View>
+                    <Text style={styles.confirmBtnText}>J&apos;y vais !</Text>
+                    <Text style={styles.confirmBtnSub}>Don de sang</Text>
+                  </View>
                 </TouchableOpacity>
               </Animated.View>
 
               <TouchableOpacity
                 onPress={handleDecline}
                 activeOpacity={0.75}
-                disabled={isDeclining || hasActiveConfirmation}
+                disabled={isDeclining}
                 style={[
                   styles.declineBtn,
-                  (isDeclining || hasActiveConfirmation) &&
-                    styles.declineBtnDisabled,
+                  isDeclining && styles.declineBtnDisabled,
                 ]}
               >
                 {isDeclining ? (
@@ -641,20 +626,9 @@ export default function AlertDetailScreen() {
                     <Ionicons
                       name="close-circle-outline"
                       size={20}
-                      color={
-                        hasActiveConfirmation
-                          ? "rgba(255,255,255,0.15)"
-                          : COLORS.textMuted
-                      }
+                      color={COLORS.textMuted}
                     />
-                    <Text
-                      style={[
-                        styles.declineBtnText,
-                        hasActiveConfirmation && styles.declineBtnTextDisabled,
-                      ]}
-                    >
-                      Indisponible
-                    </Text>
+                    <Text style={styles.declineBtnText}>Indisponible</Text>
                   </>
                 )}
               </TouchableOpacity>

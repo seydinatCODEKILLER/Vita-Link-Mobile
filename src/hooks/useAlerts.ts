@@ -83,6 +83,7 @@ export const useConfirmAlert = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeEngagement });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hasActiveConfirmation });
     },
   });
 };
