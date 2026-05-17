@@ -4,26 +4,33 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/src/store/auth.store";
-import { useAppStore } from "@/src/store/alerts.store";
 import { tokenManager } from "@/src/utils/token.utils";
 import { QUERY_KEYS } from "@/src/constants/query_key";
 import { Alert } from "@/src/types/alert.types";
 import logger from "@/src/utils/logger.utils";
+import { useAlertStore } from "../store/alerts.store";
 
 export const useSocket = () => {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const { setInAppAlert, setJambaarCelebration, setBadgeUnlock } =
-    useAppStore();
+
+  // ✅ AJOUT : On récupère les actions de données (addAlert, removeAlert)
+  // en plus des actions d'UI
+  const {
+    setInAppAlert,
+    setJambaarCelebration,
+    setBadgeUnlock,
+    addAlert,
+    removeAlert,
+  } = useAlertStore();
 
   const socketRef = useRef<Socket | null>(null);
-  const isConnecting = useRef(false); // ✅ Guard anti-double connexion
+  const isConnecting = useRef(false);
 
   const connect = useCallback(async () => {
     if (!user) return;
 
-    // ✅ Empêche les connexions simultanées
     if (socketRef.current?.connected) return;
     if (isConnecting.current) return;
 
@@ -44,8 +51,6 @@ export const useSocket = () => {
 
     const socket = io(socketUrl, {
       auth: { token },
-      // ✅ FIX PRINCIPAL : polling d'abord → upgrade auto vers websocket
-      // Forcer "websocket" seul échoue sur réseau local sans handshake HTTP
       transports: ["polling", "websocket"],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -68,7 +73,7 @@ export const useSocket = () => {
     });
 
     socket.on("connect_error", (err) => {
-      isConnecting.current = false; // ✅ Reset pour permettre retry
+      isConnecting.current = false;
       logger.error("❌ Socket.io erreur de connexion :", err.message);
     });
 
@@ -89,12 +94,12 @@ export const useSocket = () => {
         receivedAt: new Date(),
       });
 
-      // Ajouter l'alerte en tête de liste sans refetch
-      queryClient.setQueryData<Alert[]>(QUERY_KEYS.nearbyAlerts, (oldData) => {
-        if (!oldData) return [data];
-        if (oldData.some((a) => a.id === data.id)) return oldData;
-        return [data, ...oldData];
-      });
+      // ✅ MODIFICATION : On utilise l'action Zustand pour une maj UI instantanée
+      // (Le store gère déjà la déduplication)
+      addAlert(data);
+
+      // On déclenche un refetch en arrière-plan pour resync avec la BDD
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
     });
 
     // ── 2. DON VALIDÉ ────────────────────────────────────────
@@ -103,7 +108,6 @@ export const useSocket = () => {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-      // Mise à jour optimiste du profil Jambaar dans le store
       const currentUser = useAuthStore.getState().user;
       if (currentUser?.jambaarsProfile) {
         updateUser({
@@ -116,7 +120,6 @@ export const useSocket = () => {
         });
       }
 
-      // Invalider les queries pour forcer un refetch propre
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myDonations });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarsProfile });
 
@@ -148,7 +151,6 @@ export const useSocket = () => {
     socket.on("alert:quota_reached", (data: { alertId: string }) => {
       logger.info("🎯 Quota atteint pour l'alerte :", data.alertId);
 
-      // Mettre à jour la liste + le détail de l'alerte
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.alert(data.alertId),
@@ -159,12 +161,11 @@ export const useSocket = () => {
     socket.on("alert:closed", (data: { alertId: string; status: string }) => {
       logger.info("🔒 Alerte fermée :", data.alertId);
 
-      // Retirer l'alerte de la liste locale immédiatement
-      queryClient.setQueryData<Alert[]>(
-        QUERY_KEYS.nearbyAlerts,
-        (oldData) => oldData?.filter((a) => a.id !== data.alertId) ?? [],
-      );
+      // ✅ MODIFICATION : On utilise l'action Zustand pour une suppression UI instantanée
+      removeAlert(data.alertId);
 
+      // Et on resync le cache React Query en arrière-plan
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.alert(data.alertId),
       });
@@ -172,12 +173,14 @@ export const useSocket = () => {
 
     socketRef.current = socket;
   }, [
-    user?.id, // ✅ Dépendance sur user.id seulement, pas user entier
+    user?.id,
     queryClient,
     updateUser,
     setInAppAlert,
     setJambaarCelebration,
     setBadgeUnlock,
+    addAlert, // ✅ AJOUT : Ajout des nouvelles dépendances
+    removeAlert, // ✅ AJOUT : pour le callback
   ]);
 
   const disconnect = useCallback(() => {

@@ -5,20 +5,23 @@ import { QUERY_KEYS } from "@/src/constants/query_key";
 import { CreateAlertPayload } from "@/src/types/alert.types";
 import { usersApi } from "../api/users.api";
 import { useUserRole } from "./useAuthStore";
+import { useAlertStore } from "../store/alerts.store";
 
 // ── GET alertes autour du donneur ─────────────────────────────
 export const useNearbyAlerts = () => {
   const user = useAuthStore((s) => s.user);
+  const setAlerts = useAlertStore((s) => s.setAlerts);
 
   return useQuery({
     queryKey: QUERY_KEYS.nearbyAlerts,
-    queryFn: () =>
-      alertsApi.getNearby({
+    queryFn: async () => {
+      const data = await alertsApi.getNearby({
         lat: user?.latitude ?? undefined,
         lng: user?.longitude ?? undefined,
-      }),
-    // Rafraîchir toutes les 30 secondes — les alertes sont temps-réel
-    // Socket.io s'occupe des nouvelles alertes, React Query gère le fallback
+      });
+      setAlerts(data);
+      return data;
+    },
     refetchInterval: 30_000,
     staleTime: 15_000,
     enabled: !!user,
@@ -83,7 +86,9 @@ export const useConfirmAlert = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeEngagement });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.hasActiveConfirmation });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.hasActiveConfirmation,
+      });
     },
   });
 };

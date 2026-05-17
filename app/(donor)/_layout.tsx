@@ -9,7 +9,7 @@ import { useNotifications } from "@/src/hooks/useNotifications";
 import { InAppAlert } from "@/src/components/ui/InAppAlert";
 import logger from "@/src/utils/logger.utils";
 import { useSocket } from "@/src/hooks/useSocket";
-import { useAppStore } from "@/src/store/alerts.store";
+import { useAlertStore } from "@/src/store/alerts.store";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -68,12 +68,12 @@ export default function DonorLayout() {
 
   // ── Permissions & Notifications ──
   const { requestAndSync: syncLocation } = useLocation();
-  const { requestAndRegister, startForegroundListener } = useNotifications(); // ✅ Plus besoin du state local ici
+  const { requestAndRegister, startForegroundListener } = useNotifications();
 
   // ✅ Socket & Store Global
   useSocket();
-  const inAppAlert = useAppStore((s) => s.inAppAlert);
-  const setInAppAlert = useAppStore((s) => s.setInAppAlert);
+  const inAppAlert = useAlertStore((s) => s.inAppAlert);
+  const setInAppAlert = useAlertStore((s) => s.setInAppAlert);
 
   const hasInitialized = useRef(false);
 
