@@ -1,42 +1,170 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
   FlatList,
   StyleSheet,
-  ActivityIndicator,
   TouchableOpacity,
   Switch,
+  Platform,
+  Animated,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/src/store/auth.store";
-import { useNearbyAlerts } from "@/src/hooks/useAlerts";
+import { useActiveEngagement, useNearbyAlerts } from "@/src/hooks/useAlerts";
 import { useUpdateAvailability } from "@/src/hooks/useAvailability";
 import { AlertCard } from "@/src/components/alerts/AlertCard";
 import { EmptyState } from "@/src/components/ui/EmptyState";
+import { ActiveEngagement, Alert } from "@/src/types/alert.types";
+import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 
+// ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
   bg: "#080808",
   white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.50)",
+  textMuted: "rgba(255,255,255,0.45)",
+  textSubtle: "rgba(255,255,255,0.18)",
   red: "#DC1E1E",
-  filterBg: "rgba(255,255,255,0.06)",
-  filterActiveBg: "rgba(220,30,30,0.15)",
-  filterActiveBorder: "rgba(220,30,30,0.40)",
-  filterBorder: "rgba(255,255,255,0.08)",
   green: "#1D9E75",
-};
+  cardBg: "rgba(255,255,255,0.05)",
+  cardBorder: "rgba(255,255,255,0.08)",
+} as const;
 
 type FilterType = "ALL" | "VITAL" | "STANDARD";
 
-const FILTERS: { key: FilterType; label: string }[] = [
+const FILTERS: { key: FilterType; label: string; icon?: string }[] = [
   { key: "ALL", label: "Toutes" },
-  { key: "VITAL", label: "VITAL" },
+  { key: "VITAL", label: "Vital" },
   { key: "STANDARD", label: "Standard" },
 ];
 
+// ─── Skeleton card ─────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <View style={styles.skeletonCard}>
+      <View style={styles.skeletonRow}>
+        <View style={styles.skeletonBlood} />
+        <View style={styles.skeletonInfo}>
+          <View style={styles.skeletonLine} />
+          <View style={[styles.skeletonLine, { width: "60%", opacity: 0.4 }]} />
+          <View style={[styles.skeletonLine, { width: "80%", opacity: 0.3 }]} />
+        </View>
+      </View>
+      <View style={styles.skeletonFooter} />
+    </View>
+  );
+}
+
+// ─── Composant stats rapides ───────────────────────────────────
+function AlertsStats({ total, vital }: { total: number; vital: number }) {
+  if (total === 0) return null;
+  return (
+    <View style={styles.statsRow}>
+      <View style={styles.statItem}>
+        <Text style={styles.statValue}>{total}</Text>
+        <Text style={styles.statLabel}>alerte{total > 1 ? "s" : ""}</Text>
+      </View>
+      <View style={styles.statDivider} />
+      {vital > 0 ? (
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: COLORS.red }]}>{vital}</Text>
+          <Text style={styles.statLabel}>vitale{vital > 1 ? "s" : ""}</Text>
+        </View>
+      ) : (
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, { color: COLORS.green }]}>0</Text>
+          <Text style={styles.statLabel}>vitales</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ─── Bannière Engagement Actif ─────────────────────────────────
+function EngagementBanner({
+  engagement,
+  onPress,
+}: {
+  engagement: ActiveEngagement;
+  onPress: () => void;
+}) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.02,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 900,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, []);
+
+  const bloodLabel =
+    BLOOD_TYPE_LABELS[engagement.alert.bloodType] ??
+    engagement.alert.bloodType.replace("_", "");
+
+  return (
+    <Animated.View
+      style={[styles.engagementWrapper, { transform: [{ scale: pulseAnim }] }]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.85}
+        style={styles.engagementRow}
+      >
+        {/* Bande accent en haut */}
+        <View style={styles.engagementAccentBar} />
+
+        <View style={styles.engagementInner}>
+          {/* Icône QR + badge LIVE */}
+          <View style={styles.engagementIconContainer}>
+            <View style={styles.engagementIconWrap}>
+              <Ionicons name="qr-code-outline" size={26} color={COLORS.white} />
+            </View>
+            <View style={styles.liveBadge}>
+              <Text style={styles.liveBadgeText}>LIVE</Text>
+            </View>
+          </View>
+
+          {/* Bloc texte */}
+          <View style={styles.engagementTextBlock}>
+            <View style={styles.engagementTitleRow}>
+              <Text style={styles.engagementTitle}>Vous êtes attendu !</Text>
+              <View style={styles.engagementDot} />
+            </View>
+            <Text style={styles.engagementSub} numberOfLines={1}>
+              {engagement.alert.healthStructure.name} • {bloodLabel}
+            </Text>
+            {/* Pill CTA */}
+          </View>
+
+          {/* Chevron */}
+          <View style={styles.engagementArrow}>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color="rgba(255,255,255,0.60)"
+            />
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// ─── Écran principal ───────────────────────────────────────────
 export default function DonorHomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -47,104 +175,63 @@ export default function DonorHomeScreen() {
     refetch,
     isRefetching,
   } = useNearbyAlerts();
-  const { mutate: toggleAvailability } = useUpdateAvailability();
+  const { mutate: toggleAvailability, isPending: isTogglingAvail } =
+    useUpdateAvailability();
+  const { data: activeEngagement } = useActiveEngagement();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
 
-  // Filtrage côté client (les données arrivent déjà de React Query)
-  const filteredAlerts = alerts?.filter((a) => {
-    if (activeFilter === "ALL") return true;
-    return a.urgencyLevel === activeFilter;
-  });
+  // Filtrage côté client
+  const filteredAlerts: Alert[] =
+    alerts?.filter((a) => {
+      if (activeFilter === "ALL") return true;
+      return a.urgencyLevel === activeFilter;
+    }) ?? [];
+
+  const handleOpenQrCode = useCallback(
+    (qrCode: string) =>
+      router.push({ pathname: "/(donor)/qrcode" as any, params: { qrCode } }),
+    [router],
+  );
+
+  const vitalCount =
+    alerts?.filter((a) => a.urgencyLevel === "VITAL").length ?? 0;
 
   const handleAlertPress = useCallback(
-    (alertId: string) => {
-      router.push(`/(donor)/alerts/${alertId}` as any);
-    },
+    (alertId: string) => router.push(`/(donor)/alerts/${alertId}` as Href),
     [router],
   );
 
+  // Pour l'instant, "J'y vais" rapide → navigate vers le détail
+  // Le vrai flow confirm est géré à l'étape 11
   const handleQuickConfirm = useCallback(
-    (alertId: string) => {
-      // Pour l'instant on navigate vers le détail,
-      // le bouton "J'y vais" complet sera géré à l'étape 11
-      router.push(`/(donor)/alerts/${alertId}` as any);
-    },
+    (alertId: string) => router.push(`/(donor)/alerts/${alertId}` as Href),
     [router],
   );
 
+  // ── Loading skeleton ──
   if (isLoading && !alerts) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.red} />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Bonjour {user?.firstName} 👋</Text>
+            <Text style={styles.headerTitle}>
+              Alertes <Text style={{ color: COLORS.red }}>proches</Text>
+            </Text>
+          </View>
+        </View>
+        <View style={styles.listContent}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.greeting}>
-            Bonjour {user?.firstName || ""} 👋
-          </Text>
-          <Text style={styles.subtitle}>Alertes proches</Text>
-        </View>
-        <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
-          <Ionicons
-            name="notifications-outline"
-            size={22}
-            color={COLORS.white}
-          />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Disponibilité ── */}
-      <View style={styles.availabilityRow}>
-        <Ionicons name="heart-circle" size={20} color={COLORS.green} />
-        <Text style={styles.availabilityText}>Disponible pour donner</Text>
-        <Switch
-          trackColor={{ false: "rgba(255,255,255,0.10)", true: COLORS.green }}
-          thumbColor={
-            user?.isAvailable ? COLORS.white : "rgba(255,255,255,0.40)"
-          }
-          value={user?.isAvailable ?? true}
-          onValueChange={(val) => toggleAvailability(val)}
-          style={{ marginLeft: "auto" }}
-        />
-      </View>
-
-      {/* ── Filtres ── */}
-      <View style={styles.filtersRow}>
-        {FILTERS.map((f) => {
-          const isActive = activeFilter === f.key;
-          return (
-            <TouchableOpacity
-              key={f.key}
-              onPress={() => setActiveFilter(f.key)}
-              style={[
-                styles.filterPill,
-                isActive && styles.filterPillActive,
-                f.key === "VITAL" && isActive && styles.filterPillVital,
-              ]}
-              activeOpacity={0.7}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  isActive && styles.filterTextActive,
-                  f.key === "VITAL" && isActive && styles.filterTextVital,
-                ]}
-              >
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* ── Liste ── */}
       <FlatList
         data={filteredAlerts}
         keyExtractor={(item) => item.id}
@@ -159,18 +246,151 @@ export default function DonorHomeScreen() {
         showsVerticalScrollIndicator={false}
         onRefresh={refetch}
         refreshing={isRefetching}
+        // ── Header de la liste ──
+        ListHeaderComponent={
+          <View>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={{ gap: 3 }}>
+                <Text style={styles.greeting}>
+                  Bonjour {user?.firstName} 👋
+                </Text>
+                <Text style={styles.headerTitle}>
+                  Alertes <Text style={{ color: COLORS.red }}>proches</Text>
+                </Text>
+              </View>
+
+              {/* Cloche avec badge */}
+              <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={21}
+                  color={COLORS.white}
+                />
+                {vitalCount > 0 && (
+                  <View style={styles.bellBadge}>
+                    <Text style={styles.bellBadgeText}>{vitalCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Toggle disponibilité */}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              style={[
+                styles.availRow,
+                user?.isAvailable ? styles.availRowOn : styles.availRowOff,
+              ]}
+              onPress={() => toggleAvailability(!user?.isAvailable)}
+              disabled={isTogglingAvail}
+            >
+              <View style={styles.availLeft}>
+                <View
+                  style={[
+                    styles.availDot,
+                    user?.isAvailable ? styles.availDotOn : styles.availDotOff,
+                  ]}
+                />
+                <View>
+                  <Text style={styles.availTitle}>
+                    {user?.isAvailable
+                      ? "Disponible pour donner"
+                      : "Non disponible"}
+                  </Text>
+                  <Text style={styles.availSub}>
+                    {user?.isAvailable
+                      ? "Vous recevez les alertes push"
+                      : "Les alertes sont suspendues"}
+                  </Text>
+                </View>
+              </View>
+              <Switch
+                trackColor={{
+                  false: "rgba(255,255,255,0.10)",
+                  true: COLORS.green,
+                }}
+                thumbColor={COLORS.white}
+                value={user?.isAvailable ?? true}
+                onValueChange={(val) => toggleAvailability(val)}
+                disabled={isTogglingAvail}
+              />
+            </TouchableOpacity>
+
+            {/* ✅ NOUVEAU : Bannière Engagement Actif */}
+            {activeEngagement && (
+              <EngagementBanner
+                engagement={activeEngagement}
+                onPress={() => handleOpenQrCode(activeEngagement.qrCode)}
+              />
+            )}
+
+            {/* Stats */}
+            <AlertsStats total={alerts?.length ?? 0} vital={vitalCount} />
+
+            {/* Filtres */}
+            <View style={styles.filtersRow}>
+              {FILTERS.map((f) => {
+                const isActive = activeFilter === f.key;
+                const isVitalFilter = f.key === "VITAL";
+                return (
+                  <TouchableOpacity
+                    key={f.key}
+                    onPress={() => setActiveFilter(f.key)}
+                    activeOpacity={0.75}
+                    style={[
+                      styles.filterPill,
+                      isActive && styles.filterPillActive,
+                      isActive && isVitalFilter && styles.filterPillVital,
+                    ]}
+                  >
+                    {isVitalFilter && (
+                      <View
+                        style={[
+                          styles.filterDot,
+                          isActive && styles.filterDotActive,
+                        ]}
+                      />
+                    )}
+                    <Text
+                      style={[
+                        styles.filterText,
+                        isActive && styles.filterTextActive,
+                        isActive && isVitalFilter && styles.filterTextVital,
+                      ]}
+                    >
+                      {f.label}
+                      {f.key === "VITAL" && vitalCount > 0
+                        ? ` (${vitalCount})`
+                        : ""}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Compteur résultats à droite */}
+              <View style={styles.filterCount}>
+                <Text style={styles.filterCountText}>
+                  {filteredAlerts.length} résultat
+                  {filteredAlerts.length > 1 ? "s" : ""}
+                </Text>
+              </View>
+            </View>
+          </View>
+        }
+        // ── État vide ──
         ListEmptyComponent={
           isError ? (
             <EmptyState
               icon="cloud-offline-outline"
               title="Erreur de connexion"
-              subtitle="Tirez pour réessayer."
+              subtitle="Vérifiez votre connexion et tirez pour réessayer."
             />
           ) : (
             <EmptyState
               icon="heart-outline"
-              title="Aucune alerte"
-              subtitle="Vous serez notifié si un hôpital a besoin de vous."
+              title="Aucune alerte dans votre zone"
+              subtitle="Vous serez notifié dès qu'un hôpital a besoin de votre groupe sanguin."
             />
           )
         }
@@ -179,79 +399,335 @@ export default function DonorHomeScreen() {
   );
 }
 
+// ─── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  centered: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 
-  // Header
+  // ── Header ──
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 4,
+    paddingBottom: 16,
   },
-  headerLeft: { gap: 2 },
-  greeting: { color: COLORS.white, fontSize: 22, fontWeight: "800" },
-  subtitle: { color: COLORS.textMuted, fontSize: 14 },
+  greeting: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  headerTitle: {
+    color: COLORS.white,
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
   bellBtn: {
     width: 44,
     height: 44,
+    borderRadius: 13,
+    backgroundColor: COLORS.cardBg,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  bellBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.red,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: COLORS.bg,
+    paddingHorizontal: 3,
+  },
+  bellBadgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  // ── Disponibilité ──
+  availRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginHorizontal: 20,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(255,255,255,0.06)",
+    borderWidth: 1,
+  },
+  availRowOn: {
+    backgroundColor: "rgba(29,158,117,0.08)",
+    borderColor: "rgba(29,158,117,0.22)",
+  },
+  availRowOff: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  availLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+  },
+  availDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  availDotOn: { backgroundColor: COLORS.green },
+  availDotOff: { backgroundColor: "rgba(255,255,255,0.25)" },
+  availTitle: {
+    color: COLORS.white,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  availSub: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 1,
+  },
+
+  // ── Engagement Banner ──
+  engagementWrapper: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+  },
+  engagementRow: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: "rgba(220,30,30,0.30)",
+    backgroundColor: "rgba(220,30,30,0.07)",
+    overflow: "hidden",
+    shadowColor: COLORS.red,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  engagementAccentBar: {
+    height: 3,
+    backgroundColor: COLORS.red,
+    opacity: 0.85,
+  },
+  engagementInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  engagementIconContainer: {
+    position: "relative",
+    flexShrink: 0,
+  },
+  engagementIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: COLORS.red,
     alignItems: "center",
     justifyContent: "center",
   },
-
-  // Availability
-  availabilityRow: {
+  liveBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#22C55E",
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: COLORS.bg,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  liveBadgeText: {
+    color: COLORS.white,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  engagementTextBlock: {
+    flex: 1,
+    gap: 4,
+    minWidth: 0,
+  },
+  engagementTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 24,
-    marginVertical: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: "rgba(29,158,117,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(29,158,117,0.20)",
-    gap: 10,
+    gap: 8,
   },
-  availabilityText: { color: COLORS.white, fontSize: 14, fontWeight: "600" },
+  engagementTitle: {
+    color: COLORS.white,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  engagementDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.red,
+  },
+  engagementSub: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+  engagementPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(220,30,30,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(220,30,30,0.30)",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 2,
+  },
+  engagementPillText: {
+    color: COLORS.red,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  engagementArrow: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
 
-  // Filters
+  // ── Stats ──
+  statsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 20,
+    marginBottom: 14,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    paddingVertical: 10,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statValue: {
+    color: COLORS.white,
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  statLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 1,
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: COLORS.cardBorder,
+  },
+
+  // ── Filtres ──
   filtersRow: {
     flexDirection: "row",
-    paddingHorizontal: 24,
-    marginBottom: 16,
+    alignItems: "center",
+    paddingHorizontal: 20,
+    marginBottom: 14,
     gap: 8,
   },
   filterPill: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.filterBorder,
-    backgroundColor: COLORS.filterBg,
+    borderColor: COLORS.cardBorder,
+    backgroundColor: COLORS.cardBg,
   },
   filterPillActive: {
-    backgroundColor: COLORS.filterActiveBg,
-    borderColor: COLORS.filterActiveBorder,
-  },
-  filterPillVital: {
     backgroundColor: "rgba(220,30,30,0.12)",
     borderColor: "rgba(220,30,30,0.35)",
   },
-  filterText: { color: COLORS.textMuted, fontSize: 13, fontWeight: "600" },
+  filterPillVital: {
+    backgroundColor: "rgba(220,30,30,0.15)",
+    borderColor: "rgba(220,30,30,0.40)",
+  },
+  filterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.textSubtle,
+  },
+  filterDotActive: { backgroundColor: COLORS.red },
+  filterText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+  },
   filterTextActive: { color: COLORS.white },
   filterTextVital: { color: COLORS.red },
+  filterCount: { marginLeft: "auto" },
+  filterCountText: {
+    color: COLORS.textSubtle,
+    fontSize: 11,
+  },
 
-  // List
-  listContent: { paddingHorizontal: 24, paddingBottom: 100 },
+  // ── Liste ──
+  listContent: {
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === "ios" ? 100 : 80,
+  },
+
+  // ── Skeleton ──
+  skeletonCard: {
+    backgroundColor: "#111111",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: COLORS.cardBorder,
+    padding: 14,
+    marginBottom: 12,
+    opacity: 0.6,
+  },
+  skeletonRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginBottom: 10,
+  },
+  skeletonBlood: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.07)",
+  },
+  skeletonInfo: { flex: 1, gap: 8, justifyContent: "center" },
+  skeletonLine: {
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    width: "90%",
+  },
+  skeletonFooter: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    marginTop: 4,
+  },
 });

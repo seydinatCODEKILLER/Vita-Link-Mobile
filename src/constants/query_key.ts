@@ -5,9 +5,11 @@ export const QUERY_KEYS = {
   // Alerts
   alerts: ["alerts"],
   nearbyAlerts: ["alerts", "nearby"],
+  hasActiveConfirmation: ["alerts", "has-active-confirmation"],
   myAlerts: ["alerts", "my-structure"],
   alert: (id: string) => ["alerts", id],
   alertResponses: (id: string) => ["alerts", id, "responses"],
+  activeEngagement: ["alerts", "engagement"], // ✅ Ajouté ici
 
   // Donations
   myDonations: ["donations", "me"],

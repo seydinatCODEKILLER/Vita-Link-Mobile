@@ -3,6 +3,8 @@ import { alertsApi } from "@/src/api/alerts.api";
 import { useAuthStore } from "@/src/store/auth.store";
 import { QUERY_KEYS } from "@/src/constants/query_key";
 import { CreateAlertPayload } from "@/src/types/alert.types";
+import { usersApi } from "../api/users.api";
+import { useUserRole } from "./useAuthStore";
 
 // ── GET alertes autour du donneur ─────────────────────────────
 export const useNearbyAlerts = () => {
@@ -57,6 +59,15 @@ export const useAlertResponses = (alertId: string) => {
   });
 };
 
+export const useActiveEngagement = () => {
+  return useQuery({
+    queryKey: QUERY_KEYS.activeEngagement, // Ajoute "activeEngagement" dans tes constants
+    queryFn: () => usersApi.getActiveEngagement(),
+    refetchInterval: 60_000, // Vérifie toutes les minutes
+    staleTime: 30_000,
+  });
+};
+
 // ── Confirmer venue (Donneur) ─────────────────────────────────
 export const useConfirmAlert = () => {
   const queryClient = useQueryClient();
@@ -70,8 +81,8 @@ export const useConfirmAlert = () => {
       etaMinutes?: number;
     }) => alertsApi.confirm(alertId, { etaMinutes }),
     onSuccess: () => {
-      // Invalider la liste des alertes proches
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeEngagement });
     },
   });
 };
@@ -109,6 +120,34 @@ export const useCloseAlert = () => {
     onSuccess: (_, alertId) => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.alert(alertId) });
+    },
+  });
+};
+
+// ── GET Vérification engagement actif ──────────────────────────
+export const useHasActiveConfirmation = () => {
+  const role = useUserRole();
+
+  return useQuery({
+    queryKey: QUERY_KEYS.hasActiveConfirmation,
+    queryFn: () => alertsApi.checkActiveConfirmation(),
+    select: (data) => data.hasActiveConfirmation,
+    enabled: role === "DONOR",
+    staleTime: 15_000,
+  });
+};
+
+export const useCancelConfirmation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (alertId: string) => alertsApi.cancel(alertId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeEngagement });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.hasActiveConfirmation,
+      });
     },
   });
 };

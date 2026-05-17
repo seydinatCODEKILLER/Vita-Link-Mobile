@@ -154,7 +154,6 @@ export default function DonorLayout() {
         ))}
 
         {/* ── Routes cachées de la tab bar (fantômes) ── */}
-        <Tabs.Screen name="alerts/index" options={{ href: null }} />
         <Tabs.Screen name="alerts/[id]" options={{ href: null }} />
         <Tabs.Screen name="qrcode" options={{ href: null }} />
         <Tabs.Screen name="jambaar/badges" options={{ href: null }} />

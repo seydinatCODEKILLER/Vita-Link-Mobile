@@ -97,4 +97,21 @@ export const alertsApi = {
     );
     return data;
   },
+
+  checkActiveConfirmation: async (): Promise<{
+    hasActiveConfirmation: boolean;
+  }> => {
+    const { data } = await api.get<{
+      success: boolean;
+      hasActiveConfirmation: boolean;
+    }>("/alert-responses/active-confirmation");
+    return data;
+  },
+
+  cancel: async (alertId: string): Promise<{ message: string }> => {
+    const { data } = await api.patch<{ success: boolean; message: string }>(
+      `/alert-responses/${alertId}/cancel`,
+    );
+    return data;
+  },
 };

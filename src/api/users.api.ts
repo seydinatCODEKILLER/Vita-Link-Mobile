@@ -5,6 +5,7 @@ import {
 } from "@/src/types/user.types";
 import { api } from "./client";
 import { buildApiBody } from "@/src/utils/form-data.utils";
+import { ActiveEngagement } from "../types/alert.types";
 
 export const usersApi = {
   // ── GET /users/me ─────────────────────────────────────────
@@ -77,5 +78,13 @@ export const usersApi = {
       "/users/me",
     );
     return data;
+  },
+
+  getActiveEngagement: async (): Promise<ActiveEngagement | null> => {
+    const { data } = await api.get<{
+      success: boolean;
+      engagement: ActiveEngagement | null;
+    }>("/users/me/active-engagement");
+    return data.engagement;
   },
 };
