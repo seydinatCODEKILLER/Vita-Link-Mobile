@@ -125,3 +125,37 @@ export interface Coupon {
   createdAt: string;
   reward: CouponReward;
 }
+
+// ─── Reward ──────────────────────────────────────────────────
+
+export interface Reward {
+  id: string;
+  title: string;
+  description: string;
+  pointsCost: number;
+  rewardType: string;
+  isUnlimited: boolean;
+  expiresAt: string | null;
+  partner: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+  };
+}
+
+export interface RedeemRewardPayload {
+  rewardId: string;
+}
+
+// L'API retourne directement le Coupon lors du redeem
+export type RedeemRewardResponse = Coupon;
+
+export interface CouponsResponse {
+  coupons: Coupon[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}

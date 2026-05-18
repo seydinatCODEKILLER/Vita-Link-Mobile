@@ -234,13 +234,24 @@ export default function DonorHomeScreen() {
         setIsLocalExpired(false);
       } else {
         setLocalQr(null);
-        if (activeEngagement && !qr) {
+        // ✅ CORRECTION : On ajoute 2 gardes fous
+        // 1. activeEngagement doit exister
+        // 2. L'alerte doit avoir un ID valide
+        // 3. L'engagement doit appartenir à l'utilisateur actuel
+        if (
+          activeEngagement &&
+          activeEngagement.alert &&
+          activeEngagement.alert.id &&
+          user?.id
+        ) {
           setIsLocalExpired(true);
+        } else {
+          setIsLocalExpired(false);
         }
       }
     };
     loadLocalQr();
-  }, [activeEngagement]);
+  }, [activeEngagement, user?.id]);
 
   // Déterminer ce qu'on affiche : L'engagement API en priorité, sinon le local
   const displayedEngagement = activeEngagement
@@ -425,22 +436,26 @@ export default function DonorHomeScreen() {
             )}
 
             {/* ✅ Bannière Fantôme (Prioritaire si le QR local a expiré mais backend toujours bloquant) */}
-            {isLocalExpired && activeEngagement && (
-              <View style={styles.ghostBanner}>
-                <View style={styles.ghostTextBlock}>
-                  <Text style={styles.ghostTitle}>Engagement non validé</Text>
-                  <Text style={styles.ghostSub}>
-                    Votre pass a expiré. Annulez pour redevenir disponible.
-                  </Text>
+            {isLocalExpired &&
+              activeEngagement &&
+              activeEngagement.alert?.id && (
+                <View style={styles.ghostBanner}>
+                  <View style={styles.ghostTextBlock}>
+                    <Text style={styles.ghostTitle}>Engagement non validé</Text>
+                    <Text style={styles.ghostSub}>
+                      Votre pass a expiré. Annulez pour redevenir disponible.
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.ghostCancelBtn}
+                    onPress={() =>
+                      handleCancelDirect(activeEngagement.alert.id)
+                    }
+                  >
+                    <Text style={styles.ghostCancelText}>Libérer</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.ghostCancelBtn}
-                  onPress={() => handleCancelDirect(activeEngagement.alert.id)}
-                >
-                  <Text style={styles.ghostCancelText}>Libérer</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+              )}
 
             {/* Stats */}
             <AlertsStats total={alerts?.length ?? 0} vital={vitalCount} />

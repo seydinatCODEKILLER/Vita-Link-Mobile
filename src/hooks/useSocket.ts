@@ -148,6 +148,7 @@ export const useSocket = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts }); // Met à jour les quotas des alertes
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myDonations }); // Rafraîchit l'historique
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarsProfile }); // Sync les points réels
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leaderboard }); // Sync les points réels
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarssBadges }); // Check les nouveaux badges
 
       setJambaarCelebration({
