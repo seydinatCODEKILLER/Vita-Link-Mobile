@@ -33,6 +33,7 @@ import {
   getTimeRemaining,
   formatRelative,
 } from "@/src/utils/format.utils";
+import { savePendingQr } from "@/src/utils/qr.utils";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -195,8 +196,6 @@ export default function AlertDetailScreen() {
 
   const confirmAnim = useRef(new Animated.Value(1)).current;
 
-  console.log(hasConfirmedThisAlert);
-
   // ── Confirmer ──
   const handleConfirm = useCallback(
     async (etaMinutes?: number) => {
@@ -220,21 +219,34 @@ export default function AlertDetailScreen() {
           Animated.spring(confirmAnim, { toValue: 1, useNativeDriver: true }),
         ]).start();
 
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        );
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-        // Naviguer vers l'écran QR Code
+        // ✅ NOUVEAU : Sauvegarder le QR dans le SecureStore (Option C)
+        if (alert) {
+          await savePendingQr({
+            qrCode: result.qrCode,
+            alertId: id,
+            hospitalName: alert.healthStructure.name,
+            bloodType: alert.bloodType,
+            confirmedAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(), // +4h
+          });
+        }
+
         router.push({
           pathname: "/(donor)/qrcode" as any,
-          params: { qrCode: result.qrCode },
+          params: { 
+            qrCode: result.qrCode, 
+            alertId: id,
+            isExpired: "false"
+          },
         });
       } catch {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setShowEtaModal(false);
       }
     },
-    [id, confirmAlert, router],
+    [id, confirmAlert, router, alert],
   );
 
   // ── Décliner ──

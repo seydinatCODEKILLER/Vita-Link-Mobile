@@ -5,11 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Share,
-  Platform,
   Alert,
   Animated,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
+import { useCancelConfirmation } from "@/src/hooks/useAlerts";
+import { clearPendingQr } from "@/src/utils/qr.utils";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +19,7 @@ import * as Brightness from "expo-brightness";
 import * as Haptics from "expo-haptics";
 import QRCode from "react-native-qrcode-svg";
 import { StatusBar } from "expo-status-bar";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -34,10 +37,18 @@ const COLORS = {
 
 export default function QrCodeScreen() {
   const router = useRouter();
-  const { qrCode } = useLocalSearchParams<{ qrCode: string }>();
+  const { qrCode, alertId, isExpired } = useLocalSearchParams<{
+    qrCode: string;
+    alertId: string;
+    isExpired?: string;
+  }>();
+  const tabBarHeight = useBottomTabBarHeight();
   const [previousBrightness, setPreviousBrightness] = useState<number | null>(
     null,
   );
+
+  const { mutateAsync: cancelConfirmation, isPending: isCancelling } =
+    useCancelConfirmation();
 
   // ── Animations d'entrée ──
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -104,6 +115,34 @@ export default function QrCodeScreen() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!alertId) return;
+
+    Alert.alert(
+      "Annuler votre venue ?",
+      "L'hôpital compte sur vous. Si vous annulez, votre engagement sera supprimé et vous redeviendrez disponible pour d'autres alertes.",
+      [
+        { text: "Non, je maintiens", style: "cancel" },
+        {
+          text: "Oui, annuler",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Warning,
+              );
+              await cancelConfirmation(alertId);
+              await clearPendingQr();
+              router.back();
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible d'annuler. Réessayez.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
   // ── Écran d'erreur ──
   if (!qrCode) {
     return (
@@ -133,7 +172,10 @@ export default function QrCodeScreen() {
 
       <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 20 + tabBarHeight }, // ✅ MODIFICATION : On ajoute la hauteur de la tab bar au padding
+          ]}
           showsVerticalScrollIndicator={false}
         >
           {/* ── Header ── */}
@@ -260,6 +302,34 @@ export default function QrCodeScreen() {
               <Text style={styles.shareBtnText}>Partager le code</Text>
             </TouchableOpacity>
 
+            {/* ✅ NOUVEAU : Bouton Annuler l'engagement */}
+            <TouchableOpacity
+              style={[styles.cancelBtn, isExpired && styles.cancelBtnExpired]}
+              onPress={handleCancel}
+              activeOpacity={0.7}
+              disabled={isCancelling}
+            >
+              {isCancelling ? (
+                <ActivityIndicator color={COLORS.amber} size="small" />
+              ) : (
+                <>
+                  <Ionicons
+                    name="close-circle-outline"
+                    size={18}
+                    color={isExpired ? COLORS.textMuted : COLORS.amber}
+                  />
+                  <Text
+                    style={[
+                      styles.cancelBtnText,
+                      isExpired && styles.cancelBtnTextExpired,
+                    ]}
+                  >
+                    Annuler mon engagement
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+
             {/* Sécurité */}
             <View style={styles.securityRow}>
               <Ionicons
@@ -285,7 +355,6 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContent: {
     flexGrow: 1, // ✅ Permet au contenu de grandir et de scroller si besoin
-    paddingBottom: Platform.OS === "ios" ? 20 : 10,
   },
   centered: {
     flex: 1,
@@ -468,7 +537,6 @@ const styles = StyleSheet.create({
     gap: 14,
     marginTop: "auto",
     justifyContent: "flex-end",
-    paddingBottom: Platform.OS === "ios" ? 8 : 16,
   },
   instructionRow: {
     flexDirection: "row",
@@ -549,4 +617,28 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   errorBtnText: { color: COLORS.white, fontWeight: "700", fontSize: 15 },
+  // ✅ NOUVEAU : Bouton Annuler
+  cancelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "rgba(250,199,117,0.25)",
+    backgroundColor: "rgba(250,199,117,0.06)",
+  },
+  cancelBtnExpired: {
+    borderColor: COLORS.cardBorder,
+    backgroundColor: "rgba(255,255,255,0.03)",
+  },
+  cancelBtnText: {
+    color: COLORS.amber,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  cancelBtnTextExpired: {
+    color: COLORS.textMuted,
+  },
 });

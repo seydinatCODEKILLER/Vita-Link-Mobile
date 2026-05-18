@@ -8,17 +8,23 @@ import {
   Switch,
   Platform,
   Animated,
+  Alert,
 } from "react-native";
 import { Href, useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuthStore } from "@/src/store/auth.store";
-import { useActiveEngagement, useNearbyAlerts } from "@/src/hooks/useAlerts";
+import {
+  useActiveEngagement,
+  useCancelConfirmation,
+  useNearbyAlerts,
+} from "@/src/hooks/useAlerts";
 import { useUpdateAvailability } from "@/src/hooks/useAvailability";
 import { AlertCard } from "@/src/components/alerts/AlertCard";
 import { EmptyState } from "@/src/components/ui/EmptyState";
-import { ActiveEngagement, Alert } from "@/src/types/alert.types";
+import { ActiveEngagement, Alert as AlertType } from "@/src/types/alert.types";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
+import { getPendingQr, PendingQr } from "@/src/utils/qr.utils";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -28,6 +34,7 @@ const COLORS = {
   textSubtle: "rgba(255,255,255,0.18)",
   red: "#DC1E1E",
   green: "#1D9E75",
+  amber: "#FAC775", // ✅ AJOUTÉ pour le mode expiré
   cardBg: "rgba(255,255,255,0.05)",
   cardBorder: "rgba(255,255,255,0.08)",
 } as const;
@@ -85,9 +92,11 @@ function AlertsStats({ total, vital }: { total: number; vital: number }) {
 // ─── Bannière Engagement Actif ─────────────────────────────────
 function EngagementBanner({
   engagement,
+  isExpired = false,
   onPress,
 }: {
-  engagement: ActiveEngagement;
+  engagement: ActiveEngagement | PendingQr;
+  isExpired?: boolean;
   onPress: () => void;
 }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -111,9 +120,19 @@ function EngagementBanner({
     return () => pulse.stop();
   }, []);
 
-  const bloodLabel =
-    BLOOD_TYPE_LABELS[engagement.alert.bloodType] ??
-    engagement.alert.bloodType.replace("_", "");
+  // Détermination des données selon le type d'engagement
+  const isLocalQr = "hospitalName" in engagement; // PendingQr a hospitalName directement
+  const hospitalName = isLocalQr
+    ? (engagement as PendingQr).hospitalName
+    : (engagement as ActiveEngagement).alert.healthStructure.name;
+
+  const bloodLabel = isLocalQr
+    ? (engagement as PendingQr).bloodType
+    : (BLOOD_TYPE_LABELS[(engagement as ActiveEngagement).alert.bloodType] ??
+      (engagement as ActiveEngagement).alert.bloodType.replace("_", ""));
+
+  // ✅ Couleur dynamique selon l'expiration
+  const accentColor = isExpired ? COLORS.amber : COLORS.red;
 
   return (
     <Animated.View
@@ -122,32 +141,55 @@ function EngagementBanner({
       <TouchableOpacity
         onPress={onPress}
         activeOpacity={0.85}
-        style={styles.engagementRow}
+        style={[
+          styles.engagementRow,
+          {
+            borderColor: accentColor + "30",
+            backgroundColor: accentColor + "07",
+          },
+        ]}
       >
         {/* Bande accent en haut */}
-        <View style={styles.engagementAccentBar} />
+        <View
+          style={[styles.engagementAccentBar, { backgroundColor: accentColor }]}
+        />
 
         <View style={styles.engagementInner}>
-          {/* Icône QR + badge LIVE */}
+          {/* Icône QR + badge LIVE / RETARD */}
           <View style={styles.engagementIconContainer}>
-            <View style={styles.engagementIconWrap}>
+            <View
+              style={[
+                styles.engagementIconWrap,
+                { backgroundColor: accentColor },
+              ]}
+            >
               <Ionicons name="qr-code-outline" size={26} color={COLORS.white} />
             </View>
-            <View style={styles.liveBadge}>
-              <Text style={styles.liveBadgeText}>LIVE</Text>
+            <View
+              style={[
+                styles.liveBadge,
+                { backgroundColor: isExpired ? COLORS.amber : COLORS.green },
+              ]}
+            >
+              <Text style={styles.liveBadgeText}>
+                {isExpired ? "RETARD" : "LIVE"}
+              </Text>
             </View>
           </View>
 
           {/* Bloc texte */}
           <View style={styles.engagementTextBlock}>
             <View style={styles.engagementTitleRow}>
-              <Text style={styles.engagementTitle}>Vous êtes attendu !</Text>
-              <View style={styles.engagementDot} />
+              <Text style={[styles.engagementTitle, { color: accentColor }]}>
+                {isExpired ? "Retard — Pass Classique" : "Vous êtes attendu !"}
+              </Text>
+              <View
+                style={[styles.engagementDot, { backgroundColor: accentColor }]}
+              />
             </View>
             <Text style={styles.engagementSub} numberOfLines={1}>
-              {engagement.alert.healthStructure.name} • {bloodLabel}
+              {hospitalName} • {bloodLabel}
             </Text>
-            {/* Pill CTA */}
           </View>
 
           {/* Chevron */}
@@ -178,19 +220,48 @@ export default function DonorHomeScreen() {
   const { mutate: toggleAvailability, isPending: isTogglingAvail } =
     useUpdateAvailability();
   const { data: activeEngagement } = useActiveEngagement();
+  const { mutateAsync: cancelConfirmation } = useCancelConfirmation();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
+  const [localQr, setLocalQr] = useState<PendingQr | null>(null);
+  const [isLocalExpired, setIsLocalExpired] = useState(false);
+
+  useEffect(() => {
+    const loadLocalQr = async () => {
+      const qr = await getPendingQr();
+      if (qr) {
+        setLocalQr(qr);
+        setIsLocalExpired(false);
+      } else {
+        setLocalQr(null);
+        if (activeEngagement && !qr) {
+          setIsLocalExpired(true);
+        }
+      }
+    };
+    loadLocalQr();
+  }, [activeEngagement]);
+
+  // Déterminer ce qu'on affiche : L'engagement API en priorité, sinon le local
+  const displayedEngagement = activeEngagement
+    ? { type: "active" as const, data: activeEngagement }
+    : localQr
+      ? { type: "expired" as const, data: localQr }
+      : null;
 
   // Filtrage côté client
-  const filteredAlerts: Alert[] =
+  const filteredAlerts: AlertType[] =
     alerts?.filter((a) => {
       if (activeFilter === "ALL") return true;
       return a.urgencyLevel === activeFilter;
     }) ?? [];
 
   const handleOpenQrCode = useCallback(
-    (qrCode: string) =>
-      router.push({ pathname: "/(donor)/qrcode" as any, params: { qrCode } }),
+    (qrCode: string, alertId: string, isExpired: boolean) =>
+      router.push({
+        pathname: "/(donor)/qrcode" as any,
+        params: { qrCode, alertId, isExpired: isExpired ? "true" : "false" },
+      }),
     [router],
   );
 
@@ -202,8 +273,24 @@ export default function DonorHomeScreen() {
     [router],
   );
 
-  // Pour l'instant, "J'y vais" rapide → navigate vers le détail
-  // Le vrai flow confirm est géré à l'étape 11
+  const handleCancelDirect = async (alertId: string) => {
+    Alert.alert(
+      "Annuler cet engagement ?",
+      "Votre pass a expiré. Si vous n'êtes pas à l'hôpital, annulez pour redevenir disponible.",
+      [
+        { text: "Non", style: "cancel" },
+        {
+          text: "Oui, annuler",
+          style: "destructive",
+          onPress: async () => {
+            await cancelConfirmation(alertId);
+            setIsLocalExpired(false);
+          },
+        },
+      ],
+    );
+  };
+
   const handleQuickConfirm = useCallback(
     (alertId: string) => router.push(`/(donor)/alerts/${alertId}` as Href),
     [router],
@@ -317,12 +404,42 @@ export default function DonorHomeScreen() {
               />
             </TouchableOpacity>
 
-            {/* ✅ NOUVEAU : Bannière Engagement Actif */}
-            {activeEngagement && (
+            {/* ✅ Bannière Engagement Actif / Expiré (On ne l'affiche PAS si le fantôme est là) */}
+            {displayedEngagement && !isLocalExpired && (
               <EngagementBanner
-                engagement={activeEngagement}
-                onPress={() => handleOpenQrCode(activeEngagement.qrCode)}
+                engagement={displayedEngagement.data}
+                isExpired={displayedEngagement.type === "expired"}
+                onPress={() => {
+                  const alertId =
+                    displayedEngagement.type === "active"
+                      ? (displayedEngagement.data as ActiveEngagement).alert.id
+                      : (displayedEngagement.data as PendingQr).alertId;
+
+                  handleOpenQrCode(
+                    displayedEngagement.data.qrCode,
+                    alertId,
+                    displayedEngagement.type === "expired",
+                  );
+                }}
               />
+            )}
+
+            {/* ✅ Bannière Fantôme (Prioritaire si le QR local a expiré mais backend toujours bloquant) */}
+            {isLocalExpired && activeEngagement && (
+              <View style={styles.ghostBanner}>
+                <View style={styles.ghostTextBlock}>
+                  <Text style={styles.ghostTitle}>Engagement non validé</Text>
+                  <Text style={styles.ghostSub}>
+                    Votre pass a expiré. Annulez pour redevenir disponible.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.ghostCancelBtn}
+                  onPress={() => handleCancelDirect(activeEngagement.alert.id)}
+                >
+                  <Text style={styles.ghostCancelText}>Libérer</Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             {/* Stats */}
@@ -402,6 +519,48 @@ export default function DonorHomeScreen() {
 // ─── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
+
+  // ── Bannière Fantôme (Engagement expiré non annulé) ──
+  ghostBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    backgroundColor: "rgba(220,30,30,0.08)",
+    borderWidth: 1.5,
+    borderColor: "rgba(220,30,30,0.30)",
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  ghostTextBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  ghostTitle: {
+    color: COLORS.red,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  ghostSub: {
+    // ✅ Voici la propriété manquante
+    color: COLORS.textMuted,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  ghostCancelBtn: {
+    backgroundColor: COLORS.red,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    flexShrink: 0,
+  },
+  ghostCancelText: {
+    color: COLORS.white,
+    fontSize: 12,
+    fontWeight: "700",
+  },
 
   // ── Header ──
   header: {
@@ -506,8 +665,6 @@ const styles = StyleSheet.create({
   engagementRow: {
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: "rgba(220,30,30,0.30)",
-    backgroundColor: "rgba(220,30,30,0.07)",
     overflow: "hidden",
     shadowColor: COLORS.red,
     shadowOffset: { width: 0, height: 6 },
@@ -517,7 +674,6 @@ const styles = StyleSheet.create({
   },
   engagementAccentBar: {
     height: 3,
-    backgroundColor: COLORS.red,
     opacity: 0.85,
   },
   engagementInner: {
@@ -535,7 +691,6 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: COLORS.red,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -543,7 +698,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -6,
     right: -6,
-    backgroundColor: "#22C55E",
     borderRadius: 7,
     borderWidth: 2,
     borderColor: COLORS.bg,
@@ -567,7 +721,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   engagementTitle: {
-    color: COLORS.white,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -575,29 +728,10 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.red,
   },
   engagementSub: {
     color: COLORS.textMuted,
     fontSize: 12,
-  },
-  engagementPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(220,30,30,0.14)",
-    borderWidth: 1,
-    borderColor: "rgba(220,30,30,0.30)",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginTop: 2,
-  },
-  engagementPillText: {
-    color: COLORS.red,
-    fontSize: 11,
-    fontWeight: "600",
   },
   engagementArrow: {
     width: 34,

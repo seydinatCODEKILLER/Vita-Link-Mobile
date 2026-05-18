@@ -9,6 +9,7 @@ import { QUERY_KEYS } from "@/src/constants/query_key";
 import { Alert } from "@/src/types/alert.types";
 import logger from "@/src/utils/logger.utils";
 import { useAlertStore } from "../store/alerts.store";
+import { clearPendingQr } from "../utils/qr.utils";
 
 export const useSocket = () => {
   const queryClient = useQueryClient();
@@ -103,29 +104,57 @@ export const useSocket = () => {
     });
 
     // ── 2. DON VALIDÉ ────────────────────────────────────────
-    socket.on("donation:validated", (data: { pointsAwarded: number }) => {
+    socket.on("donation:validated", (data: any) => {
+      // Remplace "any" par ton type si tu l'as
       logger.info("🎉 Don validé, points crédités :", data.pointsAwarded);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // 1. Nettoyer le QR local IMMMÉDIATEMENT (plus de bannière fantôme)
+      clearPendingQr().catch((err) =>
+        logger.warn("Erreur nettoyage QR local", err),
+      );
+
+      // 2. Mise à jour optimiste du store Zustand
       const currentUser = useAuthStore.getState().user;
       if (currentUser?.jambaarsProfile) {
         updateUser({
+          // ✅ Force la mise à jour de l'éligibilité (très important !)
           jambaarsProfile: {
             ...currentUser.jambaarsProfile,
             totalPoints:
+              data.totalPoints ??
               currentUser.jambaarsProfile.totalPoints + data.pointsAwarded,
             donationCount: currentUser.jambaarsProfile.donationCount + 1,
+            currentGrade:
+              data.newGrade ?? currentUser.jambaarsProfile.currentGrade,
+            nextEligibilityAt:
+              data.nextEligibilityAt ??
+              currentUser.jambaarsProfile.nextEligibilityAt,
+            lastDonationAt: new Date().toISOString(),
+            livesSavedEstimate:
+              currentUser.jambaarsProfile.livesSavedEstimate + 3,
           },
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myDonations });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarsProfile });
+      // 3. INVALIDATION MASSIVE DE REACT QUERY
+      // Force le rafraîchissement de TOUTES les données liées au donneur
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me }); // Rafraîchit l'utilisateur complet
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeEngagement }); // Va renvoyer null -> fait disparaître la bannière
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.hasActiveConfirmation,
+      }); // Dégrise le bouton "J'y vais"
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts }); // Met à jour les quotas des alertes
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myDonations }); // Rafraîchit l'historique
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarsProfile }); // Sync les points réels
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarssBadges }); // Check les nouveaux badges
 
       setJambaarCelebration({
         pointsEarned: data.pointsAwarded,
-        message: "Votre don a été validé !",
+        message: data.gradeChanged
+          ? `Nouveau grade : ${data.newGrade} !`
+          : "Votre don a été validé !",
       });
     });
 

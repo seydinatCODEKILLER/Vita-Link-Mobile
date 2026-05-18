@@ -3,9 +3,9 @@ import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import { Platform } from "react-native";
 import { usersApi } from "@/src/api/users.api";
-import { useAppStore } from "@/src/store/alerts.store";
 import logger from "@/src/utils/logger.utils";
 import { useRouter } from "expo-router";
+import { useAlertStore } from "../store/alerts.store";
 
 // ─── Config globale Expo Notifications ───────────────────────
 // À appeler une seule fois — idéalement dans app/_layout.tsx
@@ -126,7 +126,7 @@ export const useNotifications = () => {
         logger.info("🔔 Notification foreground reçue", { title, data });
 
         // Pousser vers le store global → InAppAlert s'affiche dans le layout
-        useAppStore.getState().setInAppAlert({
+        useAlertStore.getState().setInAppAlert({
           id: notification.request.identifier,
           title: title ?? "Vita-Link",
           body: body ?? "",
