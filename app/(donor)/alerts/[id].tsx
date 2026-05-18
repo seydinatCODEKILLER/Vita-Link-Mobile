@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  Share,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -18,6 +19,7 @@ import { StatusBar } from "expo-status-bar";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import MapView, { Marker, Circle } from "react-native-maps";
 import * as Haptics from "expo-haptics";
+import { useIsEligible } from "@/src/hooks/useAuthStore";
 import {
   useActiveEngagement,
   useAlert,
@@ -175,6 +177,7 @@ function EtaModal({
 // ─── Écran principal ───────────────────────────────────────────
 export default function AlertDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { isEligible, daysLeft } = useIsEligible();
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
 
@@ -219,7 +222,9 @@ export default function AlertDetailScreen() {
           Animated.spring(confirmAnim, { toValue: 1, useNativeDriver: true }),
         ]).start();
 
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
 
         // ✅ NOUVEAU : Sauvegarder le QR dans le SecureStore (Option C)
         if (alert) {
@@ -235,10 +240,10 @@ export default function AlertDetailScreen() {
 
         router.push({
           pathname: "/(donor)/qrcode" as any,
-          params: { 
-            qrCode: result.qrCode, 
+          params: {
+            qrCode: result.qrCode,
             alertId: id,
-            isExpired: "false"
+            isExpired: "false",
           },
         });
       } catch {
@@ -248,6 +253,16 @@ export default function AlertDetailScreen() {
     },
     [id, confirmAlert, router, alert],
   );
+
+  const handleRelay = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!alert) return;
+    try {
+      await Share.share({
+        message: `🚨 URGENCE : L'hôpital ${alert.healthStructure.name} a besoin de sang ${formatBloodType(alert.bloodType)} ! Si tu es disponible, aide-nous.`,
+      });
+    } catch (error) {}
+  };
 
   // ── Décliner ──
   const handleDecline = useCallback(async () => {
@@ -356,6 +371,22 @@ export default function AlertDetailScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* ✅ NOUVEAU : Bannière d'inéligibilité (Placée juste après le Hero) */}
+          {!isEligible && (
+            <View style={styles.ineligibleBanner}>
+              <Ionicons name="time-outline" size={22} color={COLORS.amber} />
+              <View style={styles.ineligibleTextBlock}>
+                <Text style={styles.ineligibleTitle}>
+                  Période de repos en cours
+                </Text>
+                <Text style={styles.ineligibleSub}>
+                  Vous pourrez donner à nouveau dans {daysLeft} jour
+                  {daysLeft > 1 ? "s" : ""}. En attendant, relayez l&apos;alerte
+                  pour sauver des vies !
+                </Text>
+              </View>
+            </View>
+          )}
           {/* ── Hero groupe sanguin ── */}
           <View style={styles.heroBlock}>
             <View style={[styles.bloodHero, isVital && styles.bloodHeroVital]}>
@@ -520,7 +551,7 @@ export default function AlertDetailScreen() {
           style={[styles.actionsBlock, { paddingBottom: 12 + tabBarHeight }]}
         >
           {hasConfirmedThisAlert ? (
-            // ── CAS 1 : Donnéur engagé sur CETTE alerte ──
+            // ── CAS 1 : Donneur engagé sur CETTE alerte ──
             <>
               <TouchableOpacity
                 onPress={() =>
@@ -576,7 +607,7 @@ export default function AlertDetailScreen() {
               </TouchableOpacity>
             </>
           ) : hasActiveConfirmation ? (
-            // ── CAS 2 : Donnéur engagé sur une AUTRE alerte (Bouton pleine largeur) ──
+            // ── CAS 2 : Donneur engagé sur une AUTRE alerte (Bouton pleine largeur) ──
             <TouchableOpacity
               onPress={() =>
                 router.push({
@@ -601,8 +632,8 @@ export default function AlertDetailScreen() {
                 </Text>
               </View>
             </TouchableOpacity>
-          ) : (
-            // ── CAS 3 : Aucun engagement (Layout normal J'y vais + Indisponible) ──
+          ) : isEligible ? (
+            // ── CAS 3 : Aucun engagement + ÉLIGIBLE (Layout normal J'y vais + Indisponible) ──
             <>
               <Animated.View
                 style={[{ flex: 1 }, { transform: [{ scale: confirmAnim }] }]}
@@ -645,6 +676,30 @@ export default function AlertDetailScreen() {
                 )}
               </TouchableOpacity>
             </>
+          ) : (
+            // ── CAS 4 : Aucun engagement + INÉLIGIBLE (Bouton Relayer pleine largeur) ──
+            <TouchableOpacity
+              onPress={handleRelay}
+              activeOpacity={0.8}
+              style={[styles.confirmBtn, styles.relayFullBtn, { flex: 1 }]}
+            >
+              <View
+                style={[
+                  styles.confirmIcon,
+                  { backgroundColor: "rgba(250,199,117,0.20)" },
+                ]}
+              >
+                <Ionicons name="share-outline" size={18} color={COLORS.amber} />
+              </View>
+              <View>
+                <Text style={[styles.confirmBtnText, { color: COLORS.amber }]}>
+                  Relayer cette alerte
+                </Text>
+                <Text style={styles.confirmBtnSub}>
+                  Aidez en partageant autour de vous
+                </Text>
+              </View>
+            </TouchableOpacity>
           )}
         </View>
       </SafeAreaView>
@@ -665,6 +720,43 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   safeArea: { flex: 1 },
   centered: { alignItems: "center", justifyContent: "center", gap: 16 },
+
+  ineligibleBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "rgba(250,199,117,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(250,199,117,0.25)",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 20,
+  },
+  ineligibleTextBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  ineligibleTitle: {
+    color: COLORS.amber,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  ineligibleSub: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  relayFullBtn: {
+    backgroundColor: "rgba(250,199,117,0.10)",
+    borderWidth: 1.5,
+    borderColor: "rgba(250,199,117,0.35)",
+    shadowColor: COLORS.amber,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 4,
+    flex: 1,
+  },
 
   vitalHalo: {
     position: "absolute",

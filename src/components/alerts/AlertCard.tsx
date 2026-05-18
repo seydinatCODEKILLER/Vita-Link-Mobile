@@ -5,10 +5,13 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Share,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Alert } from "@/src/types/alert.types";
 import { getTimeRemaining } from "@/src/utils/format.utils";
+import * as Haptics from "expo-haptics";
+import { useIsEligible } from "@/src/hooks/useAuthStore";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -82,6 +85,7 @@ interface AlertCardProps {
 
 export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
   const isVital = alert.urgencyLevel === "VITAL";
+  const { isEligible, daysLeft } = useIsEligible();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
@@ -124,6 +128,17 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
     };
   }, [isVital]);
 
+  const handleRelay = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      await Share.share({
+        message: `🚨 URGENCE : L'hôpital ${alert.healthStructure.name} a besoin de sang ${bloodLabel} ! Si tu es disponible et éligible, télécharge Vita-Link ou rends-y toi.`,
+      });
+    } catch (error) {
+      // Silencieux
+    }
+  };
+
   const timeRemaining = getTimeRemaining(alert.expiresAt);
   const serviceLabel = SERVICE_LABELS[alert.serviceUnit] ?? alert.serviceUnit;
   const bloodLabel = BLOOD_TYPE_LABELS[alert.bloodType] ?? alert.bloodType;
@@ -141,6 +156,7 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
         style={[
           styles.card,
           isVital && styles.cardVital,
+          !isEligible && styles.cardIneligible,
           { transform: [{ scale: pulseAnim }] },
         ]}
       >
@@ -229,17 +245,34 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.ctaBtn, isVital && styles.ctaBtnVital]}
-            onPress={(e) => {
-              e.stopPropagation();
-              onConfirm(alert.id);
-            }}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="heart" size={13} color={COLORS.white} />
-            <Text style={styles.ctaBtnText}>J&apos;y vais</Text>
-          </TouchableOpacity>
+          {/* ✅ NOUVEAU : Logique de bouton conditionnelle */}
+          {isEligible ? (
+            // CAS 1 : Éligible -> Bouton normal "J'y vais"
+            <TouchableOpacity
+              style={[styles.ctaBtn, isVital && styles.ctaBtnVital]}
+              onPress={(e) => {
+                e.stopPropagation();
+                onConfirm(alert.id);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="heart" size={13} color={COLORS.white} />
+              <Text style={styles.ctaBtnText}>J&apos;y vais</Text>
+            </TouchableOpacity>
+          ) : (
+            // CAS 2 : Inéligible -> Bouton "Relayer"
+            <TouchableOpacity
+              style={styles.relayBtn}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleRelay();
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="share-outline" size={13} color={COLORS.amber} />
+              <Text style={styles.relayBtnText}>Relayer</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </Animated.View>
     </TouchableOpacity>
@@ -249,6 +282,26 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
 // ─── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   touchable: { marginBottom: 12 },
+
+  cardIneligible: {
+    opacity: 0.6,
+  },
+  relayBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(250,199,117,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(250,199,117,0.30)",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+  },
+  relayBtnText: {
+    color: COLORS.amber,
+    fontSize: 13,
+    fontWeight: "700",
+  },
 
   card: {
     backgroundColor: COLORS.cardBg,

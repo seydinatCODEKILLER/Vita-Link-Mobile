@@ -9,7 +9,7 @@ export const QUERY_KEYS = {
   myAlerts: ["alerts", "my-structure"],
   alert: (id: string) => ["alerts", id],
   alertResponses: (id: string) => ["alerts", id, "responses"],
-  activeEngagement: ["alerts", "engagement"], // ✅ Ajouté ici
+  activeEngagement: ["alerts", "engagement"],
 
   // Donations
   myDonations: ["donations", "me"],

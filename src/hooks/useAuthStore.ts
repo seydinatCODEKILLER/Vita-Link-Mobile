@@ -1,4 +1,19 @@
 import { useAuthStore } from "@/src/store/auth.store";
+import dayjs from "dayjs";
+
+export const useIsEligible = () => {
+  const profile = useAuthStore((state) => state.user?.jambaarsProfile);
+  if (!profile) return { isEligible: true, daysLeft: 0, nextDate: null };
+
+  const nextDate = profile.nextEligibilityAt ? new Date(profile.nextEligibilityAt) : null;
+  const isEligible = !nextDate || nextDate <= new Date();
+  
+  const daysLeft = !isEligible && nextDate 
+    ? dayjs(nextDate).diff(dayjs(), "day") 
+    : 0;
+
+  return { isEligible, daysLeft, nextDate };
+};
 
 // ─── Sélecteurs basiques ──────────────────────────────────────
 export const useUser = () => useAuthStore((state) => state.user);
