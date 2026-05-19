@@ -66,20 +66,19 @@ export const useVerifyOtp = () => {
   const { setUser } = useAuthStore();
 
   return useMutation({
-    mutationFn: (payload: VerifyOtpPayload) => authApi.verifyOtp(payload),
+    mutationFn: (payload: VerifyOtpPayload) => {
+      const cleanedPayload = Object.fromEntries(
+        Object.entries(payload).filter(([_, v]) => v !== ""),
+      );
+      return authApi.verifyOtp(cleanedPayload as VerifyOtpPayload);
+    },
     onSuccess: async (response) => {
       await tokenManager.saveTokens(
         response.accessToken,
         response.refreshToken,
       );
       await setUser(response.user);
-
-      Toast.show({
-        type: "success",
-        text1: "Bienvenue Jambaar ! 🩸",
-        text2: "Votre compte a été créé avec succès.",
-      });
-
+      Toast.show({ type: "success", text1: "Bienvenue Jambaar ! 🩸" });
       router.replace("/(donor)");
     },
     onError: (err) => {

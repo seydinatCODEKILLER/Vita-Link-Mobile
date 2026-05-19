@@ -15,10 +15,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { FormInput } from "@/src/components/ui/FormInput";
-import { useLogin } from "@/src/hooks/useAuth";
-import { loginSchema, type LoginValues } from "@/src/validators/auth.schema";
-import { useAuthStore } from "@/src/store/auth.store";
+import { useResendOtp } from "@/src/hooks/useAuth";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -30,23 +29,22 @@ const COLORS = {
   textSubtle: "rgba(255,255,255,0.18)",
   cardBg: "rgba(255,255,255,0.05)",
   cardBorder: "rgba(255,255,255,0.09)",
+  success: "#22C55E",
 } as const;
 
-export default function LoginScreen() {
+// ─── Schema ────────────────────────────────────────────────────
+const reconnectSchema = z.object({
+  email: z.string().email("Adresse email invalide"),
+});
+
+type ReconnectValues = z.infer<typeof reconnectSchema>;
+
+// ─── Écran principal ───────────────────────────────────────────
+export default function ReconnectDonorScreen() {
   const router = useRouter();
-  const { mutateAsync: login, isPending } = useLogin();
-  const user = useAuthStore((s) => s.user);
+  const { mutateAsync: sendOtp, isPending } = useResendOtp();
 
-  // ── Redirect si déjà connecté ──
-  useEffect(() => {
-    if (user) {
-      router.replace(
-        user.role === "HEALTH_STRUCTURE" ? "/(health)" : "/(donor)",
-      );
-    }
-  }, [user]);
-
-  // ── Animations d'entrée ──
+  // ── Animations ──
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(32)).current;
 
@@ -70,17 +68,33 @@ export default function LoginScreen() {
     control,
     handleSubmit,
     formState: { errors },
-  } = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
+  } = useForm<ReconnectValues>({
+    resolver: zodResolver(reconnectSchema),
+    defaultValues: { email: "" },
   });
 
-  const onSubmit = async (values: LoginValues) => {
+  const onSubmit = async (values: ReconnectValues) => {
     Keyboard.dismiss();
     try {
-      await login(values);
+      // Envoie l'OTP via l'API existante
+      await sendOtp(values.email);
+
+      // Redirige vers l'écran de vérification OTP en passant juste l'email
+      router.push({
+        pathname: "/(auth)/otp-verify",
+        params: {
+          email: values.email,
+          // On passe des params vides pour les autres car c'est une reco, pas une inscription
+          phone: "",
+          firstName: "",
+          lastName: "",
+          bloodType: "",
+          gender: "",
+          dateOfBirth: "",
+        },
+      });
     } catch {
-      // Toast géré dans useLogin → onError
+      // L'erreur est déjà gérée par le Toast dans le hook useResendOtp
     }
   };
 
@@ -113,25 +127,16 @@ export default function LoginScreen() {
               },
             ]}
           >
-            {/* Header : logo + titre */}
+            {/* Header */}
             <View style={styles.headerBlock}>
-              {/* Badge espace pro */}
-              <View style={styles.proBadgeRow}>
-                <View style={styles.proIconWrap}>
-                  <Ionicons name="business" size={20} color={COLORS.white} />
-                </View>
-                <View style={styles.proBadgeText}>
-                  <Text style={styles.proEyebrow}>ESPACE PROFESSIONNEL</Text>
-                  <Text style={styles.proTitle}>
-                    Vita<Text style={{ color: COLORS.red }}>Link</Text>
-                  </Text>
-                </View>
+              <View style={styles.iconWrap}>
+                <Ionicons name="mail-outline" size={28} color={COLORS.red} />
               </View>
-
               <View style={styles.titleBlock}>
-                <Text style={styles.title}>Bon retour 👋</Text>
+                <Text style={styles.title}>Bon retour Jambaar 👋</Text>
                 <Text style={styles.subtitle}>
-                  Connectez-vous à votre espace structure de santé
+                  Entrez l’email de votre compte pour recevoir un code de
+                  connexion sécurisé.
                 </Text>
               </View>
             </View>
@@ -145,46 +150,31 @@ export default function LoginScreen() {
                   <FormInput
                     label="Adresse email"
                     icon="mail-outline"
-                    placeholder="directeur@hopital.sn"
+                    placeholder="votre@email.com"
                     value={field.value}
                     onChangeText={field.onChange}
                     error={fieldState.error?.message}
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
-                    returnKeyType="next"
-                  />
-                )}
-              />
-
-              <Controller
-                control={control}
-                name="password"
-                render={({ field, fieldState }) => (
-                  <FormInput
-                    label="Mot de passe"
-                    icon="lock-closed-outline"
-                    placeholder="••••••••"
-                    value={field.value}
-                    onChangeText={field.onChange}
-                    error={fieldState.error?.message}
-                    isPassword
                     returnKeyType="done"
                     onSubmitEditing={handleSubmit(onSubmit)}
                   />
                 )}
               />
+            </View>
 
-              {/* Mot de passe oublié */}
-              <TouchableOpacity
-                style={styles.forgotRow}
-                activeOpacity={0.7}
-                onPress={() => {
-                  // TODO: implémenter la réinitialisation
-                }}
-              >
-                <Text style={styles.forgotText}>Mot de passe oublié ?</Text>
-              </TouchableOpacity>
+            {/* Info sécurité */}
+            <View style={styles.infoCard}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={16}
+                color={COLORS.success}
+              />
+              <Text style={styles.infoText}>
+                Pas besoin de mot de passe. Un code à 6 chiffres sera envoyé
+                pour vérifier votre identité.
+              </Text>
             </View>
 
             {/* ── CTA ── */}
@@ -198,7 +188,7 @@ export default function LoginScreen() {
                 <ActivityIndicator color={COLORS.white} size="small" />
               ) : (
                 <>
-                  <Text style={styles.ctaBtnText}>Se connecter</Text>
+                  <Text style={styles.ctaBtnText}>Recevoir mon code</Text>
                   <View style={styles.ctaBtnIcon}>
                     <Ionicons
                       name="arrow-forward"
@@ -209,37 +199,7 @@ export default function LoginScreen() {
                 </>
               )}
             </TouchableOpacity>
-
-            {/* ── Divider ── */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* ── Lien donneur ── */}
-            <View style={styles.donorRow}>
-              <Text style={styles.donorText}>Vous êtes donneur ? </Text>
-              <TouchableOpacity
-                onPress={() => router.push("/(auth)/reconnect-donor")}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.donorLink}>Se reconnecter par code</Text>
-              </TouchableOpacity>
-            </View>
           </Animated.View>
-
-          {/* ── Info sécurité ── */}
-          <View style={styles.securityRow}>
-            <Ionicons
-              name="shield-checkmark-outline"
-              size={13}
-              color={COLORS.textSubtle}
-            />
-            <Text style={styles.securityText}>
-              Connexion sécurisée · Données chiffrées
-            </Text>
-          </View>
         </SafeAreaView>
       </View>
     </TouchableWithoutFeedback>
@@ -292,63 +252,59 @@ const styles = StyleSheet.create({
   headerBlock: {
     marginBottom: 32,
     gap: 20,
-  },
-  proBadgeRow: {
-    flexDirection: "row",
     alignItems: "center",
-    gap: 12,
   },
-  proIconWrap: {
-    width: 44,
-    height: 44,
-    backgroundColor: COLORS.red,
-    borderRadius: 12,
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "rgba(220,30,30,0.10)",
+    borderWidth: 1,
+    borderColor: "rgba(220,30,30,0.22)",
     alignItems: "center",
     justifyContent: "center",
   },
-  proBadgeText: {
-    gap: 2,
-  },
-  proEyebrow: {
-    color: COLORS.textSubtle,
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 2,
-  },
-  proTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-  },
   titleBlock: {
-    gap: 6,
+    gap: 8,
+    alignItems: "center",
   },
   title: {
     color: COLORS.white,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "800",
     letterSpacing: -0.5,
+    textAlign: "center",
   },
   subtitle: {
     color: COLORS.textMuted,
     fontSize: 14,
     lineHeight: 21,
+    textAlign: "center",
+    paddingHorizontal: 16,
   },
 
   // ── Formulaire ──
   formBlock: {
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  forgotRow: {
-    alignSelf: "flex-end",
-    paddingVertical: 4,
-    marginTop: -4,
-    marginBottom: 8,
+
+  // ── Info Card ──
+  infoCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "rgba(34,197,94,0.07)",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(34,197,94,0.18)",
+    padding: 14,
+    marginBottom: 24,
   },
-  forgotText: {
-    color: COLORS.red,
-    fontSize: 13,
-    fontWeight: "600",
+  infoText: {
+    flex: 1,
+    color: "rgba(34,197,94,0.70)",
+    fontSize: 12,
+    lineHeight: 18,
   },
 
   // ── CTA ──
@@ -360,7 +316,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.red,
     borderRadius: 16,
     paddingVertical: 17,
-    marginBottom: 24,
   },
   ctaBtnDisabled: { opacity: 0.5 },
   ctaBtnText: {
@@ -376,52 +331,5 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  // ── Divider ──
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.cardBorder,
-  },
-  dividerText: {
-    color: COLORS.textSubtle,
-    fontSize: 12,
-  },
-
-  // ── Lien donneur ──
-  donorRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  donorText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-  donorLink: {
-    color: COLORS.red,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  // ── Sécurité ──
-  securityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingBottom: 10,
-  },
-  securityText: {
-    color: COLORS.textSubtle,
-    fontSize: 11,
-    letterSpacing: 0.3,
   },
 });
