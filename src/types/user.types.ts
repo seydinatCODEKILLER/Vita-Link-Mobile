@@ -57,6 +57,7 @@ export interface UpdateProfilePayload {
   firstName?: string;
   lastName?: string;
   gender?: Gender;
+  bloodType?: BloodType;
   dateOfBirth?: string;
 }
 
