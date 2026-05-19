@@ -57,16 +57,16 @@ export const useAlertResponses = (alertId: string) => {
     queryKey: QUERY_KEYS.alertResponses(alertId),
     queryFn: () => alertsApi.getResponses(alertId),
     enabled: !!alertId,
-    refetchInterval: 10_000, // Polling léger en plus du socket
+    refetchInterval: 10_000,
     staleTime: 5_000,
   });
 };
 
 export const useActiveEngagement = () => {
   return useQuery({
-    queryKey: QUERY_KEYS.activeEngagement, // Ajoute "activeEngagement" dans tes constants
+    queryKey: QUERY_KEYS.activeEngagement,
     queryFn: () => usersApi.getActiveEngagement(),
-    refetchInterval: 60_000, // Vérifie toutes les minutes
+    refetchInterval: 60_000,
     staleTime: 30_000,
   });
 };

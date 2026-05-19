@@ -39,6 +39,7 @@ export const QUERY_KEYS = {
   myStructure: ["health-structures", "me"],
   myStructureStaff: ["health-structures", "me", "staff"],
   myStructureStats: ["health-structures", "me", "stats"],
+  structureStats: ["structure", "stats"],
 
   // Notifications
   myNotifications: ["notifications", "me"],
