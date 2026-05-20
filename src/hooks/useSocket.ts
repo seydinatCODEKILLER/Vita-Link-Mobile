@@ -185,6 +185,10 @@ export const useSocket = () => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.alert(data.alertId),
       });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.alertResponses(data.alertId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
     });
 
     // ── 5. ALERTE FERMÉE ─────────────────────────────────────
@@ -199,6 +203,46 @@ export const useSocket = () => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.alert(data.alertId),
       });
+
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.alertResponses(data.alertId),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
+    });
+
+    // ── 6. NOUVELLE RÉPONSE DONNEUR (Pour l'hôpital) ────────
+    socket.on("response:new", (data: { alertId: string }) => {
+      logger.info("🚶 Nouveau donneur confirmé sur l'alerte :", data.alertId);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // ✅ Invalide le cache du Dashboard Médical pour forcer le rafraîchissement
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.alertResponses(data.alertId),
+      });
+    });
+
+    // ── 7. DONNEUR ARRIVÉ (Pour l'hôpital) ───────────────────
+    socket.on("response:arrived", (data: { alertId: string }) => {
+      logger.info("🏥 Donneur arrivé sur l'alerte :", data.alertId);
+
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.alertResponses(data.alertId),
+      });
+    });
+
+    // ── 8. STOCK MIS À JOUR (Pour l'hôpital) ──────────────────
+    socket.on("stock:updated", (data) => {
+      logger.info("🩸 Stock de sang mis à jour via Socket :", data.bloodType);
+
+      // ✅ Invalidation avec la clé déclarée
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodStocks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStats });
+    });
+
+    socket.on("stock:critical", (data) => {
+      logger.info("🚨 Stock critique signalé aux admins :", data);
+      queryClient.invalidateQueries({ queryKey: ["admin", "stocks"] });
     });
 
     socketRef.current = socket;
@@ -229,5 +273,5 @@ export const useSocket = () => {
     };
   }, [connect, disconnect]);
 
-  return { disconnect };
+  return { disconnect, socketRef };
 };

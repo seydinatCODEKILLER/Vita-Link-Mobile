@@ -1,4 +1,8 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { donationsApi } from "@/src/api/donations.api";
 import { QUERY_KEYS } from "@/src/constants/query_key";
 
@@ -15,5 +19,19 @@ export const useMyDonations = () => {
       return undefined;
     },
     staleTime: 30_000,
+  });
+};
+
+export const useScanDonation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (qrCode: string) => donationsApi.scanAndValidate(qrCode),
+    onSuccess: (data) => {
+      // Invalider les caches pertinents après un scan réussi
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
+      queryClient.invalidateQueries({ queryKey: ["structureDonations"] });
+      queryClient.invalidateQueries({ queryKey: ["bloodStocks"] });
+    },
   });
 };

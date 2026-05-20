@@ -117,6 +117,7 @@ export default function HealthHomeScreen() {
   const { data: alertsData, isLoading: alertsLoading } = useMyStructureAlerts({
     status: "ACTIVE",
   });
+  
 
   const fabScale = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;

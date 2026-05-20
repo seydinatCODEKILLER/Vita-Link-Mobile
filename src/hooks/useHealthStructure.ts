@@ -5,7 +5,7 @@ import { QUERY_KEYS } from "@/src/constants/query_key";
 // ── Stats du dashboard structure ───────────────────────────────
 export const useStructureStats = () => {
   return useQuery({
-    queryKey: QUERY_KEYS.structureStats,
+    queryKey: QUERY_KEYS.myStructureStats,
     queryFn: () => healthStructuresApi.getMyStats(),
     staleTime: 30_000,
   });

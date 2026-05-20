@@ -30,3 +30,15 @@ export interface HealthStructure {
   verifiedAt: string | null;
   createdAt: string;
 }
+
+export interface StaffMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  avatarUrl: string | null;
+  isStructureAdmin: boolean;
+  isActive: boolean;
+  createdAt: string;
+}

@@ -32,8 +32,8 @@ export const QUERY_KEYS = {
   rewards: ["rewards"],
   myCoupons: ["coupons", "me"],
 
-  // Blood Stocks
-  myStocks: ["blood-stocks", "me"],
+  // ✅ Blood Stocks
+  bloodStocks: ["blood-stocks", "me"],
 
   // Health Structures
   myStructure: ["health-structures", "me"],

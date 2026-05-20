@@ -197,6 +197,7 @@ export default function AlertDashboardScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
+  const { socketRef } = useSocket();
 
   const { data, isLoading } = useAlertResponses(alertId);
   const { mutateAsync: closeAlert, isPending: isClosing } = useCloseAlert();
@@ -215,38 +216,20 @@ export default function AlertDashboardScreen() {
   // ── Écoute Socket.io pour le TEMPS RÉEL ──
   useSocket(); // S'assure que le socket est connecté
 
+  // ── Gestion des Rooms Temps Réel ──
   useEffect(() => {
-    if (!alertId) return;
+    if (!alertId || !socketRef.current) return;
 
-    const handleNewResponse = (data: any) => {
-      if (data?.alertId === alertId) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        // Invalide le cache React Query pour rafraîchir la liste instantanément
-        queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.alertResponses(alertId),
-        });
-      }
-    };
+    const socket = socketRef.current;
 
-    const handleAlertClosed = (data: any) => {
-      if (data?.alertId === alertId) {
-        Alert.alert(
-          "Alerte Fermée",
-          "L'alerte a été clôturée ou le quota est atteint.",
-        );
-        router.back();
-      }
-    };
+    // 1. Rejoindre la room de l'alerte pour recevoir les "response:new"
+    socket.emit("join:alert", { alertId });
 
-    // TODO: Attacher ces événements à ton instance Socket.io globale
-    // socket.on("response:new", handleNewResponse);
-    // socket.on("alert:closed", handleAlertClosed);
-
+    // 2. Nettoyer en quittant la room quand on ferme l'écran
     return () => {
-      // socket.off("response:new", handleNewResponse);
-      // socket.off("alert:closed", handleAlertClosed);
+      socket.emit("leave:alert", { alertId });
     };
-  }, [alertId]);
+  }, [alertId, socketRef]);
 
   const handleCloseAlert = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
