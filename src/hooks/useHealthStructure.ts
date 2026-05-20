@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { healthStructuresApi } from "@/src/api/healthStructures.api";
 import { QUERY_KEYS } from "@/src/constants/query_key";
 
@@ -17,5 +17,24 @@ export const useMyStructure = () => {
     queryKey: QUERY_KEYS.myStructure,
     queryFn: () => healthStructuresApi.getMyStructure(),
     staleTime: 60_000,
+  });
+};
+
+// ── Modifier ma structure (Directeur) ──────────────────────────
+export const useUpdateMyStructure = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: {
+      name?: string;
+      address?: string;
+      latitude?: number;
+      longitude?: number;
+    }) => healthStructuresApi.updateMyStructure(data),
+    onSuccess: () => {
+      // Invalide le cache pour que le profil et l'écran d'accueil se mettent à jour
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructure });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me }); // Pour mettre à jour l'objet léger du store Auth
+    },
   });
 };

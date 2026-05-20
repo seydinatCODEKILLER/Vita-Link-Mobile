@@ -153,6 +153,7 @@ export default function HealthLayout() {
         <Tabs.Screen name="alerts/[id]/index" options={{ href: null }} />
         <Tabs.Screen name="alerts/[id]/dashboard" options={{ href: null }} />
         <Tabs.Screen name="staff/index" options={{ href: null }} />
+        <Tabs.Screen name="profile/edit" options={{ href: null }} />
         <Tabs.Screen name="staff/add" options={{ href: null }} />
       </Tabs>
     </View>
