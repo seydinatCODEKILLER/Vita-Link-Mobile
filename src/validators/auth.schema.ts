@@ -14,6 +14,23 @@ export const bloodTypeValues = [
   "O_NEG",
 ] as const;
 
+export const SENEGAL_REGIONS = [
+  "Dakar",
+  "Diourbel",
+  "Fatick",
+  "Kaffrine",
+  "Kaolack",
+  "Kédougou",
+  "Kolda",
+  "Louga",
+  "Matam",
+  "Sédhiou",
+  "Saint-Louis",
+  "Tambacounda",
+  "Thiès",
+  "Ziguinchor",
+] as const;
+
 export const phoneRegex = /^\+?[1-9]\d{7,14}$/;
 
 // ─── Register Donor — Step 1 : Identité ──────────────────────
@@ -45,7 +62,7 @@ export const donorStep3Schema = z.object({
   dateOfBirth: z
     .string()
     .optional()
-    .refine((val) => !val || !isNaN(Date.parse(val)), "Date invalide")
+    .refine((val) => !val || !isNaN(Date.parse(val)), "Date invalide"),
 });
 
 export type DonorStep1Values = z.infer<typeof donorStep1Schema>;
@@ -104,12 +121,18 @@ export const structureStep2Schema = z.object({
     .trim()
     .min(3, "Numéro d'enregistrement invalide"),
   address: z.string().trim().min(5, "Adresse trop courte"),
+
+  region: z.enum(SENEGAL_REGIONS, {
+    message: "Veuillez sélectionner une région",
+  }),
+
   structurePhone: z
     .string()
     .trim()
     .regex(phoneRegex, "Numéro invalide")
     .optional()
     .or(z.literal("")),
+
   structureEmail: z
     .string()
     .trim()

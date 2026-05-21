@@ -426,7 +426,6 @@ const styles = StyleSheet.create({
     padding: 13,
   },
   closedBannerText: { fontSize: 13, fontWeight: "600" },
-
   // Summary
   summaryCard: {
     backgroundColor: COLORS.cardBg,

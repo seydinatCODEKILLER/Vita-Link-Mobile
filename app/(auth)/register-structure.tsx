@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Keyboard,
 } from "react-native";
+import { FormSelect } from "@/src/components/ui/FormSelect";
+import { SENEGAL_REGIONS } from "@/src/validators/auth.schema";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -186,6 +188,7 @@ export default function RegisterStructureScreen() {
       structureName: "",
       registrationNumber: "",
       address: "",
+      region: undefined,
       structurePhone: "",
       structureEmail: "",
     },
@@ -224,6 +227,7 @@ export default function RegisterStructureScreen() {
             password: finalData.password,
             structureName: finalData.structureName,
             registrationNumber: finalData.registrationNumber,
+            region: finalData.region,
             address: finalData.address,
             structurePhone: finalData.structurePhone || undefined,
             structureEmail: finalData.structureEmail || undefined,
@@ -380,6 +384,22 @@ export default function RegisterStructureScreen() {
             onChangeText={field.onChange}
             error={fieldState.error?.message}
             autoCapitalize="characters"
+          />
+        )}
+      />
+
+      <Controller
+        control={form2.control}
+        name="region"
+        render={({ field, fieldState }) => (
+          <FormSelect
+            label="Région"
+            icon="map-outline"
+            placeholder="Sélectionnez la région..."
+            value={field.value}
+            options={SENEGAL_REGIONS}
+            onSelect={field.onChange}
+            error={fieldState.error?.message}
           />
         )}
       />

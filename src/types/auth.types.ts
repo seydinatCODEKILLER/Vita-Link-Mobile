@@ -69,6 +69,7 @@ export interface RegisterStructurePayload {
   // Structure
   structureName: string;
   registrationNumber: string;
+  region: string;
   address: string;
   structurePhone?: string;
   structureEmail?: string;
