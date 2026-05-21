@@ -10,14 +10,18 @@ import {
   TouchableWithoutFeedback,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs"; // <-- AJOUT ICI
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { FormInput } from "@/src/components/ui/FormInput"; // Assure-toi que ce composant existe
+import { FormInput } from "@/src/components/ui/FormInput";
 import { healthStructuresApi } from "@/src/api/healthStructures.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/src/constants/query_key";
@@ -25,12 +29,12 @@ import { QUERY_KEYS } from "@/src/constants/query_key";
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
   bg: "#080808",
+  cardBg: "#111111",
+  cardBorder: "rgba(255,255,255,0.07)",
   red: "#DC1E1E",
   white: "#FFFFFF",
   textMuted: "rgba(255,255,255,0.40)",
   textSubtle: "rgba(255,255,255,0.18)",
-  cardBg: "rgba(255,255,255,0.05)",
-  cardBorder: "rgba(255,255,255,0.09)",
   success: "#22C55E",
   amber: "#FAC775",
 } as const;
@@ -49,14 +53,11 @@ type AddStaffValues = z.infer<typeof addStaffSchema>;
 export default function AddStaffScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight(); // <-- UTILISATION DU HOOK
   const [isPending, setIsPending] = useState(false);
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<AddStaffValues>({
+  const { control, handleSubmit, watch } = useForm<AddStaffValues>({
     resolver: zodResolver(addStaffSchema),
     defaultValues: {
       firstName: "",
@@ -69,11 +70,25 @@ export default function AddStaffScreen() {
 
   const watchedPassword = watch("password");
 
+  const getPasswordStrength = () => {
+    if (!watchedPassword)
+      return { pct: 0, color: COLORS.textSubtle, label: "" };
+    const hasUpper = /[A-Z]/.test(watchedPassword);
+    const hasDigit = /[0-9]/.test(watchedPassword);
+    const score = [watchedPassword.length >= 8, hasUpper, hasDigit].filter(
+      Boolean,
+    ).length;
+    if (score === 3) return { pct: 100, color: COLORS.success, label: "Fort" };
+    if (score === 2) return { pct: 66, color: COLORS.amber, label: "Moyen" };
+    return { pct: 33, color: COLORS.red, label: "Faible" };
+  };
+
+  const strength = getPasswordStrength();
+
   const onSubmit = async (data: AddStaffValues) => {
     Keyboard.dismiss();
     setIsPending(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     try {
       await healthStructuresApi.addStaff(data);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -82,172 +97,169 @@ export default function AddStaffScreen() {
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error: any) {
-      const msg = error?.response?.data?.message || "Erreur lors de l'ajout.";
-      Alert.alert("Échec", msg);
+      Alert.alert(
+        "Échec",
+        error?.response?.data?.message || "Erreur lors de l'ajout.",
+      );
     } finally {
       setIsPending(false);
     }
   };
 
-  // Indicateur force mot de passe simplifié
-  const getPasswordStrength = () => {
-    if (!watchedPassword)
-      return { pct: 0, color: COLORS.textSubtle, label: "" };
-    const hasUpper = /[A-Z]/.test(watchedPassword);
-    const hasDigit = /[0-9]/.test(watchedPassword);
-    const strength = [watchedPassword.length >= 8, hasUpper, hasDigit].filter(
-      Boolean,
-    ).length;
-
-    if (strength === 3)
-      return { pct: 100, color: COLORS.success, label: "Fort" };
-    if (strength === 2) return { pct: 66, color: COLORS.amber, label: "Moyen" };
-    return { pct: 33, color: COLORS.red, label: "Faible" };
-  };
-
-  const strength = getPasswordStrength();
-
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <SafeAreaView style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            activeOpacity={0.7}
+      <View style={styles.container}>
+        <SafeAreaView style={styles.safeArea} edges={["top"]}>
+          {/* ── Header ── */}
+          <View style={styles.header}>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Nouvel Agent</Text>
+            <View style={{ width: 38 }} />
+          </View>
+
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[
+              styles.scrollContent,
+              // On inclut la tabBarHeight ici aussi pour le scroll
+              { paddingBottom: 120 + tabBarHeight },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Ionicons name="arrow-back" size={19} color={COLORS.white} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Nouvel Agent</Text>
-          <View style={{ width: 40 }} />
-        </View>
+            {/* Info Block */}
+            <View style={styles.infoCard}>
+              <Ionicons
+                name="information-circle-outline"
+                size={17}
+                color={COLORS.success}
+              />
+              <Text style={styles.infoText}>
+                L&apos;agent créé sera automatiquement rattaché à votre
+                structure de santé.
+              </Text>
+            </View>
 
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Info Block */}
-          <View style={styles.infoCard}>
-            <Ionicons
-              name="information-circle-outline"
-              size={18}
-              color={COLORS.success}
-            />
-            <Text style={styles.infoText}>
-              L&apos;agent créée sera automatiquement rattaché à votre structure
-              de santé.
-            </Text>
-          </View>
-
-          <View style={{ gap: 2 }}>
-            <Controller
-              control={control}
-              name="firstName"
-              render={({ field, fieldState }) => (
-                <FormInput
-                  label="Prénom"
-                  icon="person-outline"
-                  placeholder="Mamadou"
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={fieldState.error?.message}
-                  autoCapitalize="words"
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="lastName"
-              render={({ field, fieldState }) => (
-                <FormInput
-                  label="Nom"
-                  icon="person-outline"
-                  placeholder="Diop"
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={fieldState.error?.message}
-                  autoCapitalize="words"
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="email"
-              render={({ field, fieldState }) => (
-                <FormInput
-                  label="Email professionnel"
-                  icon="mail-outline"
-                  placeholder="m.diop@hopital.sn"
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={fieldState.error?.message}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="phone"
-              render={({ field, fieldState }) => (
-                <FormInput
-                  label="Téléphone"
-                  sublabel="(+221)"
-                  icon="call-outline"
-                  placeholder="77 123 45 67"
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={fieldState.error?.message}
-                  keyboardType="phone-pad"
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="password"
-              render={({ field, fieldState }) => (
-                <FormInput
-                  label="Mot de passe"
-                  icon="lock-closed-outline"
-                  placeholder="Min. 8 caractères"
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={fieldState.error?.message}
-                  isPassword
-                />
-              )}
-            />
-
-            {/* Force Mot de passe */}
-            {watchedPassword.length > 0 && (
-              <View style={styles.strengthRow}>
-                <View style={styles.strengthBarBg}>
-                  <View
-                    style={[
-                      styles.strengthBarFill,
-                      {
-                        width: `${strength.pct}%`,
-                        backgroundColor: strength.color,
-                      },
-                    ]}
+            <View style={{ gap: 2 }}>
+              <Controller
+                control={control}
+                name="firstName"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    label="Prénom"
+                    icon="person-outline"
+                    placeholder="Mamadou"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={fieldState.error?.message}
+                    autoCapitalize="words"
                   />
-                </View>
-                <Text style={[styles.strengthText, { color: strength.color }]}>
-                  {strength.label}
-                </Text>
-              </View>
-            )}
-          </View>
-        </ScrollView>
+                )}
+              />
+              <Controller
+                control={control}
+                name="lastName"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    label="Nom"
+                    icon="person-outline"
+                    placeholder="Diop"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={fieldState.error?.message}
+                    autoCapitalize="words"
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="email"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    label="Email professionnel"
+                    icon="mail-outline"
+                    placeholder="m.diop@hopital.sn"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={fieldState.error?.message}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    label="Téléphone"
+                    sublabel="(+221)"
+                    icon="call-outline"
+                    placeholder="77 123 45 67"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={fieldState.error?.message}
+                    keyboardType="phone-pad"
+                  />
+                )}
+              />
+              <Controller
+                control={control}
+                name="password"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    label="Mot de passe"
+                    icon="lock-closed-outline"
+                    placeholder="Min. 8 caractères"
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={fieldState.error?.message}
+                    isPassword
+                  />
+                )}
+              />
 
-        {/* Footer CTA */}
-        <View style={styles.footer}>
+              {/* Indicateur force mot de passe */}
+              {watchedPassword.length > 0 && (
+                <View style={styles.strengthRow}>
+                  <View style={styles.strengthBg}>
+                    <View
+                      style={[
+                        styles.strengthFill,
+                        {
+                          width: `${strength.pct}%` as any,
+                          backgroundColor: strength.color,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text
+                    style={[styles.strengthLabel, { color: strength.color }]}
+                  >
+                    {strength.label}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+
+        {/* ── Footer fixe — respecte la home indicator iOS ET la Tab Bar ── */}
+        <View
+          style={[
+            styles.footer,
+            {
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 16,
+              marginBottom: tabBarHeight, // <-- AJOUT ICI : pousse le footer au-dessus de la Tab Bar
+            },
+          ]}
+        >
           <TouchableOpacity
             onPress={handleSubmit(onSubmit)}
             activeOpacity={0.85}
@@ -270,7 +282,7 @@ export default function AddStaffScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </View>
     </TouchableWithoutFeedback>
   );
 }
@@ -278,8 +290,9 @@ export default function AddStaffScreen() {
 // ─── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
+  safeArea: { flex: 1 },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 10 },
 
   // Header
   header: {
@@ -290,28 +303,28 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   headerTitle: { color: COLORS.white, fontSize: 20, fontWeight: "800" },
 
-  // Info
+  // Info card
   infoCard: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
-    backgroundColor: "rgba(34,197,94,0.07)",
-    borderRadius: 14,
-    borderWidth: 1,
+    backgroundColor: "rgba(34,197,94,0.06)",
+    borderRadius: 13,
+    borderWidth: 0.5,
     borderColor: "rgba(34,197,94,0.18)",
-    padding: 14,
-    marginBottom: 24,
+    padding: 13,
+    marginBottom: 22,
   },
   infoText: {
     flex: 1,
@@ -320,7 +333,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Strength
+  // Password strength
   strengthRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -329,17 +342,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     marginLeft: 4,
   },
-  strengthBarBg: {
+  strengthBg: {
     flex: 1,
     height: 3,
     borderRadius: 2,
     backgroundColor: "rgba(255,255,255,0.07)",
   },
-  strengthBarFill: { height: "100%", borderRadius: 2 },
-  strengthText: { fontSize: 11, fontWeight: "700" },
+  strengthFill: { height: "100%", borderRadius: 2 },
+  strengthLabel: { fontSize: 11, fontWeight: "700" },
 
   // Footer
-  footer: { paddingHorizontal: 24, paddingBottom: 10 },
+  footer: {
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: COLORS.bg,
+    borderTopWidth: 0.5,
+    borderTopColor: COLORS.cardBorder,
+  },
   ctaBtn: {
     flexDirection: "row",
     alignItems: "center",

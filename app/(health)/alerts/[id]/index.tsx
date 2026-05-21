@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useAlert } from "@/src/hooks/useAlerts";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { useAuthStore } from "@/src/store/auth.store";
@@ -35,21 +36,29 @@ export default function AlertDetailScreen() {
   const router = useRouter();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
+  const tabBarHeight = useBottomTabBarHeight();
 
-  // ⚠️ Les hooks doivent TOUJOURS être avant les conditions de retour (return)
   const { data: alert, isLoading } = useAlert(alertId);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(14)).current;
 
   useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        friction: 9,
+        tension: 55,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
-  // ─── Loading State ──
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -58,7 +67,6 @@ export default function AlertDetailScreen() {
     );
   }
 
-  // ─── Error / Empty State ──
   if (!alert) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -67,22 +75,24 @@ export default function AlertDetailScreen() {
           size={48}
           color={COLORS.textMuted}
         />
-        <Text style={{ color: COLORS.textMuted, marginTop: 12 }}>
-          Alerte introuvable
-        </Text>
+        <Text style={styles.notFoundText}>Alerte introuvable</Text>
       </View>
     );
   }
 
-  // ─── Data Formatting ──
   const isVital = alert.urgencyLevel === "VITAL";
   const isActive = alert.status === "ACTIVE";
   const isExpired = alert.status === "EXPIRED";
+
   const bloodLabel =
     BLOOD_TYPE_LABELS[alert.bloodType] ?? alert.bloodType.replaceAll("_", "");
   const formattedExpiresAt = alert.expiresAt
     ? dayjs(alert.expiresAt).format("HH:mm")
     : "—";
+  const progressPct = Math.min(
+    (alert.quantityConfirmed / alert.quantityNeeded) * 100,
+    100,
+  );
 
   const handleGoBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -97,132 +107,228 @@ export default function AlertDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: tabBarHeight + 24 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={{ opacity: fadeAnim, gap: 20 }}>
+        <Animated.View
+          style={{
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+            gap: 12,
+          }}
+        >
           {/* ── Header ── */}
           <View style={styles.header}>
             <TouchableOpacity
               onPress={handleGoBack}
               style={styles.backBtn}
               activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Retour"
             >
               <Ionicons name="arrow-back" size={19} color={COLORS.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Détails Alerte</Text>
-            <View style={{ width: 40 }} />
+            <View style={{ width: 38 }} />
           </View>
 
-          {/* ── Carte Identité Alerte ── */}
-          <View style={styles.identityCard}>
+          {/* ── Hero Card ── */}
+          <View
+            style={[
+              styles.heroCard,
+              {
+                borderColor: isVital
+                  ? "rgba(220,30,30,0.30)"
+                  : "rgba(250,199,117,0.22)",
+              },
+            ]}
+          >
+            {/* Glow décoratif */}
             <View
               style={[
-                styles.bloodBadge,
-                isVital ? styles.badgeVital : styles.badgeStd,
-              ]}
-            >
-              <Text style={styles.bloodBadgeText}>{bloodLabel}</Text>
-            </View>
-            <View style={styles.identityInfo}>
-              <Text style={styles.hospitalName}>
-                {alert.healthStructure?.name ?? "Structure"}
-              </Text>
-              <Text style={styles.serviceUnit}>
-                {alert.serviceUnit?.replaceAll("_", " ") ?? "Urgence"}
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.statusDot,
+                styles.heroGlow,
                 {
-                  backgroundColor: isActive
-                    ? COLORS.green
-                    : isExpired
-                      ? COLORS.amber
-                      : COLORS.textSubtle,
+                  backgroundColor: isVital
+                    ? "rgba(220,30,30,0.10)"
+                    : "rgba(250,199,117,0.08)",
                 },
               ]}
             />
-          </View>
 
-          {/* ── Infos Clés ── */}
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Ionicons name="water-outline" size={18} color={COLORS.red} />
-              <Text style={styles.infoLabel}>Besoin</Text>
-              <Text style={styles.infoValue}>
-                {alert.quantityNeeded} poches
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={18}
-                color={COLORS.green}
-              />
-              <Text style={styles.infoLabel}>Confirmés</Text>
-              <Text style={styles.infoValue}>
-                {alert.quantityConfirmed} / {alert.quantityNeeded}
-              </Text>
-            </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="flash-outline" size={18} color={COLORS.amber} />
-              <Text style={styles.infoLabel}>Urgence</Text>
-              <Text
+            {/* Identité */}
+            <View style={styles.heroTop}>
+              <View
                 style={[
-                  styles.infoValue,
-                  { color: isVital ? COLORS.red : COLORS.amber },
+                  styles.bloodBadge,
+                  isVital ? styles.badgeVital : styles.badgeStd,
                 ]}
               >
-                {isVital ? "Vitale" : "Standard"}
+                <Text style={styles.bloodBadgeText}>{bloodLabel}</Text>
+              </View>
+
+              <View style={styles.heroInfo}>
+                <Text style={styles.hospitalName} numberOfLines={2}>
+                  {alert.healthStructure?.name ?? "Structure"}
+                </Text>
+                <Text style={styles.serviceUnit}>
+                  {alert.serviceUnit?.replaceAll("_", " ") ?? "Urgence"}
+                </Text>
+                {isVital && (
+                  <View style={styles.vitalPill}>
+                    <Ionicons name="flash" size={10} color={COLORS.red} />
+                    <Text style={styles.vitalPillText}>VITAL</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Statut */}
+            <View
+              style={[
+                styles.statusRow,
+                isActive
+                  ? styles.statusActive
+                  : isExpired
+                    ? styles.statusExpired
+                    : styles.statusClosed,
+              ]}
+            >
+              <View
+                style={[
+                  styles.statusDot,
+                  {
+                    backgroundColor: isActive
+                      ? COLORS.green
+                      : isExpired
+                        ? COLORS.amber
+                        : COLORS.textSubtle,
+                  },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.statusText,
+                  {
+                    color: isActive
+                      ? COLORS.green
+                      : isExpired
+                        ? COLORS.amber
+                        : COLORS.textMuted,
+                  },
+                ]}
+              >
+                {isActive
+                  ? "Alerte active"
+                  : isExpired
+                    ? "Expirée"
+                    : "Clôturée"}
               </Text>
             </View>
-            <View style={styles.infoItem}>
-              <Ionicons name="time-outline" size={18} color={COLORS.blue} />
-              <Text style={styles.infoLabel}>Expire</Text>
+          </View>
+
+          {/* ── Info Grid ── */}
+          <View style={styles.infoGrid}>
+            <View style={styles.infoCard}>
+              <View
+                style={[
+                  styles.infoIcon,
+                  { backgroundColor: "rgba(220,30,30,0.13)" },
+                ]}
+              >
+                <Ionicons name="water-outline" size={15} color={COLORS.red} />
+              </View>
+              <Text style={styles.infoLabel}>BESOIN</Text>
+              <View style={styles.infoValueRow}>
+                <Text style={styles.infoValue}>{alert.quantityNeeded}</Text>
+                <Text style={styles.infoUnit}>poches</Text>
+              </View>
+            </View>
+
+            <View style={styles.infoCard}>
+              <View
+                style={[
+                  styles.infoIcon,
+                  { backgroundColor: "rgba(250,199,117,0.13)" },
+                ]}
+              >
+                <Ionicons name="time-outline" size={15} color={COLORS.amber} />
+              </View>
+              <Text style={styles.infoLabel}>EXPIRE À</Text>
               <Text style={styles.infoValue}>{formattedExpiresAt}</Text>
             </View>
           </View>
 
-          {/* ── Bloc Action ── */}
-          {isActive && user?.isStructureAdmin && (
-            <View style={styles.actionsBlock}>
-              <TouchableOpacity
-                style={styles.dashboardBtn}
-                onPress={handleGoToDashboard}
-                activeOpacity={0.8}
-                accessibilityRole="button"
+          {/* ── Barre de progression donneurs ── */}
+          <View style={styles.progressCard}>
+            <View style={styles.progressHead}>
+              <Text style={styles.progressLabel}>Donneurs confirmés</Text>
+              <Text
+                style={[
+                  styles.progressCount,
+                  { color: progressPct >= 100 ? COLORS.green : COLORS.white },
+                ]}
               >
-                <Ionicons name="pulse-outline" size={20} color={COLORS.white} />
-                <Text style={styles.dashboardBtnText}>
-                  Dashboard Temps Réel
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={COLORS.textSubtle}
-                />
-              </TouchableOpacity>
+                {alert.quantityConfirmed} / {alert.quantityNeeded}
+              </Text>
             </View>
+            <View style={styles.progressBg}>
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${progressPct}%` as any,
+                    backgroundColor:
+                      progressPct >= 100 ? COLORS.green : COLORS.red,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressSub}>
+              {progressPct >= 100
+                ? "Quota atteint ✓"
+                : `${alert.quantityNeeded - alert.quantityConfirmed} donneur${alert.quantityNeeded - alert.quantityConfirmed > 1 ? "s" : ""} manquant${alert.quantityNeeded - alert.quantityConfirmed > 1 ? "s" : ""}`}
+            </Text>
+          </View>
+
+          {/* ── Bouton Dashboard ── */}
+          {isActive && user?.isStructureAdmin && (
+            <TouchableOpacity
+              style={styles.dashboardBtn}
+              onPress={handleGoToDashboard}
+              activeOpacity={0.85}
+            >
+              <View style={styles.dashboardBtnIcon}>
+                <Ionicons name="pulse-outline" size={19} color={COLORS.white} />
+              </View>
+              <Text style={styles.dashboardBtnText}>Dashboard Temps Réel</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={15}
+                color="rgba(255,255,255,0.45)"
+              />
+            </TouchableOpacity>
           )}
 
           {/* ── Alerte terminée ── */}
           {!isActive && (
             <View style={styles.closedCard}>
-              <Ionicons
-                name="checkmark-done-circle-outline"
-                size={24}
-                color={COLORS.green}
-              />
-              <View style={{ flex: 1, gap: 4 }}>
+              <View style={styles.closedIconWrap}>
+                <Ionicons
+                  name="checkmark-done-circle-outline"
+                  size={22}
+                  color={COLORS.green}
+                />
+              </View>
+              <View style={{ flex: 1, gap: 3 }}>
                 <Text style={styles.closedTitle}>
                   Alerte {isExpired ? "expirée" : "clôturée"}
                 </Text>
                 <Text style={styles.closedSub}>
-                  {alert.quantityConfirmed} donneurs se sont présentés.
+                  {alert.quantityConfirmed} donneur
+                  {alert.quantityConfirmed > 1 ? "s" : ""} se
+                  {alert.quantityConfirmed > 1 ? " sont" : " s'est"} présenté
+                  {alert.quantityConfirmed > 1 ? "s" : ""}.
                 </Text>
               </View>
             </View>
@@ -236,76 +342,130 @@ export default function AlertDetailScreen() {
 // ─── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  centered: { alignItems: "center", justifyContent: "center" },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40 },
+  centered: { alignItems: "center", justifyContent: "center", gap: 12 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10 },
+  notFoundText: { color: COLORS.textMuted, fontSize: 15, marginTop: 8 },
 
   // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingBottom: 20,
+    paddingBottom: 10,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
     borderRadius: 12,
     backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: COLORS.cardBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   headerTitle: { color: COLORS.white, fontSize: 18, fontWeight: "800" },
 
-  // Identity
-  identityCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
+  // Hero Card
+  heroCard: {
     backgroundColor: COLORS.cardBg,
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    padding: 16,
-    marginBottom: 16,
+    padding: 18,
+    gap: 14,
+    overflow: "hidden",
+    position: "relative",
   },
+  heroGlow: {
+    position: "absolute",
+    top: -30,
+    right: -30,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    opacity: 0.6,
+  },
+  heroTop: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   bloodBadge: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
+    width: 58,
+    height: 58,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   badgeVital: {
-    backgroundColor: "rgba(220,30,30,0.15)",
-    borderWidth: 1,
+    backgroundColor: "rgba(220,30,30,0.14)",
+    borderWidth: 0.5,
     borderColor: "rgba(220,30,30,0.40)",
   },
   badgeStd: {
     backgroundColor: "rgba(250,199,117,0.10)",
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "rgba(250,199,117,0.30)",
   },
-  bloodBadgeText: { color: COLORS.white, fontSize: 18, fontWeight: "900" },
-  identityInfo: { flex: 1, gap: 4 },
-  hospitalName: { color: COLORS.white, fontSize: 16, fontWeight: "700" },
+  bloodBadgeText: { color: COLORS.white, fontSize: 20, fontWeight: "900" },
+  heroInfo: { flex: 1, gap: 5 },
+  hospitalName: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: -0.2,
+  },
   serviceUnit: {
     color: COLORS.textMuted,
     fontSize: 13,
     textTransform: "capitalize",
   },
-  statusDot: { width: 10, height: 10, borderRadius: 5 },
+  vitalPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(220,30,30,0.13)",
+    borderWidth: 0.5,
+    borderColor: "rgba(220,30,30,0.35)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 7,
+    marginTop: 2,
+  },
+  vitalPillText: {
+    color: COLORS.red,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+
+  // Status
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 10,
+    borderRadius: 11,
+  },
+  statusActive: {
+    backgroundColor: "rgba(29,158,117,0.07)",
+    borderWidth: 0.5,
+    borderColor: "rgba(29,158,117,0.20)",
+  },
+  statusExpired: {
+    backgroundColor: "rgba(250,199,117,0.07)",
+    borderWidth: 0.5,
+    borderColor: "rgba(250,199,117,0.20)",
+  },
+  statusClosed: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderWidth: 0.5,
+    borderColor: COLORS.cardBorder,
+  },
+  statusDot: { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
+  statusText: { fontSize: 12, fontWeight: "700" },
 
   // Info Grid
-  infoGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 20,
-  },
-  infoItem: {
-    width: "47%",
+  infoGrid: { flexDirection: "row", gap: 9 },
+  infoCard: {
+    flex: 1,
     backgroundColor: COLORS.cardBg,
     borderRadius: 14,
     borderWidth: 0.5,
@@ -313,19 +473,69 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 6,
   },
-  infoLabel: { color: COLORS.textMuted, fontSize: 11, fontWeight: "600" },
-  infoValue: { color: COLORS.white, fontSize: 16, fontWeight: "800" },
+  infoIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  infoLabel: {
+    color: COLORS.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  infoValueRow: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+  infoValue: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: -0.3,
+  },
+  infoUnit: { color: COLORS.textMuted, fontSize: 11, fontWeight: "600" },
 
-  // Actions
-  actionsBlock: { gap: 10 },
+  // Progress
+  progressCard: {
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 14,
+    borderWidth: 0.5,
+    borderColor: COLORS.cardBorder,
+    padding: 15,
+    gap: 10,
+  },
+  progressHead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  progressLabel: { color: COLORS.textMuted, fontSize: 12, fontWeight: "600" },
+  progressCount: { fontSize: 14, fontWeight: "800" },
+  progressBg: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.07)",
+  },
+  progressFill: { height: "100%", borderRadius: 3 },
+  progressSub: { color: COLORS.textMuted, fontSize: 11, fontWeight: "500" },
+
+  // Dashboard Button
   dashboardBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
     backgroundColor: COLORS.red,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 18,
     borderRadius: 16,
+  },
+  dashboardBtnIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   dashboardBtnText: {
     flex: 1,
@@ -343,8 +553,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 0.5,
     borderColor: COLORS.cardBorder,
-    padding: 16,
+    padding: 15,
+  },
+  closedIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(29,158,117,0.10)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   closedTitle: { color: COLORS.white, fontSize: 14, fontWeight: "700" },
-  closedSub: { color: COLORS.textMuted, fontSize: 12 },
+  closedSub: { color: COLORS.textMuted, fontSize: 12, lineHeight: 18 },
 });

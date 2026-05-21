@@ -18,7 +18,6 @@ import { useAlertResponses, useCloseAlert } from "@/src/hooks/useAlerts";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { AlertResponseStatus } from "@/src/types/shared.types";
 import { useSocket } from "@/src/hooks/useSocket";
-import { QUERY_KEYS } from "@/src/constants/query_key";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -39,34 +38,30 @@ const RESPONSE_CONFIG: Record<
   AlertResponseStatus,
   { label: string; icon: keyof typeof Ionicons.glyphMap; color: string }
 > = {
-  CONFIRMED: {
-    label: "En route",
-    icon: "walk-outline" as const,
-    color: COLORS.blue,
-  },
+  CONFIRMED: { label: "En route", icon: "walk-outline", color: COLORS.blue },
   ARRIVED: {
     label: "Arrivé",
-    icon: "checkmark-circle-outline" as const,
+    icon: "checkmark-circle-outline",
     color: COLORS.green,
   },
   DECLINED: {
     label: "Refusé",
-    icon: "close-circle-outline" as const,
+    icon: "close-circle-outline",
     color: COLORS.red,
   },
   NO_SHOW: {
     label: "Absent",
-    icon: "alert-circle-outline" as const,
+    icon: "alert-circle-outline",
     color: COLORS.amber,
   },
   CANCELLED: {
     label: "Annulé",
-    icon: "remove-circle-outline" as const,
+    icon: "remove-circle-outline",
     color: COLORS.textMuted,
   },
 };
 
-// ─── Composant Résumé (Gauge) ────────────────────────────────
+// ─── SummaryCard ─────────────────────────────────────────────
 function SummaryCard({
   confirmed,
   arrived,
@@ -117,8 +112,6 @@ function SummaryCard({
           <Text style={styles.summaryLabel}>Absents</Text>
         </View>
       </View>
-
-      {/* Barre de progression quota */}
       <View style={styles.quotaRow}>
         <Text style={styles.quotaText}>
           Quota :{" "}
@@ -132,7 +125,7 @@ function SummaryCard({
             style={[
               styles.quotaBarFill,
               {
-                width: `${Math.min(progressPct, 100)}%`,
+                width: `${Math.min(progressPct, 100)}%` as any,
                 backgroundColor: isQuotaReached ? COLORS.green : COLORS.red,
               },
             ]}
@@ -143,7 +136,7 @@ function SummaryCard({
   );
 }
 
-// ─── Composant Ligne Donneur ──────────────────────────────────
+// ─── DonorResponseRow ─────────────────────────────────────────
 function DonorResponseRow({ response }: { response: any }) {
   const config =
     RESPONSE_CONFIG[response.status as AlertResponseStatus] ??
@@ -157,7 +150,6 @@ function DonorResponseRow({ response }: { response: any }) {
           {response.donor.lastName?.[0]}
         </Text>
       </View>
-
       <View style={styles.donorInfo}>
         <Text style={styles.donorName}>
           {response.donor.firstName} {response.donor.lastName}
@@ -173,7 +165,6 @@ function DonorResponseRow({ response }: { response: any }) {
           </Text>
         )}
       </View>
-
       <View
         style={[
           styles.statusPill,
@@ -192,7 +183,7 @@ function DonorResponseRow({ response }: { response: any }) {
   );
 }
 
-// ─── Écran principal ───────────────────────────────────────────
+// ─── Écran Principal ───────────────────────────────────────────
 export default function AlertDashboardScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -204,7 +195,6 @@ export default function AlertDashboardScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // ── Animation entrée ──
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -213,25 +203,18 @@ export default function AlertDashboardScreen() {
     }).start();
   }, []);
 
-  // ── Écoute Socket.io pour le TEMPS RÉEL ──
-  useSocket(); // S'assure que le socket est connecté
+  useSocket();
 
-  // ── Gestion des Rooms Temps Réel ──
   useEffect(() => {
     if (!alertId || !socketRef.current) return;
-
     const socket = socketRef.current;
-
-    // 1. Rejoindre la room de l'alerte pour recevoir les "response:new"
     socket.emit("join:alert", { alertId });
-
-    // 2. Nettoyer en quittant la room quand on ferme l'écran
     return () => {
       socket.emit("leave:alert", { alertId });
     };
   }, [alertId, socketRef]);
 
-  const handleCloseAlert = async () => {
+  const handleCloseAlert = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     Alert.alert(
       "Fermer l'alerte ?",
@@ -245,7 +228,7 @@ export default function AlertDashboardScreen() {
             try {
               await closeAlert(alertId);
               router.back();
-            } catch (error) {
+            } catch {
               Alert.alert("Erreur", "Impossible de fermer l'alerte.");
             }
           },
@@ -264,10 +247,16 @@ export default function AlertDashboardScreen() {
 
   const { alert, responses, summary } = data;
   const isVital = alert.urgencyLevel === "VITAL";
+  const isActive = alert.status === "ACTIVE";
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    // edges={["top","bottom"]} — SafeAreaView gère la home indicator iOS
+    // Le footer est dans le flux, jamais masqué
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <Animated.View style={{ opacity: fadeAnim, gap: 20 }}>
           {/* ── Header Alerte ── */}
           <View style={styles.alertHeader}>
@@ -291,7 +280,13 @@ export default function AlertDashboardScreen() {
             <View
               style={[
                 styles.liveDot,
-                { backgroundColor: isVital ? COLORS.red : COLORS.green },
+                {
+                  backgroundColor: isActive
+                    ? isVital
+                      ? COLORS.red
+                      : COLORS.green
+                    : COLORS.textSubtle,
+                },
               ]}
             />
           </View>
@@ -303,6 +298,29 @@ export default function AlertDashboardScreen() {
             noShow={summary.noShow}
             quantityNeeded={alert.quantityNeeded}
           />
+
+          {/* ── Alerte expirée / clôturée ── */}
+          {!isActive && (
+            <View style={styles.closedBanner}>
+              <Ionicons
+                name="checkmark-done-circle-outline"
+                size={20}
+                color={alert.status === "EXPIRED" ? COLORS.amber : COLORS.green}
+              />
+              <Text
+                style={[
+                  styles.closedBannerText,
+                  {
+                    color:
+                      alert.status === "EXPIRED" ? COLORS.amber : COLORS.green,
+                  },
+                ]}
+              >
+                Alerte {alert.status === "EXPIRED" ? "expirée" : "clôturée"} —
+                lecture seule
+              </Text>
+            </View>
+          )}
 
           {/* ── Titre Liste ── */}
           <View style={styles.listHeader}>
@@ -328,28 +346,30 @@ export default function AlertDashboardScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* ── Footer Action ── */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[styles.closeBtn, isClosing && styles.closeBtnDisabled]}
-          onPress={handleCloseAlert}
-          disabled={isClosing}
-          activeOpacity={0.8}
-        >
-          {isClosing ? (
-            <ActivityIndicator color={COLORS.red} size="small" />
-          ) : (
-            <>
-              <Ionicons
-                name="close-circle-outline"
-                size={20}
-                color={COLORS.red}
-              />
-              <Text style={styles.closeBtnText}>Fermer l&apos;alerte</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* ── Footer — uniquement si l'alerte est active ── */}
+      {isActive && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.closeBtn, isClosing && styles.closeBtnDisabled]}
+            onPress={handleCloseAlert}
+            disabled={isClosing}
+            activeOpacity={0.8}
+          >
+            {isClosing ? (
+              <ActivityIndicator color={COLORS.red} size="small" />
+            ) : (
+              <>
+                <Ionicons
+                  name="close-circle-outline"
+                  size={20}
+                  color={COLORS.red}
+                />
+                <Text style={styles.closeBtnText}>Fermer l&apos;alerte</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -358,7 +378,7 @@ export default function AlertDashboardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   centered: { alignItems: "center", justifyContent: "center" },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 100 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 24 },
 
   // Header Alerte
   alertHeader: {
@@ -380,12 +400,12 @@ const styles = StyleSheet.create({
   },
   badgeVital: {
     backgroundColor: "rgba(220,30,30,0.15)",
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "rgba(220,30,30,0.40)",
   },
   badgeStd: {
     backgroundColor: "rgba(250,199,117,0.10)",
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: "rgba(250,199,117,0.30)",
   },
   bloodBadgeText: { color: COLORS.white, fontSize: 18, fontWeight: "900" },
@@ -393,6 +413,19 @@ const styles = StyleSheet.create({
   alertTitle: { color: COLORS.white, fontSize: 18, fontWeight: "800" },
   alertSub: { color: COLORS.textMuted, fontSize: 13 },
   liveDot: { width: 10, height: 10, borderRadius: 5 },
+
+  // Closed banner
+  closedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: COLORS.cardBg,
+    borderRadius: 13,
+    borderWidth: 0.5,
+    borderColor: COLORS.cardBorder,
+    padding: 13,
+  },
+  closedBannerText: { fontSize: 13, fontWeight: "600" },
 
   // Summary
   summaryCard: {
@@ -407,7 +440,11 @@ const styles = StyleSheet.create({
   summaryItem: { flex: 1, alignItems: "center", gap: 6 },
   summaryValue: { fontSize: 24, fontWeight: "900" },
   summaryLabel: { color: COLORS.textMuted, fontSize: 11, fontWeight: "600" },
-  summaryDivider: { width: 1, height: 40, backgroundColor: COLORS.cardBorder },
+  summaryDivider: {
+    width: 0.5,
+    height: 40,
+    backgroundColor: COLORS.cardBorder,
+  },
   quotaRow: { gap: 8 },
   quotaText: { color: COLORS.textMuted, fontSize: 13, fontWeight: "600" },
   quotaBarBg: {
@@ -417,7 +454,7 @@ const styles = StyleSheet.create({
   },
   quotaBarFill: { height: "100%", borderRadius: 3 },
 
-  // List Header
+  // List
   listHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -431,7 +468,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
-  // Responses List
   responsesList: {
     backgroundColor: COLORS.cardBg,
     borderRadius: 18,
@@ -475,23 +511,21 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: "center", padding: 40, gap: 12 },
   emptyText: { color: COLORS.textSubtle, fontSize: 13, textAlign: "center" },
 
-  // Footer
+  // Footer dans le flux — visible seulement si isActive
   footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     paddingHorizontal: 24,
-    paddingBottom: 30,
-    paddingTop: 16,
-    backgroundColor: "rgba(8,8,8,0.9)",
+    paddingTop: 12,
+    paddingBottom: 12,
+    backgroundColor: COLORS.bg,
+    borderTopWidth: 0.5,
+    borderTopColor: COLORS.cardBorder,
   },
   closeBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    borderWidth: 1.5,
+    borderWidth: 0.5,
     borderColor: "rgba(220,30,30,0.30)",
     backgroundColor: "rgba(220,30,30,0.05)",
     borderRadius: 16,
