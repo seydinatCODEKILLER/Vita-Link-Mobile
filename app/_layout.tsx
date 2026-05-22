@@ -32,6 +32,8 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
+        {/* ✅ QueryClientProvider contient désormais le queryClient
+            avec QueryCache + MutationCache configurés globalement */}
         <QueryClientProvider client={queryClient}>
           <StatusBar style="auto" />
           <Stack
@@ -40,13 +42,12 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: "#080808" },
             }}
           >
-            <Stack.Screen name="index" /> {/* L'aiguilleur */}
+            <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(donor)" />
             <Stack.Screen name="(health)" />
             <Stack.Screen name="+not-found" />
           </Stack>
-          {/* Ici tu pourras ajouter le Toast ou les modales globales plus tard */}
           <Toast config={toastConfig} />
         </QueryClientProvider>
       </SafeAreaProvider>

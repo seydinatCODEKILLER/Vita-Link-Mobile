@@ -16,6 +16,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useAuthStore } from "@/src/store/auth.store";
 import { useMyStaff, useRemoveStaff } from "@/src/hooks/useStaff";
 import { StaffMember } from "@/src/types/healthStructure.type";
+import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -31,7 +32,6 @@ const COLORS = {
   textSubtle: "rgba(255,255,255,0.16)",
 } as const;
 
-// Couleurs d'avatar cycliques pour différencier les agents
 const AVATAR_COLORS = [
   { bg: "rgba(29,158,117,0.14)", text: COLORS.green },
   { bg: "rgba(96,165,250,0.14)", text: COLORS.blue },
@@ -102,6 +102,7 @@ export default function StaffScreen() {
   const router = useRouter();
   const currentUser = useAuthStore((s) => s.user);
   const tabBarHeight = useBottomTabBarHeight();
+  const isPending = useIsStructurePending();
 
   const { data: staff, isLoading } = useMyStaff();
   const { mutateAsync: removeStaff } = useRemoveStaff();
@@ -140,6 +141,19 @@ export default function StaffScreen() {
     );
   };
 
+  const handleAddStaff = () => {
+    if (isPending) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        "Structure en attente de validation",
+        "Votre structure doit être approuvée par nos équipes avant de pouvoir ajouter des agents.",
+        [{ text: "Compris", style: "default" }],
+      );
+      return;
+    }
+    router.push("/(health)/staff/add" as any);
+  };
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -148,7 +162,6 @@ export default function StaffScreen() {
     );
   }
 
-  // Données pour la FlatList : sections simulées avec items typés
   type ListItem =
     | { type: "section"; label: string }
     | { type: "member"; member: StaffMember; index: number };
@@ -177,6 +190,16 @@ export default function StaffScreen() {
         </View>
         <View style={{ width: 38 }} />
       </View>
+
+      {/* ── Banner pending ── */}
+      {isPending && (
+        <View style={styles.pendingBanner}>
+          <Ionicons name="time-outline" size={15} color={COLORS.amber} />
+          <Text style={styles.pendingBannerText}>
+            Structure en attente de validation — ajout d&apos;agents désactivé
+          </Text>
+        </View>
+      )}
 
       <FlatList
         data={listData}
@@ -218,11 +241,19 @@ export default function StaffScreen() {
 
       {/* ── FAB ── */}
       <TouchableOpacity
-        style={[styles.fab, { bottom: tabBarHeight + 20 }]}
-        onPress={() => router.push("/(health)/staff/add" as any)}
-        activeOpacity={0.85}
+        style={[
+          styles.fab,
+          { bottom: tabBarHeight + 20 },
+          isPending && { backgroundColor: "#3A3A3A", shadowOpacity: 0 },
+        ]}
+        onPress={handleAddStaff}
+        activeOpacity={isPending ? 0.6 : 0.85}
       >
-        <Ionicons name="add" size={28} color={COLORS.white} />
+        <Ionicons
+          name="add"
+          size={28}
+          color={isPending ? "rgba(255,255,255,0.35)" : COLORS.white}
+        />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -255,6 +286,27 @@ const styles = StyleSheet.create({
   headerCenter: { alignItems: "center", gap: 2 },
   headerTitle: { color: COLORS.white, fontSize: 18, fontWeight: "800" },
   headerCount: { color: COLORS.textMuted, fontSize: 11, fontWeight: "600" },
+
+  // Pending Banner
+  pendingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "rgba(250,199,117,0.08)",
+    borderWidth: 0.5,
+    borderColor: "rgba(250,199,117,0.22)",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  pendingBannerText: {
+    color: COLORS.amber,
+    fontSize: 12,
+    fontWeight: "600",
+    flex: 1,
+  },
 
   // Section label
   sectionLabel: {

@@ -5,12 +5,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/src/store/auth.store";
 import { useNotifications } from "@/src/hooks/useNotifications";
+import { useLocation } from "@/src/hooks/useLocation"; // ✅ AJOUT
 import { InAppAlert } from "@/src/components/ui/InAppAlert";
 import logger from "@/src/utils/logger.utils";
 import { useSocket } from "@/src/hooks/useSocket";
 import { useAlertStore } from "@/src/store/alerts.store";
 
-// ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
   bg: "#080808",
   tabBg: "#111111",
@@ -20,7 +20,6 @@ const COLORS = {
   white: "#FFFFFF",
 } as const;
 
-// ─── Config des tabs visibles ─────────────────────────────────
 const TABS = [
   {
     name: "index",
@@ -54,13 +53,11 @@ const TABS = [
   },
 ] as const;
 
-// ─── Layout principal ─────────────────────────────────────────
 export default function HealthLayout() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const insets = useSafeAreaInsets();
 
-  // ── Guard auth & Rôle ──
   useEffect(() => {
     if (!isAuthenticated || !user) {
       router.replace("/(auth)/welcome");
@@ -71,10 +68,9 @@ export default function HealthLayout() {
     }
   }, [isAuthenticated, user]);
 
-  // ── Notifications ──
   const { requestAndRegister, startForegroundListener } = useNotifications();
+  const { requestAndSync: syncLocation } = useLocation(); // ✅ AJOUT
 
-  // ── Socket ──
   useSocket();
   const inAppAlert = useAlertStore((s) => s.inAppAlert);
   const setInAppAlert = useAlertStore((s) => s.setInAppAlert);
@@ -87,6 +83,7 @@ export default function HealthLayout() {
 
     logger.info("Initialisation permissions structure de santé...");
     const init = async () => {
+      syncLocation(); // ✅ AJOUT — met à jour la position de la structure au login
       await requestAndRegister();
       startForegroundListener();
       logger.info("Permissions structure initialisées");
@@ -101,13 +98,11 @@ export default function HealthLayout() {
   });
   const tabBarHeight = 64 + safeBottom;
 
-  if (!isAuthenticated || !user || user.role !== "HEALTH_STRUCTURE") {
+  if (!isAuthenticated || !user || user.role !== "HEALTH_STRUCTURE")
     return null;
-  }
 
   return (
     <View style={styles.container}>
-      {/* ✅ InAppAlert unifiée (Socket + Push) */}
       {inAppAlert && (
         <View style={styles.alertOverlay} pointerEvents="box-none">
           <InAppAlert
@@ -147,8 +142,6 @@ export default function HealthLayout() {
             }}
           />
         ))}
-
-        {/* Routes cachées */}
         <Tabs.Screen name="alerts/create" options={{ href: null }} />
         <Tabs.Screen name="alerts/[id]/index" options={{ href: null }} />
         <Tabs.Screen name="alerts/[id]/dashboard" options={{ href: null }} />

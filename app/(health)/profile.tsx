@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Switch,
   Alert,
   ActivityIndicator,
   Animated,
@@ -308,52 +307,6 @@ export default function HealthProfileScreen() {
               label="Email"
               value={structure?.email ?? user?.email ?? "—"}
             />
-          </View>
-        </Animated.View>
-
-        {/* ── Disponibilité Alerte ── */}
-        <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
-          <Text style={styles.sectionTitle}>PRÉFÉRENCES ALERTES</Text>
-          <View style={styles.card}>
-            <View style={[styles.row, { paddingRight: 8 }]}>
-              <View
-                style={[
-                  styles.rowIconWrap,
-                  {
-                    backgroundColor: user?.isAvailable
-                      ? COLORS.green + "14"
-                      : "rgba(255,255,255,0.05)",
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={
-                    user?.isAvailable
-                      ? "notifications"
-                      : "notifications-off-outline"
-                  }
-                  size={17}
-                  color={user?.isAvailable ? COLORS.green : COLORS.textMuted}
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowLabel}>Réception d&apos;alertes</Text>
-                <Text style={styles.rowHint}>
-                  {user?.isAvailable ? "Activées" : "En pause"}
-                </Text>
-              </View>
-              <Switch
-                trackColor={{
-                  false: "rgba(255,255,255,0.09)",
-                  true: COLORS.green,
-                }}
-                thumbColor={COLORS.white}
-                value={user?.isAvailable ?? true}
-                onValueChange={(val) => toggleAvailability(val)}
-                disabled={isTogglingAvail}
-                ios_backgroundColor="rgba(255,255,255,0.09)"
-              />
-            </View>
           </View>
         </Animated.View>
 

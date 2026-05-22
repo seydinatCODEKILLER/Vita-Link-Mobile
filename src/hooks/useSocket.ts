@@ -245,6 +245,32 @@ export const useSocket = () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "stocks"] });
     });
 
+    // ── 9. STRUCTURE VALIDÉE ─────────────────────────────────────
+    socket.on(
+      "structure:verified",
+      (data: { structureId: string; status: string; verifiedAt: string }) => {
+        logger.info("✅ Structure validée :", data.structureId);
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        // Mise à jour optimiste du store Auth
+        const currentUser = useAuthStore.getState().user;
+        if (currentUser?.employerStructure) {
+          updateUser({
+            employerStructure: {
+              ...currentUser.employerStructure,
+              status: "VERIFIED",
+              isVerified: true,
+            },
+          });
+        }
+
+        // Resync complète en arrière-plan
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructure });
+      },
+    );
+
     socketRef.current = socket;
   }, [
     user?.id,

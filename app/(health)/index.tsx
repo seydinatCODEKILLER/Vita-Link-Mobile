@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Animated,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -18,6 +19,7 @@ import { useMyStructureAlerts } from "@/src/hooks/useAlerts";
 import { useAuthStore } from "@/src/store/auth.store";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { BloodStockLevel, BloodType } from "@/src/types/shared.types";
+import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -110,14 +112,14 @@ function BloodStockRow({
 export default function HealthHomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  
+  const isPending = useIsStructurePending();
+
   const tabBarHeight = useBottomTabBarHeight();
 
   const { data: stats, isLoading: statsLoading } = useStructureStats();
   const { data: alertsData, isLoading: alertsLoading } = useMyStructureAlerts({
     status: "ACTIVE",
   });
-  
 
   const fabScale = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -142,6 +144,15 @@ export default function HealthHomeScreen() {
   const activeAlertsCount = stats?.alerts?.ACTIVE ?? 0;
 
   const handleCreateAlert = () => {
+    if (isPending) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        "Structure en attente de validation",
+        "Votre structure n'est pas encore approuvée par nos équipes. Vous pourrez créer des alertes dès que votre dossier sera validé.",
+        [{ text: "Compris", style: "default" }],
+      );
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push("/(health)/alerts/create" as any);
   };
@@ -161,7 +172,7 @@ export default function HealthHomeScreen() {
         contentContainerStyle={[
           styles.scrollContent,
           { paddingBottom: tabBarHeight + 70 },
-        ]} // ✅ Espace pour FAB + TabBar
+        ]}
       >
         {/* ── Header ── */}
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
@@ -312,19 +323,26 @@ export default function HealthHomeScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* ── FAB ── ✅ POSITIONNEMENT DYNAMIQUE PARFAIT ── */}
+      {/* ── FAB ── */}
       <Animated.View
         style={[
           styles.fabWrap,
-          { bottom: tabBarHeight + 20, transform: [{ scale: fabScale }] }, // ✅ 20px au-dessus de la TabBar
+          { bottom: tabBarHeight + 20, transform: [{ scale: fabScale }] },
         ]}
       >
         <TouchableOpacity
-          style={styles.fab}
+          style={[
+            styles.fab,
+            isPending && { backgroundColor: "#3A3A3A", shadowOpacity: 0 },
+          ]}
           onPress={handleCreateAlert}
-          activeOpacity={0.85}
+          activeOpacity={isPending ? 0.6 : 0.85}
         >
-          <Ionicons name="add" size={28} color={COLORS.white} />
+          <Ionicons
+            name="add"
+            size={28}
+            color={isPending ? "rgba(255,255,255,0.35)" : COLORS.white}
+          />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>

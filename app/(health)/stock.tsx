@@ -16,6 +16,7 @@ import * as Haptics from "expo-haptics";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMyStocks, useUpdateMyStock } from "@/src/hooks/useBloodStocks";
 import { BloodType, BloodStockLevel } from "@/src/types/shared.types";
+import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -90,12 +91,9 @@ function StockCard({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      {/* Glow décoratif */}
       <View
         style={[styles.cardGlow, { backgroundColor: lvlConfig.color + "18" }]}
       />
-
-      {/* Header : nom + icône dans chip */}
       <View style={styles.cardHeader}>
         <Text style={styles.bloodLabel}>{config?.label}</Text>
         <View
@@ -107,21 +105,15 @@ function StockCard({
           <Ionicons name={lvlConfig.icon} size={14} color={lvlConfig.color} />
         </View>
       </View>
-
-      {/* Badge Rare */}
       {config?.isRare && (
         <View style={styles.rareBadge}>
           <Text style={styles.rareBadgeText}>Rare</Text>
         </View>
       )}
-
-      {/* Quantité */}
       <Text style={styles.quantityText}>{stock.quantity}</Text>
       <Text style={[styles.levelLabel, { color: lvlConfig.color }]}>
         {lvlConfig.label}
       </Text>
-
-      {/* Jauge */}
       <View style={styles.barBg}>
         <View
           style={[
@@ -140,6 +132,7 @@ function StockCard({
 // ─── Écran Principal ───────────────────────────────────────────
 export default function StockScreen() {
   const tabBarHeight = useBottomTabBarHeight();
+  const isPending = useIsStructurePending();
 
   const { data: stocks, isLoading } = useMyStocks();
   const { mutateAsync: updateStock, isPending: isUpdating } =
@@ -179,6 +172,20 @@ export default function StockScreen() {
     }
   };
 
+  // ── Structure en attente ──
+  if (isPending) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Ionicons name="time-outline" size={64} color={COLORS.textSubtle} />
+        <Text style={styles.pendingTitle}>Structure en attente</Text>
+        <Text style={styles.pendingSub}>
+          Votre structure doit être validée par nos équipes avant de pouvoir
+          gérer les stocks de sang.
+        </Text>
+      </View>
+    );
+  }
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -194,7 +201,6 @@ export default function StockScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          // Ajoute la hauteur de la tab bar pour que les dernières cards ne soient pas masquées
           { paddingBottom: tabBarHeight + 16 },
         ]}
         showsVerticalScrollIndicator={false}
@@ -259,11 +265,8 @@ export default function StockScreen() {
       <Modal visible={!!selectedBloodType} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            {/* Pull bar */}
             <View style={styles.pullBar} />
-
             <Text style={styles.modalTitle}>Mettre à jour le stock</Text>
-
             <View style={styles.modalBloodBadge}>
               <Text style={styles.modalBloodText}>
                 {
@@ -272,9 +275,7 @@ export default function StockScreen() {
                 }
               </Text>
             </View>
-
             <Text style={styles.modalLabel}>Nombre de poches disponibles</Text>
-
             <TextInput
               style={styles.modalInput}
               keyboardType="number-pad"
@@ -284,7 +285,6 @@ export default function StockScreen() {
               selectTextOnFocus
               placeholderTextColor={COLORS.textMuted}
             />
-
             <View style={styles.modalActions}>
               <TouchableOpacity
                 style={styles.cancelBtn}
@@ -316,8 +316,28 @@ export default function StockScreen() {
 // ─── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
-  centered: { alignItems: "center", justifyContent: "center" },
+  centered: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    padding: 24,
+  },
   scrollContent: { paddingHorizontal: 20, paddingTop: 10 },
+
+  // Pending
+  pendingTitle: {
+    color: COLORS.white,
+    fontSize: 18,
+    fontWeight: "700",
+    marginTop: 16,
+    textAlign: "center",
+  },
+  pendingSub: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 20,
+  },
 
   // Header
   header: { marginBottom: 18 },
@@ -428,7 +448,7 @@ const styles = StyleSheet.create({
   },
   barFill: { height: "100%", borderRadius: 2 },
 
-  // Modal — bottom sheet
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.85)",

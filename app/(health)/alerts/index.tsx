@@ -6,6 +6,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -15,12 +16,13 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { alertsApi } from "@/src/api/alerts.api";
 import { QUERY_KEYS } from "@/src/constants/query_key";
-import { Alert } from "@/src/types/alert.types";
+import { Alert as AlertType } from "@/src/types/alert.types";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/fr";
 import { AlertStatus } from "@/src/types/shared.types";
+import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 
 dayjs.extend(relativeTime);
 dayjs.locale("fr");
@@ -73,7 +75,7 @@ function StructureAlertCard({
   alert,
   onPress,
 }: {
-  alert: Alert;
+  alert: AlertType;
   onPress: (id: string) => void;
 }) {
   const config = STATUS_CONFIG[alert.status];
@@ -159,6 +161,7 @@ export default function HealthAlertsScreen() {
   const router = useRouter();
   const tabBarHeight = useBottomTabBarHeight();
   const [activeFilter, setActiveFilter] = useState<FilterType>("ALL");
+  const isPending = useIsStructurePending();
 
   const {
     data,
@@ -186,8 +189,7 @@ export default function HealthAlertsScreen() {
     staleTime: 15_000,
   });
 
-  // Aplatir les pages en une seule liste
-  const alerts: Alert[] = data?.pages.flatMap((p) => p.alerts) ?? [];
+  const alerts: AlertType[] = data?.pages.flatMap((p) => p.alerts) ?? [];
 
   const handleAlertPress = useCallback(
     (alertId: string) => {
@@ -198,6 +200,15 @@ export default function HealthAlertsScreen() {
   );
 
   const handleCreate = () => {
+    if (isPending) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        "Structure en attente de validation",
+        "Votre structure n'est pas encore approuvée par nos équipes. Vous pourrez créer des alertes dès que votre dossier sera validé.",
+        [{ text: "Compris", style: "default" }],
+      );
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push("/(health)/alerts/create" as any);
   };
@@ -220,11 +231,18 @@ export default function HealthAlertsScreen() {
           </Text>
         </View>
         <TouchableOpacity
-          style={styles.createBtn}
+          style={[
+            styles.createBtn,
+            isPending && { backgroundColor: "#3A3A3A", shadowOpacity: 0 },
+          ]}
           onPress={handleCreate}
-          activeOpacity={0.8}
+          activeOpacity={isPending ? 0.6 : 0.8}
         >
-          <Ionicons name="add" size={22} color={COLORS.white} />
+          <Ionicons
+            name="add"
+            size={22}
+            color={isPending ? "rgba(255,255,255,0.35)" : COLORS.white}
+          />
         </TouchableOpacity>
       </View>
 
@@ -294,13 +312,21 @@ export default function HealthAlertsScreen() {
         />
       )}
 
-      {/* ── FAB Créer (au cas où l'utilisateur scrolle vite) ── */}
+      {/* ── FAB ── */}
       <TouchableOpacity
-        style={[styles.fab, { bottom: tabBarHeight + 24 }]}
+        style={[
+          styles.fab,
+          { bottom: tabBarHeight + 24 },
+          isPending && { backgroundColor: "#3A3A3A", shadowOpacity: 0 },
+        ]}
         onPress={handleCreate}
-        activeOpacity={0.85}
+        activeOpacity={isPending ? 0.6 : 0.85}
       >
-        <Ionicons name="alert-circle-outline" size={24} color={COLORS.white} />
+        <Ionicons
+          name="alert-circle-outline"
+          size={24}
+          color={isPending ? "rgba(255,255,255,0.35)" : COLORS.white}
+        />
       </TouchableOpacity>
     </SafeAreaView>
   );

@@ -19,6 +19,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormInput } from "@/src/components/ui/FormInput";
 import { useRegisterHealthStructure } from "@/src/hooks/useAuth";
+import * as Location from "expo-location"; // ✅ AJOUT
 import {
   structureStep1Schema,
   structureStep2Schema,
@@ -27,7 +28,6 @@ import {
   type RegisterStructureFormValues,
 } from "@/src/validators/auth.schema";
 
-// ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
   bg: "#080808",
   red: "#DC1E1E",
@@ -41,7 +41,6 @@ const COLORS = {
   amber: "#FAC775",
 } as const;
 
-// ─── Config steps ──────────────────────────────────────────────
 const STEPS = [
   {
     title: "Votre profil",
@@ -55,20 +54,16 @@ const STEPS = [
   },
 ];
 
-// ─── Indicateur force du mot de passe ─────────────────────────
 function PasswordStrength({ password }: { password: string }) {
   if (!password) return null;
-
   const checks = {
     length: password.length >= 8,
     upper: /[A-Z]/.test(password),
     digit: /[0-9]/.test(password),
   };
-
   const passed = Object.values(checks).filter(Boolean).length;
   const isStrong = passed === 3;
   const isMedium = passed === 2;
-
   const bgColor = isStrong
     ? "rgba(34,197,94,0.08)"
     : isMedium
@@ -89,13 +84,11 @@ function PasswordStrength({ password }: { password: string }) {
     : isMedium
       ? ("shield-outline" as const)
       : ("alert-circle-outline" as const);
-
   const hints = [
     { check: checks.length, label: "8+ caractères" },
     { check: checks.upper, label: "Majuscule" },
     { check: checks.digit, label: "Chiffre" },
   ];
-
   return (
     <View
       style={[styles.strengthCard, { backgroundColor: bgColor, borderColor }]}
@@ -116,22 +109,19 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
-// ─── Écran principal ───────────────────────────────────────────
 export default function RegisterStructureScreen() {
   const router = useRouter();
   const { mutateAsync: registerStructure, isPending } =
     useRegisterHealthStructure();
-
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<
-    Partial<RegisterStructureFormValues>
-  >({});
+
+  // ✅ AJOUT : state géolocalisation
+  const [isGeolocating, setIsGeolocating] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  // Entrée initiale
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -169,7 +159,6 @@ export default function RegisterStructureScreen() {
     ]).start();
   }, []);
 
-  // ── Forms ──
   const form1 = useForm<StructureStep1Values>({
     resolver: zodResolver(structureStep1Schema),
     defaultValues: {
@@ -189,18 +178,51 @@ export default function RegisterStructureScreen() {
       registrationNumber: "",
       address: "",
       region: undefined,
+      latitude: undefined, // ✅ AJOUT
+      longitude: undefined, // ✅ AJOUT
       structurePhone: "",
       structureEmail: "",
     },
   });
 
   const watchedPassword = form1.watch("password");
+  // ✅ AJOUT : observer lat/lng pour l'affichage du bouton
+  const watchedLatitude = form2.watch("latitude");
+  const watchedLongitude = form2.watch("longitude");
 
-  // ── Step 1 → Step 2 ──
+  // ✅ AJOUT : handler géolocalisation
+  const handleGeolocate = useCallback(async () => {
+    setIsGeolocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        // Le toast global gère l'affichage via QueryCache,
+        // mais ici c'est une action UI — on throw pour le catch
+        throw new Error(
+          "Permission de localisation refusée. Activez-la dans les paramètres.",
+        );
+      }
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      form2.setValue("latitude", loc.coords.latitude, { shouldValidate: true });
+      form2.setValue("longitude", loc.coords.longitude, {
+        shouldValidate: true,
+      });
+    } catch (err: any) {
+      // On utilise setError pour afficher l'erreur sous le bouton,
+      // cohérent avec le pattern des autres champs du formulaire
+      form2.setError("latitude", {
+        message: err?.message ?? "Impossible de récupérer la position",
+      });
+    } finally {
+      setIsGeolocating(false);
+    }
+  }, [form2]);
+
   const handleNext = async () => {
     await form1.handleSubmit(
-      (data) => {
-        setFormData((prev) => ({ ...prev, ...data }));
+      () => {
         animateTransition();
         setCurrentStep(2);
       },
@@ -208,16 +230,15 @@ export default function RegisterStructureScreen() {
     )();
   };
 
-  // ── Submit final ──
   const handleSubmit = async () => {
     await form2.handleSubmit(
-      async (data) => {
+      async (step2Data) => {
         Keyboard.dismiss();
-        const finalData = {
-          ...formData,
-          ...data,
-        } as RegisterStructureFormValues;
-
+        const step1Data = form1.getValues();
+        const finalData: RegisterStructureFormValues = {
+          ...step1Data,
+          ...step2Data,
+        };
         try {
           await registerStructure({
             firstName: finalData.firstName,
@@ -231,8 +252,9 @@ export default function RegisterStructureScreen() {
             address: finalData.address,
             structurePhone: finalData.structurePhone || undefined,
             structureEmail: finalData.structureEmail || undefined,
+            latitude: finalData.latitude, // ✅ AJOUT
+            longitude: finalData.longitude, // ✅ AJOUT
           });
-          // Navigation → pending-review gérée dans useRegisterHealthStructure
         } catch {
           // Toast géré dans le hook
         }
@@ -241,47 +263,38 @@ export default function RegisterStructureScreen() {
     )();
   };
 
-  // ─── Step 1 : Directeur ───────────────────────────────────────
   const renderStep1 = () => (
     <View style={styles.stepContent}>
-      {/* Prénom + Nom */}
-      <View style={styles.nameRow}>
-        <View style={{ flex: 1 }}>
-          <Controller
-            control={form1.control}
-            name="firstName"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label="Prénom"
-                icon="person-outline"
-                placeholder="Moussa"
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                autoCapitalize="words"
-              />
-            )}
+      <Controller
+        control={form1.control}
+        name="firstName"
+        render={({ field, fieldState }) => (
+          <FormInput
+            label="Prénom"
+            icon="person-outline"
+            placeholder="Moussa"
+            value={field.value}
+            onChangeText={field.onChange}
+            error={fieldState.error?.message}
+            autoCapitalize="words"
           />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Controller
-            control={form1.control}
-            name="lastName"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label="Nom"
-                icon="person-outline"
-                placeholder="Sow"
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                autoCapitalize="words"
-              />
-            )}
+        )}
+      />
+      <Controller
+        control={form1.control}
+        name="lastName"
+        render={({ field, fieldState }) => (
+          <FormInput
+            label="Nom"
+            icon="person-outline"
+            placeholder="Sow"
+            value={field.value}
+            onChangeText={field.onChange}
+            error={fieldState.error?.message}
+            autoCapitalize="words"
           />
-        </View>
-      </View>
-
+        )}
+      />
       <Controller
         control={form1.control}
         name="email"
@@ -298,7 +311,6 @@ export default function RegisterStructureScreen() {
           />
         )}
       />
-
       <Controller
         control={form1.control}
         name="phone"
@@ -315,7 +327,6 @@ export default function RegisterStructureScreen() {
           />
         )}
       />
-
       <Controller
         control={form1.control}
         name="password"
@@ -331,10 +342,7 @@ export default function RegisterStructureScreen() {
           />
         )}
       />
-
-      {/* Indicateur force */}
       <PasswordStrength password={watchedPassword} />
-
       <Controller
         control={form1.control}
         name="confirmPassword"
@@ -353,131 +361,211 @@ export default function RegisterStructureScreen() {
     </View>
   );
 
-  // ─── Step 2 : Structure ───────────────────────────────────────
-  const renderStep2 = () => (
-    <View style={styles.stepContent}>
-      <Controller
-        control={form2.control}
-        name="structureName"
-        render={({ field, fieldState }) => (
-          <FormInput
-            label="Nom de la structure"
-            icon="business-outline"
-            placeholder="CHNU de Fann"
-            value={field.value}
-            onChangeText={field.onChange}
-            error={fieldState.error?.message}
-            autoCapitalize="words"
-          />
-        )}
-      />
+  const renderStep2 = () => {
+    const hasLocation =
+      watchedLatitude !== undefined && watchedLongitude !== undefined;
+    const locationError = form2.formState.errors.latitude?.message;
 
-      <Controller
-        control={form2.control}
-        name="registrationNumber"
-        render={({ field, fieldState }) => (
-          <FormInput
-            label="N° d'enregistrement officiel"
-            icon="document-text-outline"
-            placeholder="SN-MS-2024-0042"
-            value={field.value}
-            onChangeText={field.onChange}
-            error={fieldState.error?.message}
-            autoCapitalize="characters"
-          />
-        )}
-      />
+    return (
+      <View style={styles.stepContent}>
+        <Controller
+          control={form2.control}
+          name="structureName"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label="Nom de la structure"
+              icon="business-outline"
+              placeholder="CHNU de Fann"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              autoCapitalize="words"
+            />
+          )}
+        />
+        <Controller
+          control={form2.control}
+          name="registrationNumber"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label="N° d'enregistrement officiel"
+              icon="document-text-outline"
+              placeholder="SN-MS-2024-0042"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              autoCapitalize="characters"
+            />
+          )}
+        />
+        <Controller
+          control={form2.control}
+          name="region"
+          render={({ field, fieldState }) => (
+            <FormSelect
+              label="Région"
+              icon="map-outline"
+              placeholder="Sélectionnez la région..."
+              value={field.value}
+              options={SENEGAL_REGIONS}
+              onSelect={field.onChange}
+              error={fieldState.error?.message}
+              modalTitle="Sélectionner une région"
+            />
+          )}
+        />
+        <Controller
+          control={form2.control}
+          name="address"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label="Adresse complète"
+              icon="location-outline"
+              placeholder="Avenue Cheikh Anta Diop, Dakar"
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              autoCapitalize="sentences"
+            />
+          )}
+        />
 
-      <Controller
-        control={form2.control}
-        name="region"
-        render={({ field, fieldState }) => (
-          <FormSelect
-            label="Région"
-            icon="map-outline"
-            placeholder="Sélectionnez la région..."
-            value={field.value}
-            options={SENEGAL_REGIONS}
-            onSelect={field.onChange}
-            error={fieldState.error?.message}
-          />
-        )}
-      />
+        {/* ✅ AJOUT : Bouton géolocalisation — obligatoire pour créer des alertes */}
+        <View style={styles.geoWrapper}>
+          <View style={styles.labelRow}>
+            <Text style={styles.geoLabel}>Position GPS de la structure</Text>
+            <Text style={styles.geoRequired}>* requis</Text>
+          </View>
 
-      <Controller
-        control={form2.control}
-        name="address"
-        render={({ field, fieldState }) => (
-          <FormInput
-            label="Adresse complète"
-            icon="location-outline"
-            placeholder="Avenue Cheikh Anta Diop, Dakar"
-            value={field.value}
-            onChangeText={field.onChange}
-            error={fieldState.error?.message}
-            autoCapitalize="sentences"
-          />
-        )}
-      />
-
-      {/* Téléphone + Email structure — optionnels en ligne */}
-      <View style={styles.nameRow}>
-        <View style={{ flex: 1 }}>
-          <Controller
-            control={form2.control}
-            name="structurePhone"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label="Tél. structure"
-                sublabel="(opt.)"
-                icon="call-outline"
-                placeholder="+221 33..."
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                keyboardType="phone-pad"
-              />
+          <TouchableOpacity
+            onPress={handleGeolocate}
+            disabled={isGeolocating}
+            activeOpacity={0.8}
+            style={[
+              styles.geoBtn,
+              hasLocation ? styles.geoBtnSuccess : styles.geoBtnDefault,
+              !!locationError && styles.geoBtnError,
+            ]}
+          >
+            {isGeolocating ? (
+              <>
+                <ActivityIndicator size="small" color={COLORS.white} />
+                <Text style={styles.geoBtnLabel}>Localisation en cours...</Text>
+              </>
+            ) : (
+              <>
+                <View
+                  style={[
+                    styles.geoIconWrap,
+                    {
+                      backgroundColor: hasLocation
+                        ? "rgba(34,197,94,0.20)"
+                        : "rgba(220,30,30,0.20)",
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={
+                      hasLocation
+                        ? "checkmark-circle-outline"
+                        : "locate-outline"
+                    }
+                    size={18}
+                    color={hasLocation ? COLORS.success : COLORS.red}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.geoBtnLabel,
+                      { color: hasLocation ? COLORS.success : COLORS.white },
+                    ]}
+                  >
+                    {hasLocation
+                      ? "Position enregistrée"
+                      : "Localiser ma structure"}
+                  </Text>
+                  {hasLocation ? (
+                    <Text style={styles.geoBtnCoords}>
+                      {watchedLatitude?.toFixed(5)},{" "}
+                      {watchedLongitude?.toFixed(5)}
+                    </Text>
+                  ) : (
+                    <Text style={styles.geoBtnSub}>
+                      Nécessaire pour cibler les donneurs proches
+                    </Text>
+                  )}
+                </View>
+                {hasLocation && (
+                  <Ionicons
+                    name="refresh-outline"
+                    size={16}
+                    color="rgba(34,197,94,0.60)"
+                  />
+                )}
+              </>
             )}
-          />
+          </TouchableOpacity>
+
+          {/* Erreur de validation Zod sous le bouton */}
+          {locationError && (
+            <View style={styles.geoErrorRow}>
+              <Ionicons name="alert-circle-outline" size={13} color="#EF4444" />
+              <Text style={styles.geoErrorText}>{locationError}</Text>
+            </View>
+          )}
         </View>
-        <View style={{ flex: 1 }}>
-          <Controller
-            control={form2.control}
-            name="structureEmail"
-            render={({ field, fieldState }) => (
-              <FormInput
-                label="Email structure"
-                sublabel="(opt.)"
-                icon="mail-outline"
-                placeholder="contact@..."
-                value={field.value}
-                onChangeText={field.onChange}
-                error={fieldState.error?.message}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            )}
-          />
+
+        <Controller
+          control={form2.control}
+          name="structurePhone"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label="Tél. structure"
+              sublabel="(opt.)"
+              icon="call-outline"
+              placeholder="+221 33..."
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              keyboardType="phone-pad"
+            />
+          )}
+        />
+        <Controller
+          control={form2.control}
+          name="structureEmail"
+          render={({ field, fieldState }) => (
+            <FormInput
+              label="Email structure"
+              sublabel="(opt.)"
+              icon="mail-outline"
+              placeholder="contact@..."
+              value={field.value}
+              onChangeText={field.onChange}
+              error={fieldState.error?.message}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          )}
+        />
+
+        <View style={styles.pendingCard}>
+          <View style={styles.pendingIconWrap}>
+            <Ionicons name="time-outline" size={18} color={COLORS.amber} />
+          </View>
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text style={styles.pendingTitle}>Vérification sous 24-48h</Text>
+            <Text style={styles.pendingText}>
+              Notre équipe examinera votre demande avant d&apos;activer
+              l&apos;accès à votre structure.
+            </Text>
+          </View>
         </View>
       </View>
+    );
+  };
 
-      {/* Info PENDING_REVIEW */}
-      <View style={styles.pendingCard}>
-        <View style={styles.pendingIconWrap}>
-          <Ionicons name="time-outline" size={18} color={COLORS.amber} />
-        </View>
-        <View style={{ flex: 1, gap: 3 }}>
-          <Text style={styles.pendingTitle}>Vérification sous 24-48h</Text>
-          <Text style={styles.pendingText}>
-            Notre équipe examinera votre demande avant d&apos;activer
-            l&apos;accès à votre structure.
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  // ─── Rendu principal ──────────────────────────────────────────
   const stepInfo = STEPS[currentStep - 1];
 
   return (
@@ -487,7 +575,6 @@ export default function RegisterStructureScreen() {
       <View style={styles.haloBottom} />
 
       <SafeAreaView style={styles.safeArea}>
-        {/* ── Header ── */}
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
           <TouchableOpacity
             onPress={() =>
@@ -498,8 +585,6 @@ export default function RegisterStructureScreen() {
           >
             <Ionicons name="arrow-back" size={19} color={COLORS.white} />
           </TouchableOpacity>
-
-          {/* Progress */}
           <View style={styles.headerCenter}>
             <View style={styles.progressRow}>
               {STEPS.map((_, i) => (
@@ -518,14 +603,11 @@ export default function RegisterStructureScreen() {
               {currentStep} / {STEPS.length}
             </Text>
           </View>
-
-          {/* Icon badge */}
           <View style={styles.stepIconBadge}>
             <Ionicons name={stepInfo.icon} size={16} color={COLORS.red} />
           </View>
         </Animated.View>
 
-        {/* ── Titre ── */}
         <Animated.View
           style={[
             styles.titleBlock,
@@ -539,7 +621,6 @@ export default function RegisterStructureScreen() {
           <Text style={styles.subtitle}>{stepInfo.subtitle}</Text>
         </Animated.View>
 
-        {/* ── Contenu scrollable ── */}
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -550,13 +631,23 @@ export default function RegisterStructureScreen() {
             style={{
               opacity: opacityAnim,
               transform: [{ translateY: slideAnim }],
+              display: currentStep === 1 ? "flex" : "none",
             }}
           >
-            {currentStep === 1 ? renderStep1() : renderStep2()}
+            {renderStep1()}
+          </Animated.View>
+
+          <Animated.View
+            style={{
+              opacity: opacityAnim,
+              transform: [{ translateY: slideAnim }],
+              display: currentStep === 2 ? "flex" : "none",
+            }}
+          >
+            {renderStep2()}
           </Animated.View>
         </ScrollView>
 
-        {/* ── Footer ── */}
         <View style={styles.footer}>
           <TouchableOpacity
             onPress={currentStep === 1 ? handleNext : handleSubmit}
@@ -599,11 +690,9 @@ export default function RegisterStructureScreen() {
   );
 }
 
-// ─── Styles ────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg },
   safeArea: { flex: 1 },
-
   haloTop: {
     position: "absolute",
     top: -80,
@@ -622,8 +711,6 @@ const styles = StyleSheet.create({
     borderRadius: 90,
     backgroundColor: "rgba(220,30,30,0.07)",
   },
-
-  // ── Header ──
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -642,21 +729,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-  },
-  progressRow: {
-    flexDirection: "row",
-    gap: 6,
-    width: "100%",
-  },
-  progressSegment: {
-    flex: 1,
-    height: 3,
-    borderRadius: 2,
-  },
+  headerCenter: { flex: 1, alignItems: "center", gap: 6 },
+  progressRow: { flexDirection: "row", gap: 6, width: "100%" },
+  progressSegment: { flex: 1, height: 3, borderRadius: 2 },
   progressActive: { backgroundColor: COLORS.red },
   progressInactive: { backgroundColor: COLORS.cardBorder },
   stepCounter: {
@@ -675,13 +750,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  // ── Titre ──
-  titleBlock: {
-    paddingHorizontal: 24,
-    marginBottom: 4,
-    gap: 3,
-  },
+  titleBlock: { paddingHorizontal: 24, marginBottom: 4, gap: 3 },
   eyebrow: {
     color: COLORS.textSubtle,
     fontSize: 10,
@@ -694,27 +763,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: -0.5,
   },
-  subtitle: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    lineHeight: 20,
-  },
-
-  // ── Scroll ──
+  subtitle: { color: COLORS.textMuted, fontSize: 13, lineHeight: 20 },
   scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 24,
-  },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 },
   stepContent: { gap: 2 },
-
-  nameRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-
-  // ── Password strength ──
   strengthCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -726,13 +778,68 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 8,
   },
-  strengthText: {
-    fontSize: 11,
-    flex: 1,
-    lineHeight: 18,
-  },
+  strengthText: { fontSize: 11, flex: 1, lineHeight: 18 },
 
-  // ── Pending card ──
+  // ✅ AJOUT : styles géolocalisation
+  geoWrapper: { marginBottom: 16 },
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  geoLabel: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  geoRequired: { color: COLORS.red, fontSize: 12, fontWeight: "600" },
+  geoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+  },
+  geoBtnDefault: {
+    backgroundColor: "rgba(220,30,30,0.06)",
+    borderColor: "rgba(220,30,30,0.25)",
+  },
+  geoBtnSuccess: {
+    backgroundColor: "rgba(34,197,94,0.06)",
+    borderColor: "rgba(34,197,94,0.25)",
+  },
+  geoBtnError: {
+    borderColor: "#EF4444",
+  },
+  geoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  geoBtnLabel: { color: COLORS.white, fontSize: 14, fontWeight: "600" },
+  geoBtnCoords: {
+    color: "rgba(34,197,94,0.70)",
+    fontSize: 11,
+    marginTop: 2,
+    fontFamily: "monospace",
+  },
+  geoBtnSub: { color: COLORS.textMuted, fontSize: 11, marginTop: 2 },
+  geoErrorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 6,
+    marginLeft: 2,
+  },
+  geoErrorText: { color: "#EF4444", fontSize: 12, flex: 1 },
+
   pendingCard: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -763,13 +870,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-
-  // ── Footer ──
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 10,
-    gap: 14,
-  },
+  footer: { paddingHorizontal: 24, paddingBottom: 10, gap: 14 },
   ctaBtn: {
     flexDirection: "row",
     alignItems: "center",

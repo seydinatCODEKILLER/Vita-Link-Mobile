@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { CameraView, Camera } from "expo-camera";
 import { useScanDonation } from "@/src/hooks/useDonations";
+import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 
 // ─── Palette ──────────────────────────────────────────────────
 const COLORS = {
@@ -30,14 +31,13 @@ const COLORS = {
   textSubtle: "rgba(255,255,255,0.18)",
 } as const;
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SCAN_SIZE = SCREEN_WIDTH * 0.7;
-
-// Hauteur de la tab bar selon la plateforme
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 85 : 65;
 
 export default function ScanScreen() {
   const router = useRouter();
+  const isPending = useIsStructurePending();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
@@ -46,7 +46,6 @@ export default function ScanScreen() {
   const { mutateAsync: scanDonation, isPending: isScanning } =
     useScanDonation();
 
-  // ── Permission Camera ──
   useEffect(() => {
     (async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
@@ -54,14 +53,10 @@ export default function ScanScreen() {
     })();
   }, []);
 
-  // ── Quand le scanner détecte un QR Code ──
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
     if (scanned || isScanning) return;
-
-    // Bloquer immédiatement — évite les détections multiples en boucle
     setScanned(true);
 
-    // Vérifier le format Vita-Link (ex: VITA-X9K2-M4P7)
     if (!data.startsWith("VITA-")) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
@@ -76,12 +71,9 @@ export default function ScanScreen() {
 
     try {
       const result = await scanDonation(data);
-
-      // ✅ SUCCÈS
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSuccessData(result);
     } catch (error: any) {
-      // ❌ ERREUR (Backend)
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       const msg =
         error?.response?.data?.message ||
@@ -92,11 +84,24 @@ export default function ScanScreen() {
     }
   };
 
-  // ── Fermer la modale et rescanner ──
   const handleRescan = () => {
     setSuccessData(null);
     setScanned(false);
   };
+
+  // ── Structure en attente ──
+  if (isPending) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Ionicons name="time-outline" size={64} color={COLORS.textSubtle} />
+        <Text style={styles.permissionTitle}>Structure en attente</Text>
+        <Text style={styles.permissionSub}>
+          Votre structure doit être validée par nos équipes avant de pouvoir
+          scanner les pass donneurs.
+        </Text>
+      </View>
+    );
+  }
 
   // ── Permissions en attente ──
   if (hasPermission === null) {
@@ -157,7 +162,6 @@ export default function ScanScreen() {
           {/* ── Zone de Viseur ── */}
           <View style={styles.scanArea}>
             <View style={styles.scanFrame}>
-              {/* Coins lumineux */}
               <View style={[styles.corner, styles.topLeft]} />
               <View style={[styles.corner, styles.topRight]} />
               <View style={[styles.corner, styles.bottomLeft]} />
@@ -165,7 +169,7 @@ export default function ScanScreen() {
             </View>
           </View>
 
-          {/* ── Instructions — positionnées au-dessus de la tab bar ── */}
+          {/* ── Instructions ── */}
           <View style={styles.instructions}>
             <Ionicons name="qr-code-outline" size={24} color={COLORS.white} />
             <Text style={styles.instructionText}>
@@ -245,7 +249,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
-    // Réserver la place de la tab bar en bas pour que les instructions soient visibles
     paddingBottom: TAB_BAR_HEIGHT,
   },
   header: {
@@ -333,6 +336,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     marginTop: 16,
+    textAlign: "center",
   },
   permissionSub: {
     color: COLORS.textMuted,

@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-// ─── Helpers partagés ─────────────────────────────────────────
-
-// ✅ CORRECTION : On type explicitement le tableau en "tuple" pour Zod
 export const bloodTypeValues = [
   "A_POS",
   "A_NEG",
@@ -33,17 +30,13 @@ export const SENEGAL_REGIONS = [
 
 export const phoneRegex = /^\+?[1-9]\d{7,14}$/;
 
-// ─── Register Donor — Step 1 : Identité ──────────────────────
+// ─── Register Donor ───────────────────────────────────────────
 
 export const donorStep1Schema = z.object({
   firstName: z.string().trim().min(2, "Prénom trop court (min 2 caractères)"),
   lastName: z.string().trim().min(2, "Nom trop court (min 2 caractères)"),
-  gender: z.enum(["MALE", "FEMALE"], {
-    message: "Sélectionnez votre genre",
-  }),
+  gender: z.enum(["MALE", "FEMALE"], { message: "Sélectionnez votre genre" }),
 });
-
-// ─── Register Donor — Step 2 : Coordonnées ───────────────────
 
 export const donorStep2Schema = z.object({
   phone: z
@@ -52,8 +45,6 @@ export const donorStep2Schema = z.object({
     .regex(phoneRegex, "Numéro invalide (ex: +221771234567)"),
   email: z.string().trim().email("Adresse email invalide"),
 });
-
-// ─── Register Donor — Step 3 : Profil médical ────────────────
 
 export const donorStep3Schema = z.object({
   bloodType: z.enum(bloodTypeValues as any, {
@@ -72,7 +63,7 @@ export type RegisterDonorFormValues = DonorStep1Values &
   DonorStep2Values &
   DonorStep3Values;
 
-// ─── OTP Verify ───────────────────────────────────────────────
+// ─── OTP ──────────────────────────────────────────────────────
 
 export const otpSchema = z.object({
   code: z
@@ -83,7 +74,7 @@ export const otpSchema = z.object({
 
 export type OtpValues = z.infer<typeof otpSchema>;
 
-// ─── Login — Agents de santé ──────────────────────────────────
+// ─── Login ────────────────────────────────────────────────────
 
 export const loginSchema = z.object({
   email: z.string().trim().email("Adresse email invalide"),
@@ -92,7 +83,7 @@ export const loginSchema = z.object({
 
 export type LoginValues = z.infer<typeof loginSchema>;
 
-// ─── Register Structure — Step 1 : Directeur ─────────────────
+// ─── Register Structure — Step 1 ──────────────────────────────
 
 export const structureStep1Schema = z
   .object({
@@ -112,7 +103,8 @@ export const structureStep1Schema = z
     path: ["confirmPassword"],
   });
 
-// ─── Register Structure — Step 2 : Structure ─────────────────
+// ─── Register Structure — Step 2 ──────────────────────────────
+// ✅ AJOUT : latitude + longitude obligatoires
 
 export const structureStep2Schema = z.object({
   structureName: z.string().trim().min(3, "Nom de structure trop court"),
@@ -121,10 +113,12 @@ export const structureStep2Schema = z.object({
     .trim()
     .min(3, "Numéro d'enregistrement invalide"),
   address: z.string().trim().min(5, "Adresse trop courte"),
-
   region: z.enum(SENEGAL_REGIONS, {
     message: "Veuillez sélectionner une région",
   }),
+
+  latitude: z.number({ message: "Localisez votre structure pour continuer" }),
+  longitude: z.number({ message: "Localisez votre structure pour continuer" }),
 
   structurePhone: z
     .string()
@@ -132,7 +126,6 @@ export const structureStep2Schema = z.object({
     .regex(phoneRegex, "Numéro invalide")
     .optional()
     .or(z.literal("")),
-
   structureEmail: z
     .string()
     .trim()
