@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { Href, useRouter } from "expo-router";
-import Toast from "react-native-toast-message"; // ✅ Import
+import Toast from "react-native-toast-message";
 import { authApi } from "@/src/api/auth.api";
 import { useAuthStore } from "@/src/store/auth.store";
 import { tokenManager } from "@/src/utils/token.utils";
@@ -10,6 +10,7 @@ import {
   RegisterStructurePayload,
   VerifyOtpPayload,
 } from "../types/auth.types";
+import { registrationManager } from "@/src/utils/registration.utils";
 
 // ─── Helper pour extraire le message d'erreur Axios ──────────
 const getErrorMessage = (err: any) =>
@@ -78,6 +79,7 @@ export const useVerifyOtp = () => {
         response.refreshToken,
       );
       await setUser(response.user);
+      await registrationManager.clearPendingDonor();
       Toast.show({ type: "success", text1: "Bienvenue Jambaar ! 🩸" });
       router.replace("/(donor)");
     },
