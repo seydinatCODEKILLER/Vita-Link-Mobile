@@ -24,7 +24,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     const init = async () => {
-      await hydrateTheme(); // thème d'abord pour éviter le flash
+      await hydrateTheme();
       await initialize();
     };
     init();

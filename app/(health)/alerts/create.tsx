@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Animated,
@@ -26,22 +25,9 @@ import {
   createAlertSchema,
 } from "@/src/validators/alert.schema";
 import { z } from "zod";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  red: "#DC1E1E",
-  redGlow: "rgba(220,30,30,0.14)",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.45)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.09)",
-  inputBg: "#141414",
-  inputBorder: "rgba(255,255,255,0.10)",
-  amber: "#FAC775",
-  green: "#1D9E75",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useThemeStore } from "@/src/store/theme.store";
+import { AppColors } from "@/src/theme/colors";
 
 // ─── Données statiques UI ──────────────────────────────────────
 const BLOOD_TYPES = [
@@ -55,23 +41,11 @@ const BLOOD_TYPES = [
   { value: "O_NEG", label: "O−" },
 ] as const;
 
+// Les couleurs d'urgence restent partiellement statiques
+// car elles sont fixes par design (rouge = vital, amber = standard)
 const URGENCY_LEVELS = [
-  {
-    value: "VITAL",
-    label: "Vital",
-    icon: "flash" as const,
-    color: COLORS.red,
-    bg: "rgba(220,30,30,0.10)",
-    border: "rgba(220,30,30,0.30)",
-  },
-  {
-    value: "STANDARD",
-    label: "Standard",
-    icon: "time-outline" as const,
-    color: COLORS.amber,
-    bg: "rgba(250,199,117,0.08)",
-    border: "rgba(250,199,117,0.25)",
-  },
+  { value: "VITAL", label: "Vital", icon: "flash" as const },
+  { value: "STANDARD", label: "Standard", icon: "time-outline" as const },
 ] as const;
 
 const SERVICE_UNITS = [
@@ -82,20 +56,21 @@ const SERVICE_UNITS = [
   { value: "PEDIATRICS", label: "Pédiatrie" },
 ] as const;
 
-// ─── Composants Sélecteurs ────────────────────────────────────
-
+// ─── BloodTypeGrid ─────────────────────────────────────────────
 function BloodTypeGrid({
   value,
   onChange,
   error,
+  colors,
 }: {
   value?: string;
   onChange: (v: string) => void;
   error?: string;
+  colors: AppColors;
 }) {
   return (
     <View style={{ gap: 10 }}>
-      <View style={styles.grid}>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
         {BLOOD_TYPES.map((bt) => {
           const selected = value === bt.value;
           return (
@@ -106,13 +81,23 @@ function BloodTypeGrid({
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}
               activeOpacity={0.7}
-              style={[
-                styles.gridCell,
-                selected ? styles.gridCellSelected : styles.gridCellDefault,
-              ]}
+              style={{
+                width: "22%",
+                aspectRatio: 1,
+                borderRadius: 14,
+                alignItems: "center",
+                justifyContent: "center",
+                borderWidth: 1.5,
+                backgroundColor: selected ? colors.red : colors.cardBg,
+                borderColor: selected ? colors.red : colors.cardBorder,
+              }}
             >
               <Text
-                style={[styles.gridLabel, selected && styles.gridLabelSelected]}
+                style={{
+                  fontSize: 17,
+                  fontWeight: "800",
+                  color: selected ? "#FFFFFF" : colors.textMuted,
+                }}
               >
                 {bt.label}
               </Text>
@@ -120,25 +105,41 @@ function BloodTypeGrid({
           );
         })}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <Text
+          style={{
+            color: "#EF4444",
+            fontSize: 12,
+            marginTop: 4,
+            marginLeft: 4,
+          }}
+        >
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
 
+// ─── UrgencySelector ───────────────────────────────────────────
 function UrgencySelector({
   value,
   onChange,
   error,
+  colors,
 }: {
   value?: string;
   onChange: (v: string) => void;
   error?: string;
+  colors: AppColors;
 }) {
   return (
     <View style={{ gap: 10 }}>
-      <View style={styles.urgencyRow}>
+      <View style={{ flexDirection: "row", gap: 12 }}>
         {URGENCY_LEVELS.map((u) => {
           const selected = value === u.value;
+          const isVital = u.value === "VITAL";
+          const accentColor = isVital ? colors.red : colors.amber;
           return (
             <TouchableOpacity
               key={u.value}
@@ -147,24 +148,30 @@ function UrgencySelector({
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               }}
               activeOpacity={0.7}
-              style={[
-                styles.urgencyBtn,
-                {
-                  backgroundColor: selected ? u.bg : COLORS.inputBg,
-                  borderColor: selected ? u.border : COLORS.inputBorder,
-                },
-              ]}
+              style={{
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                paddingVertical: 14,
+                borderRadius: 14,
+                borderWidth: 1.5,
+                backgroundColor: selected ? accentColor + "1A" : colors.inputBg,
+                borderColor: selected ? accentColor + "4D" : colors.cardBorder,
+              }}
             >
               <Ionicons
                 name={u.icon}
                 size={18}
-                color={selected ? u.color : COLORS.textMuted}
+                color={selected ? accentColor : colors.textMuted}
               />
               <Text
-                style={[
-                  styles.urgencyLabel,
-                  { color: selected ? u.color : COLORS.textMuted },
-                ]}
+                style={{
+                  fontSize: 15,
+                  fontWeight: "700",
+                  color: selected ? accentColor : colors.textMuted,
+                }}
               >
                 {u.label}
               </Text>
@@ -172,20 +179,34 @@ function UrgencySelector({
           );
         })}
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error && (
+        <Text
+          style={{
+            color: "#EF4444",
+            fontSize: 12,
+            marginTop: 4,
+            marginLeft: 4,
+          }}
+        >
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
 
+// ─── ServicePills ──────────────────────────────────────────────
 function ServicePills({
   value,
   onChange,
+  colors,
 }: {
   value?: string;
   onChange: (v: string) => void;
+  colors: AppColors;
 }) {
   return (
-    <View style={styles.pillsRow}>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
       {SERVICE_UNITS.map((s) => {
         const selected = value === s.value;
         return (
@@ -196,13 +217,25 @@ function ServicePills({
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
             activeOpacity={0.7}
-            style={[
-              styles.pill,
-              selected ? styles.pillSelected : styles.pillDefault,
-            ]}
+            style={{
+              paddingVertical: 8,
+              paddingHorizontal: 14,
+              borderRadius: 20,
+              borderWidth: 1,
+              backgroundColor: selected
+                ? "rgba(220,30,30,0.10)"
+                : colors.cardBg,
+              borderColor: selected
+                ? "rgba(220,30,30,0.30)"
+                : colors.cardBorder,
+            }}
           >
             <Text
-              style={[styles.pillText, selected && styles.pillTextSelected]}
+              style={{
+                fontSize: 12,
+                fontWeight: "600",
+                color: selected ? colors.red : colors.textMuted,
+              }}
             >
               {s.label}
             </Text>
@@ -217,9 +250,124 @@ function ServicePills({
 export default function CreateAlertScreen() {
   const router = useRouter();
   const { mutateAsync: createAlert, isPending } = useCreateAlert();
-
+  const colors = useColors();
+  const theme = useThemeStore((s) => s.theme);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const tabBarHeight = useBottomTabBarHeight();
+
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    safeArea: { flex: 1 },
+    haloTop: {
+      position: "absolute",
+      top: -100,
+      right: -80,
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      backgroundColor: c.redGlow,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 16,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: { color: c.white, fontSize: 20, fontWeight: "800" },
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: 24, paddingTop: 10 },
+    fieldLabel: {
+      color: c.white,
+      fontSize: 13,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+      opacity: 0.75,
+    },
+    infoCard: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 12,
+      backgroundColor: c.success + "12",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.success + "2E",
+      padding: 14,
+    },
+    infoCardIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: c.success + "1F",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    infoCardTitle: {
+      color: c.success,
+      fontSize: 13,
+      fontWeight: "700",
+      marginBottom: 2,
+    },
+    infoCardText: { color: c.success + "B3", fontSize: 12, lineHeight: 18 },
+    sliderCard: {
+      backgroundColor: c.cardBg,
+      borderRadius: 18,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      padding: 18,
+    },
+    sliderHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 14,
+    },
+    sliderTitle: { color: c.white, fontSize: 13, fontWeight: "600", flex: 1 },
+    sliderValue: { color: c.amber, fontSize: 16, fontWeight: "800" },
+    sliderLabels: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: -4,
+    },
+    sliderHint: { color: c.textSubtle, fontSize: 10, fontWeight: "600" },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      backgroundColor: c.bg + "D9", // bg + alpha pour le blur léger
+    },
+    ctaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: c.red,
+      borderRadius: 16,
+      paddingVertical: 17,
+    },
+    ctaBtnDisabled: { opacity: 0.6, backgroundColor: c.red + "66" },
+    ctaBtnText: {
+      color: "#FFFFFF",
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    ctaBtnTextDisabled: { color: "rgba(255,255,255,0.5)" },
+  }));
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -246,7 +394,6 @@ export default function CreateAlertScreen() {
   });
 
   const { isValid } = formState;
-
   const radiusKm = watch("radiusKm");
 
   const onSubmit = async (data: CreateAlertFormValues) => {
@@ -254,9 +401,6 @@ export default function CreateAlertScreen() {
     try {
       const response = await createAlert(data);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      console.log(response);
-      
-
       Alert.alert(
         "🚨 Alerte Lancée !",
         `${response.notifiedDonors} donneurs compatibles dans un rayon de ${data.radiusKm}km ont été notifiés.`,
@@ -281,7 +425,7 @@ export default function CreateAlertScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
       <View style={styles.haloTop} />
 
       <SafeAreaView style={styles.safeArea}>
@@ -292,7 +436,7 @@ export default function CreateAlertScreen() {
             style={styles.backBtn}
             activeOpacity={0.75}
           >
-            <Ionicons name="close" size={20} color={COLORS.white} />
+            <Ionicons name="close" size={20} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Nouvelle Alerte</Text>
           <View style={{ width: 40 }} />
@@ -308,8 +452,8 @@ export default function CreateAlertScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View style={{ opacity: fadeAnim, gap: 24 }}>
-            {/* Groupe Sanguin */}
-            <View style={styles.fieldBlock}>
+            {/* ── Groupe Sanguin ── */}
+            <View style={{ gap: 10 }}>
               <Text style={styles.fieldLabel}>Groupe sanguin requis *</Text>
               <Controller
                 control={control}
@@ -319,13 +463,14 @@ export default function CreateAlertScreen() {
                     value={field.value}
                     onChange={field.onChange}
                     error={fieldState.error?.message}
+                    colors={colors}
                   />
                 )}
               />
             </View>
 
-            {/* Niveau d'urgence */}
-            <View style={styles.fieldBlock}>
+            {/* ── Urgence ── */}
+            <View style={{ gap: 10 }}>
               <Text style={styles.fieldLabel}>Niveau d&apos;urgence *</Text>
               <Controller
                 control={control}
@@ -335,13 +480,14 @@ export default function CreateAlertScreen() {
                     value={field.value}
                     onChange={field.onChange}
                     error={fieldState.error?.message}
+                    colors={colors}
                   />
                 )}
               />
             </View>
 
-            {/* Quantité */}
-            <View style={styles.fieldBlock}>
+            {/* ── Quantité ── */}
+            <View style={{ gap: 10 }}>
               <Controller
                 control={control}
                 name="quantityNeeded"
@@ -360,55 +506,68 @@ export default function CreateAlertScreen() {
               />
             </View>
 
-            {/* Service */}
-            <View style={styles.fieldBlock}>
+            {/* ── Service ── */}
+            <View style={{ gap: 10 }}>
               <Text style={styles.fieldLabel}>Service médical</Text>
               <Controller
                 control={control}
                 name="serviceUnit"
                 render={({ field }) => (
-                  <ServicePills value={field.value} onChange={field.onChange} />
+                  <ServicePills
+                    value={field.value}
+                    onChange={field.onChange}
+                    colors={colors}
+                  />
                 )}
               />
             </View>
 
-            {/* Info Expiration Auto (Pas de sélecteur de date !) */}
+            {/* ── Info Expiration ── */}
             <View style={styles.infoCard}>
               <View style={styles.infoCardIcon}>
-                <Ionicons name="timer-outline" size={18} color={COLORS.green} />
+                <Ionicons
+                  name="timer-outline"
+                  size={18}
+                  color={colors.success}
+                />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={styles.infoCardTitle}>Expiration automatique</Text>
                 <Text style={styles.infoCardText}>
                   Les alertes VITAL expirent après{" "}
-                  <Text style={styles.highlight}>1 heure</Text> et les alertes
-                  STANDARD après <Text style={styles.highlight}>4 heures</Text>.
-                  Vous pourrez aussi la fermer manuellement à tout moment.
+                  <Text style={{ color: colors.success, fontWeight: "700" }}>
+                    1 heure
+                  </Text>{" "}
+                  et les alertes STANDARD après{" "}
+                  <Text style={{ color: colors.success, fontWeight: "700" }}>
+                    4 heures
+                  </Text>
+                  . Vous pourrez aussi la fermer manuellement à tout moment.
                 </Text>
               </View>
             </View>
 
-            {/* Rayon de recherche */}
-            <View style={[styles.fieldBlock, styles.cardBg]}>
+            {/* ── Rayon ── */}
+            <View style={styles.sliderCard}>
               <View style={styles.sliderHeader}>
                 <Ionicons
                   name="locate-outline"
                   size={16}
-                  color={COLORS.amber}
+                  color={colors.amber}
                 />
                 <Text style={styles.sliderTitle}>Rayon de recherche</Text>
                 <Text style={styles.sliderValue}>{radiusKm} km</Text>
               </View>
               <Slider
-                style={styles.slider}
+                style={{ width: "100%", height: 40 }}
                 minimumValue={1}
                 maximumValue={50}
                 step={1}
                 value={radiusKm}
                 onValueChange={(val) => setValue("radiusKm", val)}
-                minimumTrackTintColor={COLORS.red}
-                maximumTrackTintColor="rgba(255,255,255,0.10)"
-                thumbTintColor={COLORS.red}
+                minimumTrackTintColor={colors.red}
+                maximumTrackTintColor={colors.cardBorder}
+                thumbTintColor={colors.red}
               />
               <View style={styles.sliderLabels}>
                 <Text style={styles.sliderHint}>1 km</Text>
@@ -418,7 +577,7 @@ export default function CreateAlertScreen() {
           </Animated.View>
         </ScrollView>
 
-        {/* Footer CTA */}
+        {/* ── Footer CTA ── */}
         <View style={[styles.footer, { paddingBottom: tabBarHeight + 20 }]}>
           <TouchableOpacity
             onPress={handleSubmit(onSubmit)}
@@ -430,13 +589,13 @@ export default function CreateAlertScreen() {
             disabled={!isValid || isPending}
           >
             {isPending ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
+              <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <>
                 <Ionicons
                   name="alert-circle-outline"
                   size={20}
-                  color={!isValid ? COLORS.textSubtle : COLORS.white}
+                  color={!isValid ? "rgba(255,255,255,0.5)" : "#FFFFFF"}
                 />
                 <Text
                   style={[
@@ -454,183 +613,3 @@ export default function CreateAlertScreen() {
     </View>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  safeArea: { flex: 1 },
-  haloTop: {
-    position: "absolute",
-    top: -100,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: COLORS.redGlow,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { color: COLORS.white, fontSize: 20, fontWeight: "800" },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 10 },
-  fieldBlock: { gap: 10 },
-  fieldLabel: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-  },
-  ctaBtnDisabled: {
-    opacity: 0.6,
-    backgroundColor: "rgba(220,30,30,0.4)", // ✅ Rouge pâle au lieu du rouge vif
-  },
-  ctaBtnTextDisabled: {
-    color: "rgba(255,255,255,0.5)", // ✅ Texte moins contrasté
-  },
-  errorText: { color: "#EF4444", fontSize: 12, marginTop: 4, marginLeft: 4 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  gridCell: {
-    width: "22%",
-    aspectRatio: 1,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-  },
-  gridCellDefault: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.cardBorder,
-  },
-  gridCellSelected: { backgroundColor: COLORS.red, borderColor: COLORS.red },
-  gridLabel: { color: COLORS.textMuted, fontSize: 17, fontWeight: "800" },
-  gridLabelSelected: { color: COLORS.white },
-  urgencyRow: { flexDirection: "row", gap: 12 },
-  urgencyBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-  },
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    backgroundColor: "rgba(34,197,94,0.07)",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(34,197,94,0.18)",
-    padding: 14,
-  },
-  infoCardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "rgba(34,197,94,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  infoCardTitle: {
-    color: COLORS.green,
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  infoCardText: {
-    color: "rgba(34,197,94,0.70)",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  highlight: {
-    color: COLORS.green,
-    fontWeight: "700",
-  },
-  urgencyLabel: { fontSize: 15, fontWeight: "700" },
-  pillsRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  pill: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  pillDefault: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.cardBorder,
-  },
-  pillSelected: {
-    backgroundColor: "rgba(220,30,30,0.10)",
-    borderColor: "rgba(220,30,30,0.30)",
-  },
-  pillText: { color: COLORS.textMuted, fontSize: 12, fontWeight: "600" },
-  pillTextSelected: { color: COLORS.red },
-  cardBg: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 18,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    padding: 18,
-  },
-  sliderHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 14,
-  },
-  sliderTitle: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: "600",
-    flex: 1,
-  },
-  sliderValue: { color: COLORS.amber, fontSize: 16, fontWeight: "800" },
-  slider: { width: "100%", height: 40 },
-  sliderLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: -4,
-  },
-  sliderHint: { color: COLORS.textSubtle, fontSize: 10, fontWeight: "600" },
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    backgroundColor: "rgba(8,8,8,0.85)",
-  },
-  ctaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: COLORS.red,
-    borderRadius: 16,
-    paddingVertical: 17,
-  },
-  ctaBtnText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-});

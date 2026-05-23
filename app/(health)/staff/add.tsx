@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Keyboard,
@@ -15,7 +14,7 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs"; // <-- AJOUT ICI
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useForm, Controller } from "react-hook-form";
@@ -25,19 +24,8 @@ import { FormInput } from "@/src/components/ui/FormInput";
 import { healthStructuresApi } from "@/src/api/healthStructures.api";
 import { useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/src/constants/query_key";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.07)",
-  red: "#DC1E1E",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.40)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  success: "#22C55E",
-  amber: "#FAC775",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
 
 // ─── Schéma Zod ────────────────────────────────────────────────
 const addStaffSchema = z.object({
@@ -50,11 +38,26 @@ const addStaffSchema = z.object({
 
 type AddStaffValues = z.infer<typeof addStaffSchema>;
 
+// ─── Password Strength Helper ────────────────────────────────
+const getPasswordStrength = (password: string, colors: AppColors) => {
+  if (!password) return { pct: 0, color: colors.textSubtle, label: "" };
+  const hasUpper = /[A-Z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const score = [password.length >= 8, hasUpper, hasDigit].filter(
+    Boolean,
+  ).length;
+
+  if (score === 3) return { pct: 100, color: colors.success, label: "Fort" };
+  if (score === 2) return { pct: 66, color: colors.amber, label: "Moyen" };
+  return { pct: 33, color: colors.red, label: "Faible" };
+};
+
 export default function AddStaffScreen() {
   const router = useRouter();
+  const colors = useColors();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight(); // <-- UTILISATION DU HOOK
+  const tabBarHeight = useBottomTabBarHeight();
   const [isPending, setIsPending] = useState(false);
 
   const { control, handleSubmit, watch } = useForm<AddStaffValues>({
@@ -69,21 +72,7 @@ export default function AddStaffScreen() {
   });
 
   const watchedPassword = watch("password");
-
-  const getPasswordStrength = () => {
-    if (!watchedPassword)
-      return { pct: 0, color: COLORS.textSubtle, label: "" };
-    const hasUpper = /[A-Z]/.test(watchedPassword);
-    const hasDigit = /[0-9]/.test(watchedPassword);
-    const score = [watchedPassword.length >= 8, hasUpper, hasDigit].filter(
-      Boolean,
-    ).length;
-    if (score === 3) return { pct: 100, color: COLORS.success, label: "Fort" };
-    if (score === 2) return { pct: 66, color: COLORS.amber, label: "Moyen" };
-    return { pct: 33, color: COLORS.red, label: "Faible" };
-  };
-
-  const strength = getPasswordStrength();
+  const strength = getPasswordStrength(watchedPassword, colors);
 
   const onSubmit = async (data: AddStaffValues) => {
     Keyboard.dismiss();
@@ -106,6 +95,91 @@ export default function AddStaffScreen() {
     }
   };
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    safeArea: { flex: 1 },
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: 24, paddingTop: 10 },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+    },
+    backBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: { color: c.white, fontSize: 20, fontWeight: "800" },
+    infoCard: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+      backgroundColor: c.success + "06",
+      borderRadius: 13,
+      borderWidth: 0.5,
+      borderColor: c.success + "18",
+      padding: 13,
+      marginBottom: 22,
+    },
+    infoText: {
+      flex: 1,
+      color: c.success,
+      fontSize: 12,
+      lineHeight: 18,
+      opacity: 0.8,
+    },
+    strengthRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: -4,
+      marginBottom: 8,
+      marginLeft: 4,
+    },
+    strengthBg: {
+      flex: 1,
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: c.cardBorder,
+    },
+    strengthFill: { height: "100%", borderRadius: 2 },
+    strengthLabel: { fontSize: 11, fontWeight: "700" },
+    footer: {
+      paddingHorizontal: 24,
+      paddingTop: 12,
+      backgroundColor: c.bg,
+      borderTopWidth: 0.5,
+      borderTopColor: c.cardBorder,
+    },
+    ctaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: c.red,
+      borderRadius: 16,
+      paddingVertical: 17,
+    },
+    ctaBtnDisabled: { opacity: 0.5 },
+    ctaBtnText: { color: c.white, fontSize: 16, fontWeight: "700" },
+    ctaBtnIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: c.white + "18",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  }));
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
@@ -117,7 +191,7 @@ export default function AddStaffScreen() {
               style={styles.backBtn}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+              <Ionicons name="arrow-back" size={19} color={colors.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Nouvel Agent</Text>
             <View style={{ width: 38 }} />
@@ -127,7 +201,6 @@ export default function AddStaffScreen() {
             style={styles.scroll}
             contentContainerStyle={[
               styles.scrollContent,
-              // On inclut la tabBarHeight ici aussi pour le scroll
               { paddingBottom: 120 + tabBarHeight },
             ]}
             keyboardShouldPersistTaps="handled"
@@ -138,7 +211,7 @@ export default function AddStaffScreen() {
               <Ionicons
                 name="information-circle-outline"
                 size={17}
-                color={COLORS.success}
+                color={colors.success}
               />
               <Text style={styles.infoText}>
                 L&apos;agent créé sera automatiquement rattaché à votre
@@ -233,7 +306,7 @@ export default function AddStaffScreen() {
                       style={[
                         styles.strengthFill,
                         {
-                          width: `${strength.pct}%` as any,
+                          width: `${strength.pct}%`,
                           backgroundColor: strength.color,
                         },
                       ]}
@@ -256,7 +329,7 @@ export default function AddStaffScreen() {
             styles.footer,
             {
               paddingBottom: insets.bottom > 0 ? insets.bottom : 16,
-              marginBottom: tabBarHeight, // <-- AJOUT ICI : pousse le footer au-dessus de la Tab Bar
+              marginBottom: tabBarHeight,
             },
           ]}
         >
@@ -267,7 +340,7 @@ export default function AddStaffScreen() {
             disabled={isPending}
           >
             {isPending ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
+              <ActivityIndicator color={colors.white} size="small" />
             ) : (
               <>
                 <Text style={styles.ctaBtnText}>Créer le compte agent</Text>
@@ -275,7 +348,7 @@ export default function AddStaffScreen() {
                   <Ionicons
                     name="checkmark-outline"
                     size={17}
-                    color={COLORS.white}
+                    color={colors.white}
                   />
                 </View>
               </>
@@ -286,96 +359,3 @@ export default function AddStaffScreen() {
     </TouchableWithoutFeedback>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  safeArea: { flex: 1 },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 10 },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { color: COLORS.white, fontSize: 20, fontWeight: "800" },
-
-  // Info card
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    backgroundColor: "rgba(34,197,94,0.06)",
-    borderRadius: 13,
-    borderWidth: 0.5,
-    borderColor: "rgba(34,197,94,0.18)",
-    padding: 13,
-    marginBottom: 22,
-  },
-  infoText: {
-    flex: 1,
-    color: "rgba(34,197,94,0.80)",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-
-  // Password strength
-  strengthRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: -4,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  strengthBg: {
-    flex: 1,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.07)",
-  },
-  strengthFill: { height: "100%", borderRadius: 2 },
-  strengthLabel: { fontSize: 11, fontWeight: "700" },
-
-  // Footer
-  footer: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    backgroundColor: COLORS.bg,
-    borderTopWidth: 0.5,
-    borderTopColor: COLORS.cardBorder,
-  },
-  ctaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: COLORS.red,
-    borderRadius: 16,
-    paddingVertical: 17,
-  },
-  ctaBtnDisabled: { opacity: 0.5 },
-  ctaBtnText: { color: COLORS.white, fontSize: 16, fontWeight: "700" },
-  ctaBtnIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

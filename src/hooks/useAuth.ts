@@ -96,10 +96,20 @@ export const useVerifyOtp = () => {
 // ─── Login (agents & admins) ──────────────────────────────────
 export const useLogin = () => {
   const { setUser } = useAuthStore();
+  const router = useRouter();
 
   return useMutation({
-    mutationFn: (payload: LoginPayload) => authApi.login(payload),
-    onSuccess: async (response) => {
+    mutationFn: async (payload: LoginPayload) => {
+      const response = await authApi.login(payload);
+      if (response.user.role === "ADMIN") {
+        throw new Error(
+          "ADMIN_BLOCKED: L'application mobile est réservée aux donneurs et aux structures de santé."
+        );
+      }
+
+      return response;
+    },
+    onSuccess: async (response) => {      
       await tokenManager.saveTokens(
         response.accessToken,
         response.refreshToken,
@@ -112,12 +122,23 @@ export const useLogin = () => {
         text2: `Bon retour, ${response.user.firstName} !`,
       });
     },
-    onError: (err) => {
-      Toast.show({
-        type: "error",
-        text1: "Connexion échouée",
-        text2: getErrorMessage(err),
-      });
+    onError: (err: any) => {
+      const isBlockedAdmin = err.message?.includes("ADMIN_BLOCKED");
+
+      if (isBlockedAdmin) {
+        Toast.show({
+          type: "error",
+          text1: "Accès refusé 🚫",
+          text2: err.message.replace("ADMIN_BLOCKED: ", ""),
+        });
+        router.replace("/unauthorized"); 
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Connexion échouée",
+          text2: getErrorMessage(err),
+        });
+      }
     },
   });
 };

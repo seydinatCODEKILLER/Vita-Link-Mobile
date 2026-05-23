@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Animated,
@@ -20,29 +19,18 @@ import { useAuthStore } from "@/src/store/auth.store";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { BloodStockLevel, BloodType } from "@/src/types/shared.types";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
 
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.07)",
-  red: "#DC1E1E",
-  green: "#1D9E75",
-  amber: "#FAC775",
-  blue: "#60A5FA",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.42)",
-  textSubtle: "rgba(255,255,255,0.16)",
-} as const;
-
-// ─── Config Niveaux de Stock ──────────────────────────────────
-const LEVEL_CONFIG: Record<BloodStockLevel, { label: string; color: string }> =
-  {
-    CRITICAL: { label: "Critique", color: COLORS.red },
-    LOW: { label: "Bas", color: COLORS.amber },
-    ADEQUATE: { label: "Ok", color: COLORS.green },
-    SURPLUS: { label: "Surplus", color: COLORS.blue },
-  };
+// ─── Config Niveaux de Stock (Dynamique) ──────────────────────
+const getLevelConfig = (
+  colors: AppColors,
+): Record<BloodStockLevel, { label: string; color: string }> => ({
+  CRITICAL: { label: "Critique", color: colors.red },
+  LOW: { label: "Bas", color: colors.amber },
+  ADEQUATE: { label: "Ok", color: colors.success },
+  SURPLUS: { label: "Surplus", color: "#60A5FA" }, // Le bleu n'est pas dans ton AppColors de base, je le laisse en dur
+});
 
 // ─── StatCard ─────────────────────────────────────────────────
 function StatCard({
@@ -58,13 +46,47 @@ function StatCard({
   unit?: string;
   color: string;
 }) {
+  const styles = useThemedStyles((c) => ({
+    statCard: {
+      flex: 1,
+      backgroundColor: c.cardBg,
+      borderRadius: 14,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      padding: 12,
+      gap: 9,
+    },
+    statIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    statBody: { gap: 2 },
+    statUnit: { fontSize: 11, fontWeight: "600" },
+    statLabel: {
+      color: c.textMuted,
+      fontSize: 9,
+      fontWeight: "600",
+      letterSpacing: 0.4,
+    },
+  }));
+
   return (
     <View style={styles.statCard}>
       <View style={[styles.statIcon, { backgroundColor: color + "15" }]}>
         <Ionicons name={icon} size={15} color={color} />
       </View>
       <View style={styles.statBody}>
-        <Text style={[styles.statValue, { color }]}>
+        <Text
+          style={{
+            fontSize: 20,
+            fontWeight: "900",
+            letterSpacing: -0.5,
+            color,
+          }}
+        >
           {value}
           {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
         </Text>
@@ -79,13 +101,42 @@ function BloodStockRow({
   bloodType,
   quantity,
   level,
+  colors,
 }: {
   bloodType: BloodType;
   quantity: number;
   level: BloodStockLevel;
+  colors: AppColors;
 }) {
+  const LEVEL_CONFIG = getLevelConfig(colors);
   const { label, color } = LEVEL_CONFIG[level];
   const typeLabel = BLOOD_TYPE_LABELS[bloodType] ?? bloodType.replace("_", "");
+
+  const styles = useThemedStyles((c) => ({
+    stockRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 13,
+      borderBottomWidth: 0.5,
+      borderBottomColor: c.cardBorder,
+    },
+    stockLeft: { flexDirection: "row", alignItems: "center", gap: 11 },
+    bloodChip: {
+      minWidth: 38,
+      height: 38,
+      borderRadius: 10,
+      borderWidth: 0.5,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 6,
+    },
+    bloodChipText: { fontSize: 13, fontWeight: "900" },
+    levelLabel: { color: c.textMuted, fontSize: 12, fontWeight: "600" },
+    stockRight: { flexDirection: "row", alignItems: "baseline", gap: 4 },
+    stockQty: { fontSize: 19, fontWeight: "900" },
+    stockUnit: { color: c.textMuted, fontSize: 11, fontWeight: "500" },
+  }));
 
   return (
     <View style={styles.stockRow}>
@@ -111,6 +162,7 @@ function BloodStockRow({
 // ─── Écran Principal ───────────────────────────────────────────
 export default function HealthHomeScreen() {
   const router = useRouter();
+  const colors = useColors();
   const user = useAuthStore((s) => s.user);
   const isPending = useIsStructurePending();
 
@@ -157,10 +209,168 @@ export default function HealthHomeScreen() {
     router.push("/(health)/alerts/create" as any);
   };
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    centered: { alignItems: "center", justifyContent: "center" },
+    scrollContent: { paddingHorizontal: 20 },
+
+    // Header
+    header: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      paddingTop: 8,
+      paddingBottom: 22,
+    },
+    greeting: {
+      color: c.textMuted,
+      fontSize: 12,
+      fontWeight: "500",
+      marginBottom: 3,
+    },
+    headerTitle: {
+      color: c.white,
+      fontSize: 24,
+      fontWeight: "900",
+      letterSpacing: -0.5,
+    },
+    notifWrap: { position: "relative" },
+    notifBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 4,
+    },
+    notifDot: {
+      position: "absolute",
+      top: 6,
+      right: 6,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: c.red,
+      borderWidth: 1.5,
+      borderColor: c.bg,
+    },
+
+    // Stats
+    statsGrid: { flexDirection: "row", gap: 8, marginBottom: 24 },
+
+    // Sections
+    sectionHead: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      marginBottom: 10,
+      marginTop: 4,
+    },
+    sectionLabel: {
+      color: c.textSubtle,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+    },
+    card: {
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      overflow: "hidden",
+      marginBottom: 22,
+    },
+
+    // Empty
+    empty: { alignItems: "center", padding: 24, gap: 8 },
+    emptyText: { color: c.textMuted, fontSize: 13 },
+
+    // Alert Row
+    alertRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 13,
+      borderBottomWidth: 0.5,
+      borderBottomColor: c.cardBorder,
+    },
+    alertBadge: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    badgeVital: {
+      backgroundColor: c.red + "12",
+      borderWidth: 0.5,
+      borderColor: c.red + "40",
+    },
+    badgeStd: {
+      backgroundColor: c.amber + "10",
+      borderWidth: 0.5,
+      borderColor: c.amber + "28",
+    },
+    alertBadgeText: { color: c.white, fontSize: 13, fontWeight: "900" },
+    alertInfo: { flex: 1, gap: 3 },
+    alertTitleRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+    alertQty: { color: c.white, fontSize: 13, fontWeight: "700" },
+    vitalPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 3,
+      backgroundColor: c.red + "12",
+      borderWidth: 0.5,
+      borderColor: c.red + "30",
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    vitalText: {
+      color: c.red,
+      fontSize: 9,
+      fontWeight: "800",
+      letterSpacing: 0.5,
+    },
+    alertService: {
+      color: c.textMuted,
+      fontSize: 11,
+      textTransform: "capitalize",
+    },
+
+    // FAB
+    fabWrap: {
+      position: "absolute",
+      right: 22,
+    },
+    fab: {
+      width: 58,
+      height: 58,
+      borderRadius: 18,
+      backgroundColor: c.red,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: c.red,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      elevation: 12,
+    },
+    fabDisabled: {
+      backgroundColor: c.cardBorder,
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+  }));
+
   if (statsLoading || alertsLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={COLORS.red} size="large" />
+        <ActivityIndicator color={colors.red} size="large" />
       </View>
     );
   }
@@ -179,7 +389,7 @@ export default function HealthHomeScreen() {
           <View>
             <Text style={styles.greeting}>Bonjour {user?.firstName} 👋</Text>
             <Text style={styles.headerTitle}>
-              Tableau <Text style={{ color: COLORS.red }}>de bord</Text>
+              Tableau <Text style={{ color: colors.red }}>de bord</Text>
             </Text>
           </View>
           <View style={styles.notifWrap}>
@@ -187,7 +397,7 @@ export default function HealthHomeScreen() {
               <Ionicons
                 name="notifications-outline"
                 size={20}
-                color={COLORS.white}
+                color={colors.white}
               />
             </TouchableOpacity>
             {activeAlertsCount > 0 && <View style={styles.notifDot} />}
@@ -200,27 +410,27 @@ export default function HealthHomeScreen() {
             icon="alert-circle-outline"
             label="Alertes actives"
             value={activeAlertsCount}
-            color={COLORS.red}
+            color={colors.red}
           />
           <StatCard
             icon="water-outline"
             label="Dons validés"
             value={stats?.totalDonations ?? 0}
-            color={COLORS.green}
+            color={colors.success}
           />
           <StatCard
             icon="time-outline"
             label="Tps réponse"
             value={stats?.avgResponseTimeMinutes ?? "—"}
             unit={stats?.avgResponseTimeMinutes ? "min" : ""}
-            color={COLORS.amber}
+            color={colors.amber}
           />
         </Animated.View>
 
         {/* ── Stock de sang ── */}
         <Animated.View style={{ opacity: fadeAnim }}>
           <View style={styles.sectionHead}>
-            <Ionicons name="flask-outline" size={14} color={COLORS.red} />
+            <Ionicons name="flask-outline" size={14} color={colors.red} />
             <Text style={styles.sectionLabel}>RÉSERVES DE SANG</Text>
           </View>
           <View style={styles.card}>
@@ -231,6 +441,7 @@ export default function HealthHomeScreen() {
                   bloodType={stock.bloodType}
                   quantity={stock.quantity}
                   level={stock.level}
+                  colors={colors}
                 />
               ))
             ) : (
@@ -238,7 +449,7 @@ export default function HealthHomeScreen() {
                 <Ionicons
                   name="water-outline"
                   size={24}
-                  color={COLORS.textSubtle}
+                  color={colors.textSubtle}
                 />
                 <Text style={styles.emptyText}>Aucun stock configuré</Text>
               </View>
@@ -252,7 +463,7 @@ export default function HealthHomeScreen() {
             <Ionicons
               name="radio-button-on-outline"
               size={14}
-              color={COLORS.amber}
+              color={colors.amber}
             />
             <Text style={styles.sectionLabel}>ALERTES EN COURS</Text>
           </View>
@@ -262,7 +473,7 @@ export default function HealthHomeScreen() {
                 <Ionicons
                   name="checkmark-circle-outline"
                   size={24}
-                  color={COLORS.green}
+                  color={colors.success}
                 />
                 <Text style={styles.emptyText}>Aucune urgence en cours</Text>
               </View>
@@ -300,7 +511,7 @@ export default function HealthHomeScreen() {
                             <Ionicons
                               name="flash"
                               size={9}
-                              color={COLORS.red}
+                              color={colors.red}
                             />
                             <Text style={styles.vitalText}>VITAL</Text>
                           </View>
@@ -313,7 +524,7 @@ export default function HealthHomeScreen() {
                     <Ionicons
                       name="chevron-forward"
                       size={14}
-                      color={COLORS.textSubtle}
+                      color={colors.textSubtle}
                     />
                   </TouchableOpacity>
                 );
@@ -331,224 +542,17 @@ export default function HealthHomeScreen() {
         ]}
       >
         <TouchableOpacity
-          style={[
-            styles.fab,
-            isPending && { backgroundColor: "#3A3A3A", shadowOpacity: 0 },
-          ]}
+          style={[styles.fab, isPending && styles.fabDisabled]}
           onPress={handleCreateAlert}
           activeOpacity={isPending ? 0.6 : 0.85}
         >
           <Ionicons
             name="add"
             size={28}
-            color={isPending ? "rgba(255,255,255,0.35)" : COLORS.white}
+            color={isPending ? colors.textSubtle : colors.white}
           />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  centered: { alignItems: "center", justifyContent: "center" },
-  scrollContent: { paddingHorizontal: 20 },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingTop: 8,
-    paddingBottom: 22,
-  },
-  greeting: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: "500",
-    marginBottom: 3,
-  },
-  headerTitle: {
-    color: COLORS.white,
-    fontSize: 24,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-  notifWrap: { position: "relative" },
-  notifBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
-  notifDot: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.red,
-    borderWidth: 1.5,
-    borderColor: COLORS.bg,
-  },
-
-  // Stats
-  statsGrid: { flexDirection: "row", gap: 8, marginBottom: 24 },
-  statCard: {
-    flex: 1,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    padding: 12,
-    gap: 9,
-  },
-  statIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  statBody: { gap: 2 },
-  statValue: { fontSize: 20, fontWeight: "900", letterSpacing: -0.5 },
-  statUnit: { fontSize: 11, fontWeight: "600" },
-  statLabel: {
-    color: COLORS.textMuted,
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 0.4,
-  },
-
-  // Sections
-  sectionHead: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  sectionLabel: {
-    color: COLORS.textSubtle,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-  card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    overflow: "hidden",
-    marginBottom: 22,
-  },
-
-  // Blood Stock
-  stockRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 13,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.cardBorder,
-  },
-  stockLeft: { flexDirection: "row", alignItems: "center", gap: 11 },
-  bloodChip: {
-    minWidth: 38,
-    height: 38,
-    borderRadius: 10,
-    borderWidth: 0.5,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-  },
-  bloodChipText: { fontSize: 13, fontWeight: "900" },
-  levelLabel: { color: COLORS.textMuted, fontSize: 12, fontWeight: "600" },
-  stockRight: { flexDirection: "row", alignItems: "baseline", gap: 4 },
-  stockQty: { fontSize: 19, fontWeight: "900" },
-  stockUnit: { color: COLORS.textMuted, fontSize: 11, fontWeight: "500" },
-
-  // Empty
-  empty: { alignItems: "center", padding: 24, gap: 8 },
-  emptyText: { color: COLORS.textMuted, fontSize: 13 },
-
-  // Alert Row
-  alertRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 13,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.cardBorder,
-  },
-  alertBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  badgeVital: {
-    backgroundColor: "rgba(220,30,30,0.12)",
-    borderWidth: 0.5,
-    borderColor: "rgba(220,30,30,0.40)",
-  },
-  badgeStd: {
-    backgroundColor: "rgba(250,199,117,0.10)",
-    borderWidth: 0.5,
-    borderColor: "rgba(250,199,117,0.28)",
-  },
-  alertBadgeText: { color: COLORS.white, fontSize: 13, fontWeight: "900" },
-  alertInfo: { flex: 1, gap: 3 },
-  alertTitleRow: { flexDirection: "row", alignItems: "center", gap: 7 },
-  alertQty: { color: COLORS.white, fontSize: 13, fontWeight: "700" },
-  vitalPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "rgba(220,30,30,0.12)",
-    borderWidth: 0.5,
-    borderColor: "rgba(220,30,30,0.30)",
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  vitalText: {
-    color: COLORS.red,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  alertService: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    textTransform: "capitalize",
-  },
-
-  // FAB
-  fabWrap: {
-    position: "absolute",
-    right: 22,
-  },
-  fab: {
-    width: 58,
-    height: 58,
-    borderRadius: 18,
-    backgroundColor: COLORS.red,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: COLORS.red,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-});

@@ -28,6 +28,8 @@ import { getPendingQr, PendingQr } from "@/src/utils/qr.utils";
 import { isNetworkError } from "@/src/utils/error.utils";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
+import { useBloodTypeBanner } from "@/src/hooks/usebloodtypebanner";
+import { useIsEligible } from "@/src/hooks/useAuthStore";
 
 type FilterType = "ALL" | "VITAL" | "STANDARD";
 
@@ -101,7 +103,7 @@ function SkeletonCard({ colors }: { colors: AppColors }) {
   );
 }
 
-// ─── Composant stats rapides ───────────────────────────────────
+// ─── AlertsStats ───────────────────────────────────────────────
 function AlertsStats({
   total,
   vital,
@@ -155,7 +157,59 @@ function AlertsStats({
   );
 }
 
-// ─── Bannière Engagement Actif ─────────────────────────────────
+// ─── BloodTypeBanner ───────────────────────────────────────────
+function BloodTypeBanner({
+  onPress,
+  colors,
+}: {
+  onPress: () => void;
+  colors: AppColors;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        marginHorizontal: 20,
+        marginBottom: 14,
+        backgroundColor: colors.amber + "12",
+        borderWidth: 1.5,
+        borderColor: colors.amber + "40",
+        borderRadius: 16,
+        paddingVertical: 13,
+        paddingHorizontal: 16,
+      }}
+    >
+      <View
+        style={{
+          width: 38,
+          height: 38,
+          borderRadius: 11,
+          backgroundColor: colors.amber + "20",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <Ionicons name="water-outline" size={20} color={colors.amber} />
+      </View>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={{ color: colors.amber, fontSize: 13, fontWeight: "700" }}>
+          Groupe sanguin manquant
+        </Text>
+        <Text style={{ color: colors.textMuted, fontSize: 12, lineHeight: 16 }}>
+          Renseignez-le pour recevoir les alertes compatibles.
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={colors.amber} />
+    </TouchableOpacity>
+  );
+}
+
+// ─── EngagementBanner ─────────────────────────────────────────
 function EngagementBanner({
   engagement,
   isExpired = false,
@@ -273,7 +327,6 @@ function EngagementBanner({
               </Text>
             </View>
           </View>
-
           <View style={{ flex: 1, gap: 4, minWidth: 0 }}>
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
@@ -299,7 +352,6 @@ function EngagementBanner({
               {hospitalName} • {bloodLabel}
             </Text>
           </View>
-
           <View
             style={{
               width: 34,
@@ -330,6 +382,8 @@ export default function DonorHomeScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const colors = useColors();
+  const { showBanner } = useBloodTypeBanner();
+  const { isEligible, daysLeft } = useIsEligible();
 
   const {
     data: alerts,
@@ -636,42 +690,63 @@ export default function DonorHomeScreen() {
 
             {/* ── Disponibilité ── */}
             <TouchableOpacity
-              activeOpacity={0.85}
+              activeOpacity={isEligible ? 0.85 : 1}
               style={[
                 styles.availRow,
-                user?.isAvailable ? styles.availRowOn : styles.availRowOff,
+                !isEligible
+                  ? styles.availRowOff
+                  : user?.isAvailable
+                    ? styles.availRowOn
+                    : styles.availRowOff,
+                !isEligible && { opacity: 0.55 },
               ]}
-              onPress={() => toggleAvailability(!user?.isAvailable)}
-              disabled={isTogglingAvail}
+              onPress={() =>
+                isEligible && toggleAvailability(!user?.isAvailable)
+              }
+              disabled={isTogglingAvail || !isEligible}
             >
               <View style={styles.availLeft}>
                 <View
                   style={[
                     styles.availDot,
-                    user?.isAvailable ? styles.availDotOn : styles.availDotOff,
+                    isEligible && user?.isAvailable
+                      ? styles.availDotOn
+                      : styles.availDotOff,
                   ]}
                 />
                 <View>
                   <Text style={styles.availTitle}>
-                    {user?.isAvailable
-                      ? "Disponible pour donner"
-                      : "Non disponible"}
+                    {!isEligible
+                      ? "Période de repos"
+                      : user?.isAvailable
+                        ? "Disponible pour donner"
+                        : "Non disponible"}
                   </Text>
                   <Text style={styles.availSub}>
-                    {user?.isAvailable
-                      ? "Vous recevez les alertes push"
-                      : "Les alertes sont suspendues"}
+                    {!isEligible
+                      ? `Éligible dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""} — toggle désactivé`
+                      : user?.isAvailable
+                        ? "Vous recevez les alertes push"
+                        : "Les alertes sont suspendues"}
                   </Text>
                 </View>
               </View>
               <Switch
                 trackColor={{ false: colors.cardBorder, true: colors.success }}
                 thumbColor={colors.cardBg}
-                value={user?.isAvailable ?? true}
+                value={isEligible && (user?.isAvailable ?? true)}
                 onValueChange={(val) => toggleAvailability(val)}
-                disabled={isTogglingAvail}
+                disabled={isTogglingAvail || !isEligible}
               />
             </TouchableOpacity>
+
+            {/* ── Bannière groupe sanguin manquant ── */}
+            {showBanner && (
+              <BloodTypeBanner
+                colors={colors}
+                onPress={() => router.push("/(donor)/profile/edit" as any)}
+              />
+            )}
 
             {/* ── Engagement actif ── */}
             {displayedEngagement && !isLocalExpired && (

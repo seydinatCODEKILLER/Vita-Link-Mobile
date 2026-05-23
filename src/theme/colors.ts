@@ -11,6 +11,7 @@ export const darkColors = {
   success: "#22C55E",
   amber: "#FAC775",
   haloLight: "rgba(220,30,30,0.07)",
+  blue: "#60A5FA",
 };
 
 export const lightColors = {
@@ -26,6 +27,7 @@ export const lightColors = {
   success: "#16A34A",
   amber: "#D97706",
   haloLight: "rgba(220,30,30,0.05)",
+  blue: "#2563EB",
 };
 
 export type AppColors = typeof darkColors;

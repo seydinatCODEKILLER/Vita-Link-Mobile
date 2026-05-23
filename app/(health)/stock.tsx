@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Modal,
@@ -17,22 +16,10 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useMyStocks, useUpdateMyStock } from "@/src/hooks/useBloodStocks";
 import { BloodType, BloodStockLevel } from "@/src/types/shared.types";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.07)",
-  red: "#DC1E1E",
-  orange: "#F97316",
-  green: "#1D9E75",
-  blue: "#3B82F6",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.42)",
-  textSubtle: "rgba(255,255,255,0.16)",
-  inputBg: "#141414",
-  inputBorder: "rgba(255,255,255,0.09)",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { isNetworkError } from "@/src/utils/error.utils";
 
 // ─── Config Groupes Sanguins ──────────────────────────────────
 const BLOOD_TYPES_CONFIG: {
@@ -50,28 +37,30 @@ const BLOOD_TYPES_CONFIG: {
   { value: "O_NEG", label: "O−", isRare: true },
 ];
 
-// ─── Config Niveaux de Stock ──────────────────────────────────
-const STOCK_LEVEL_CONFIG: Record<
+// ─── Config Niveaux de Stock (Dynamique) ──────────────────────
+const getStockLevelConfig = (
+  colors: AppColors,
+): Record<
   BloodStockLevel,
   {
     color: string;
     icon: keyof typeof Ionicons.glyphMap;
     label: string;
   }
-> = {
+> => ({
   CRITICAL: {
-    color: COLORS.red,
+    color: colors.red,
     icon: "alert-circle-outline",
     label: "Critique",
   },
-  LOW: { color: COLORS.orange, icon: "trending-down-outline", label: "Bas" },
+  LOW: { color: "#F97316", icon: "trending-down-outline", label: "Bas" }, // Orange hors palette
   ADEQUATE: {
-    color: COLORS.green,
+    color: colors.success,
     icon: "checkmark-circle-outline",
     label: "Adéquat",
   },
-  SURPLUS: { color: COLORS.blue, icon: "add-circle-outline", label: "Surplus" },
-};
+  SURPLUS: { color: "#3B82F6", icon: "add-circle-outline", label: "Surplus" }, // Bleu hors palette
+});
 
 // ─── StockCard ────────────────────────────────────────────────
 function StockCard({
@@ -81,9 +70,70 @@ function StockCard({
   stock: { bloodType: BloodType; quantity: number; level: BloodStockLevel };
   onPress: () => void;
 }) {
+  const colors = useColors();
+  const STOCK_LEVEL_CONFIG = getStockLevelConfig(colors);
+
   const config = BLOOD_TYPES_CONFIG.find((b) => b.value === stock.bloodType);
   const lvlConfig = STOCK_LEVEL_CONFIG[stock.level];
   const progressPct = Math.min((stock.quantity / 20) * 100, 100);
+
+  const styles = useThemedStyles((c) => ({
+    stockCard: {
+      width: "48%",
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 0.5,
+      padding: 15,
+      gap: 8,
+      position: "relative",
+      overflow: "hidden",
+    },
+    cardGlow: {
+      position: "absolute",
+      top: -24,
+      right: -24,
+      width: 90,
+      height: 90,
+      borderRadius: 45,
+      opacity: 0.5,
+    },
+    cardHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    bloodLabel: { color: c.white, fontSize: 22, fontWeight: "900" },
+    levelChip: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    rareBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: "#F9731614",
+      borderWidth: 0.5,
+      borderColor: "#F9731628",
+      paddingHorizontal: 7,
+      paddingVertical: 2,
+      borderRadius: 5,
+    },
+    rareBadgeText: { color: "#F97316", fontSize: 9, fontWeight: "700" },
+    quantityText: {
+      color: c.white,
+      fontSize: 32,
+      fontWeight: "900",
+      letterSpacing: -1,
+    },
+    levelLabel: { fontSize: 11, fontWeight: "700" },
+    barBg: {
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.cardBorder,
+    },
+    barFill: { height: "100%", borderRadius: 2 },
+  }));
 
   return (
     <TouchableOpacity
@@ -119,7 +169,7 @@ function StockCard({
           style={[
             styles.barFill,
             {
-              width: `${progressPct}%` as any,
+              width: `${progressPct}%`,
               backgroundColor: lvlConfig.color,
             },
           ]}
@@ -131,10 +181,14 @@ function StockCard({
 
 // ─── Écran Principal ───────────────────────────────────────────
 export default function StockScreen() {
+  const colors = useColors();
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
+  const STOCK_LEVEL_CONFIG = getStockLevelConfig(colors);
 
-  const { data: stocks, isLoading } = useMyStocks();
+  // ✅ AJOUT : Extraction de `isError`, `error` et `refetch`
+  const { data: stocks, isLoading, isError, error, refetch } = useMyStocks();
+
   const { mutateAsync: updateStock, isPending: isUpdating } =
     useUpdateMyStock();
 
@@ -172,11 +226,169 @@ export default function StockScreen() {
     }
   };
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    centered: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+      padding: 24,
+    },
+    scrollContent: { paddingHorizontal: 20, paddingTop: 10 },
+    pendingTitle: {
+      color: c.white,
+      fontSize: 18,
+      fontWeight: "700",
+      marginTop: 16,
+      textAlign: "center",
+    },
+    pendingSub: {
+      color: c.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    header: { marginBottom: 18 },
+    headerTitle: {
+      color: c.white,
+      fontSize: 26,
+      fontWeight: "900",
+      letterSpacing: -0.5,
+    },
+    liveRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 5,
+    },
+    liveDot: {
+      width: 7,
+      height: 7,
+      borderRadius: 4,
+      backgroundColor: c.success,
+      shadowColor: c.success,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    headerSub: { color: c.textMuted, fontSize: 12, fontWeight: "500" },
+    legendRow: {
+      flexDirection: "row",
+      marginBottom: 18,
+      backgroundColor: c.cardBg,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      borderRadius: 13,
+      overflow: "hidden",
+    },
+    legendItem: {
+      flex: 1,
+      alignItems: "center",
+      gap: 5,
+      paddingVertical: 11,
+      borderRightWidth: 0.5,
+      borderRightColor: c.cardBorder,
+    },
+    legendIconWrap: {
+      width: 26,
+      height: 26,
+      borderRadius: 7,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    legendText: { fontSize: 10, fontWeight: "700" },
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.85)",
+      justifyContent: "flex-end",
+    },
+    modalCard: {
+      backgroundColor: c.cardBg,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      padding: 24,
+      paddingTop: 16,
+      gap: 14,
+      alignItems: "center",
+    },
+    pullBar: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.textSubtle,
+      marginBottom: 6,
+    },
+    modalTitle: { color: c.white, fontSize: 17, fontWeight: "800" },
+    modalBloodBadge: {
+      backgroundColor: c.red + "12",
+      borderWidth: 0.5,
+      borderColor: c.red + "30",
+      paddingHorizontal: 18,
+      paddingVertical: 7,
+      borderRadius: 10,
+    },
+    modalBloodText: { color: c.red, fontSize: 22, fontWeight: "900" },
+    modalLabel: {
+      color: c.textMuted,
+      fontSize: 13,
+      fontWeight: "600",
+      alignSelf: "flex-start",
+    },
+    modalInput: {
+      backgroundColor: c.inputBg,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      borderRadius: 13,
+      padding: 16,
+      color: c.white,
+      fontSize: 20,
+      fontWeight: "700",
+      width: "100%",
+      textAlign: "center",
+    },
+    modalActions: {
+      flexDirection: "row",
+      gap: 10,
+      width: "100%",
+      marginTop: 4,
+    },
+    cancelBtn: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: 13,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+    },
+    cancelBtnText: { color: c.textMuted, fontSize: 14, fontWeight: "700" },
+    confirmBtn: {
+      flex: 1,
+      backgroundColor: c.red,
+      paddingVertical: 14,
+      borderRadius: 13,
+      alignItems: "center",
+    },
+    confirmBtnText: { color: c.white, fontSize: 14, fontWeight: "700" },
+    btnDisabled: { opacity: 0.5 },
+    errorText: { color: c.textMuted, fontSize: 16 },
+    errorBack: {
+      backgroundColor: c.red,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    errorBackText: { color: "#FFFFFF", fontWeight: "700" },
+  }));
+
   // ── Structure en attente ──
   if (isPending) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Ionicons name="time-outline" size={64} color={COLORS.textSubtle} />
+        <Ionicons name="time-outline" size={64} color={colors.textSubtle} />
         <Text style={styles.pendingTitle}>Structure en attente</Text>
         <Text style={styles.pendingSub}>
           Votre structure doit être validée par nos équipes avant de pouvoir
@@ -189,7 +401,30 @@ export default function StockScreen() {
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={COLORS.red} size="large" />
+        <ActivityIndicator color={colors.red} size="large" />
+      </View>
+    );
+  }
+
+  // ✅ NOUVEAU : Gestion robuste des erreurs
+  if (isError) {
+    // 1. Si c'est une erreur réseau → NetworkErrorScreen avec bouton Réessayer
+    if (isNetworkError(error)) {
+      return (
+        <View style={styles.container}>
+          <NetworkErrorScreen onRetry={refetch} />
+        </View>
+      );
+    }
+
+    // 2. Si c'est une erreur API (ex: 403 ou 500) → Message d'erreur classique
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Ionicons name="alert-circle-outline" size={40} color={colors.red} />
+        <Text style={styles.errorText}>Impossible de charger les stocks</Text>
+        <TouchableOpacity onPress={() => refetch()} style={styles.errorBack}>
+          <Text style={styles.errorBackText}>Réessayer</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -209,7 +444,7 @@ export default function StockScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.headerTitle}>
-              Stocks de <Text style={{ color: COLORS.red }}>Sang</Text>
+              Stocks de <Text style={{ color: colors.red }}>Sang</Text>
             </Text>
             <View style={styles.liveRow}>
               <View style={styles.liveDot} />
@@ -283,7 +518,7 @@ export default function StockScreen() {
               onChangeText={setInputQuantity}
               maxLength={3}
               selectTextOnFocus
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={colors.textMuted}
             />
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -300,7 +535,7 @@ export default function StockScreen() {
                 activeOpacity={0.8}
               >
                 {isUpdating ? (
-                  <ActivityIndicator color={COLORS.white} size="small" />
+                  <ActivityIndicator color={colors.white} size="small" />
                 ) : (
                   <Text style={styles.confirmBtnText}>Enregistrer</Text>
                 )}
@@ -312,211 +547,3 @@ export default function StockScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  centered: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    padding: 24,
-  },
-  scrollContent: { paddingHorizontal: 20, paddingTop: 10 },
-
-  // Pending
-  pendingTitle: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: "700",
-    marginTop: 16,
-    textAlign: "center",
-  },
-  pendingSub: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-
-  // Header
-  header: { marginBottom: 18 },
-  headerTitle: {
-    color: COLORS.white,
-    fontSize: 26,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-  liveRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 5 },
-  liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.green,
-    shadowColor: COLORS.green,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  headerSub: { color: COLORS.textMuted, fontSize: 12, fontWeight: "500" },
-
-  // Légende
-  legendRow: {
-    flexDirection: "row",
-    marginBottom: 18,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    borderRadius: 13,
-    overflow: "hidden",
-  },
-  legendItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 5,
-    paddingVertical: 11,
-    borderRightWidth: 0.5,
-    borderRightColor: COLORS.cardBorder,
-  },
-  legendIconWrap: {
-    width: 26,
-    height: 26,
-    borderRadius: 7,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  legendText: { fontSize: 10, fontWeight: "700" },
-
-  // Grid
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-
-  // Stock Card
-  stockCard: {
-    width: "48%",
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    borderWidth: 0.5,
-    padding: 15,
-    gap: 8,
-    position: "relative",
-    overflow: "hidden",
-  },
-  cardGlow: {
-    position: "absolute",
-    top: -24,
-    right: -24,
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    opacity: 0.5,
-  },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  bloodLabel: { color: COLORS.white, fontSize: 22, fontWeight: "900" },
-  levelChip: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rareBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "rgba(249,115,22,0.14)",
-    borderWidth: 0.5,
-    borderColor: "rgba(249,115,22,0.28)",
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 5,
-  },
-  rareBadgeText: { color: COLORS.orange, fontSize: 9, fontWeight: "700" },
-  quantityText: {
-    color: COLORS.white,
-    fontSize: 32,
-    fontWeight: "900",
-    letterSpacing: -1,
-  },
-  levelLabel: { fontSize: 11, fontWeight: "700" },
-  barBg: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.07)",
-  },
-  barFill: { height: "100%", borderRadius: 2 },
-
-  // Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.85)",
-    justifyContent: "flex-end",
-  },
-  modalCard: {
-    backgroundColor: COLORS.cardBg,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    padding: 24,
-    paddingTop: 16,
-    gap: 14,
-    alignItems: "center",
-  },
-  pullBar: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    marginBottom: 6,
-  },
-  modalTitle: { color: COLORS.white, fontSize: 17, fontWeight: "800" },
-  modalBloodBadge: {
-    backgroundColor: "rgba(220,30,30,0.12)",
-    borderWidth: 0.5,
-    borderColor: "rgba(220,30,30,0.30)",
-    paddingHorizontal: 18,
-    paddingVertical: 7,
-    borderRadius: 10,
-  },
-  modalBloodText: { color: COLORS.red, fontSize: 22, fontWeight: "900" },
-  modalLabel: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    fontWeight: "600",
-    alignSelf: "flex-start",
-  },
-  modalInput: {
-    backgroundColor: COLORS.inputBg,
-    borderWidth: 0.5,
-    borderColor: COLORS.inputBorder,
-    borderRadius: 13,
-    padding: 16,
-    color: COLORS.white,
-    fontSize: 20,
-    fontWeight: "700",
-    width: "100%",
-    textAlign: "center",
-  },
-  modalActions: { flexDirection: "row", gap: 10, width: "100%", marginTop: 4 },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 13,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-  },
-  cancelBtnText: { color: COLORS.textMuted, fontSize: 14, fontWeight: "700" },
-  confirmBtn: {
-    flex: 1,
-    backgroundColor: COLORS.red,
-    paddingVertical: 14,
-    borderRadius: 13,
-    alignItems: "center",
-  },
-  confirmBtnText: { color: COLORS.white, fontSize: 14, fontWeight: "700" },
-  btnDisabled: { opacity: 0.5 },
-});

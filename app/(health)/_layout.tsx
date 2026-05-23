@@ -1,24 +1,16 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, Platform } from "react-native";
+import { View, Platform } from "react-native";
 import { Tabs, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "@/src/store/auth.store";
 import { useNotifications } from "@/src/hooks/useNotifications";
-import { useLocation } from "@/src/hooks/useLocation"; // ✅ AJOUT
+import { useLocation } from "@/src/hooks/useLocation";
 import { InAppAlert } from "@/src/components/ui/InAppAlert";
 import logger from "@/src/utils/logger.utils";
 import { useSocket } from "@/src/hooks/useSocket";
 import { useAlertStore } from "@/src/store/alerts.store";
-
-const COLORS = {
-  bg: "#080808",
-  tabBg: "#111111",
-  tabBorder: "rgba(255,255,255,0.08)",
-  red: "#DC1E1E",
-  textMuted: "rgba(255,255,255,0.35)",
-  white: "#FFFFFF",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 
 const TABS = [
   {
@@ -57,6 +49,38 @@ export default function HealthLayout() {
   const router = useRouter();
   const { user, isAuthenticated } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const colors = useColors();
+
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    tabBar: {
+      backgroundColor: "transparent",
+      borderTopWidth: 1,
+      borderTopColor: c.cardBorder,
+      paddingTop: 8,
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      elevation: 0,
+    },
+    tabBarBg: { position: "absolute", inset: 0, backgroundColor: c.cardBg },
+    tabLabel: {
+      fontSize: 10,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+      marginTop: 2,
+    },
+    tabItem: { paddingTop: 4 },
+    alertOverlay: {
+      position: "absolute",
+      top: Platform.OS === "ios" ? 56 : 44,
+      left: 0,
+      right: 0,
+      zIndex: 9999,
+      pointerEvents: "box-none",
+    },
+  }));
 
   useEffect(() => {
     if (!isAuthenticated || !user) {
@@ -69,7 +93,7 @@ export default function HealthLayout() {
   }, [isAuthenticated, user]);
 
   const { requestAndRegister, startForegroundListener } = useNotifications();
-  const { requestAndSync: syncLocation } = useLocation(); // ✅ AJOUT
+  const { requestAndSync: syncLocation } = useLocation();
 
   useSocket();
   const inAppAlert = useAlertStore((s) => s.inAppAlert);
@@ -83,7 +107,7 @@ export default function HealthLayout() {
 
     logger.info("Initialisation permissions structure de santé...");
     const init = async () => {
-      syncLocation(); // ✅ AJOUT — met à jour la position de la structure au login
+      syncLocation();
       await requestAndRegister();
       startForegroundListener();
       logger.info("Permissions structure initialisées");
@@ -119,8 +143,8 @@ export default function HealthLayout() {
             styles.tabBar,
             { height: tabBarHeight, paddingBottom: safeBottom },
           ],
-          tabBarActiveTintColor: COLORS.red,
-          tabBarInactiveTintColor: COLORS.textMuted,
+          tabBarActiveTintColor: colors.red,
+          tabBarInactiveTintColor: colors.textMuted,
           tabBarLabelStyle: styles.tabLabel,
           tabBarItemStyle: styles.tabItem,
           tabBarBackground: () => <View style={styles.tabBarBg} />,
@@ -152,34 +176,3 @@ export default function HealthLayout() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  tabBar: {
-    backgroundColor: "transparent",
-    borderTopWidth: 1,
-    borderTopColor: COLORS.tabBorder,
-    paddingTop: 8,
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    elevation: 0,
-  },
-  tabBarBg: { position: "absolute", inset: 0, backgroundColor: COLORS.tabBg },
-  tabLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    marginTop: 2,
-  },
-  tabItem: { paddingTop: 4 },
-  alertOverlay: {
-    position: "absolute",
-    top: Platform.OS === "ios" ? 56 : 44,
-    left: 0,
-    right: 0,
-    zIndex: 9999,
-    pointerEvents: "box-none",
-  },
-});

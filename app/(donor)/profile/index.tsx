@@ -96,9 +96,7 @@ function ProfileRow({
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
-          backgroundColor: valueColor
-            ? valueColor + "14"
-            : colors.cardBorder,
+          backgroundColor: valueColor ? valueColor + "14" : colors.cardBorder,
         }}
       >
         <Ionicons
@@ -107,7 +105,14 @@ function ProfileRow({
           color={valueColor ?? colors.textMuted}
         />
       </View>
-      <Text style={{ flex: 1, color: colors.white, fontSize: 14, fontWeight: "500" }}>
+      <Text
+        style={{
+          flex: 1,
+          color: colors.white,
+          fontSize: 14,
+          fontWeight: "500",
+        }}
+      >
         {label}
       </Text>
       {value && (
@@ -158,10 +163,18 @@ function StatBadge({
       >
         <Ionicons name={icon} size={13} color={color} />
       </View>
-      <Text style={{ fontSize: 15, fontWeight: "800", letterSpacing: -0.3, color }}>
+      <Text
+        style={{ fontSize: 15, fontWeight: "800", letterSpacing: -0.3, color }}
+      >
         {value}
       </Text>
-      <Text style={{ color: "rgba(255,255,255,0.42)", fontSize: 10, fontWeight: "600" }}>
+      <Text
+        style={{
+          color: "rgba(255,255,255,0.42)",
+          fontSize: 10,
+          fontWeight: "600",
+        }}
+      >
         {label}
       </Text>
     </View>
@@ -472,7 +485,13 @@ export default function ProfileScreen() {
         >
           <LinearGradient
             colors={[...gradeConfig.gradient] as [string, string]}
-            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            }}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           />
@@ -643,30 +662,47 @@ export default function ProfileScreen() {
         {/* ── Disponibilité ── */}
         <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
           <Text style={styles.sectionTitle}>DISPONIBILITÉ</Text>
-          <View style={styles.card}>
+          <View style={[styles.card, !isEligible && { opacity: 0.55 }]}>
             <View style={styles.availRow}>
               <View
                 style={[
                   styles.availIconWrap,
                   {
-                    backgroundColor: user?.isAvailable
-                      ? colors.success + "14"
-                      : colors.cardBorder,
+                    backgroundColor:
+                      isEligible && user?.isAvailable
+                        ? colors.success + "14"
+                        : colors.cardBorder,
                   },
                 ]}
               >
                 <Ionicons
-                  name={user?.isAvailable ? "pulse" : "pulse-outline"}
+                  name={
+                    isEligible && user?.isAvailable ? "pulse" : "pulse-outline"
+                  }
                   size={17}
-                  color={user?.isAvailable ? colors.success : colors.textMuted}
+                  color={
+                    isEligible && user?.isAvailable
+                      ? colors.success
+                      : colors.textMuted
+                  }
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.white, fontSize: 14, fontWeight: "500" }}>
-                  Disponible pour donner
+                <Text
+                  style={{
+                    color: colors.white,
+                    fontSize: 14,
+                    fontWeight: "500",
+                  }}
+                >
+                  {!isEligible ? "Période de repos" : "Disponible pour donner"}
                 </Text>
                 <Text style={styles.rowHint}>
-                  {user?.isAvailable ? "Alertes activées" : "Alertes en pause"}
+                  {!isEligible
+                    ? `Éligible dans ${daysLeft} jour${daysLeft > 1 ? "s" : ""}`
+                    : user?.isAvailable
+                      ? "Alertes activées"
+                      : "Alertes en pause"}
                 </Text>
               </View>
               <Switch
@@ -675,9 +711,9 @@ export default function ProfileScreen() {
                   true: colors.success,
                 }}
                 thumbColor={colors.white}
-                value={user?.isAvailable ?? true}
+                value={isEligible && (user?.isAvailable ?? true)}
                 onValueChange={(val) => toggleAvailability(val)}
-                disabled={isTogglingAvail}
+                disabled={isTogglingAvail || !isEligible}
                 ios_backgroundColor={colors.cardBorder}
               />
             </View>

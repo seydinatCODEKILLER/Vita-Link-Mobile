@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -17,26 +16,15 @@ import { useAuthStore } from "@/src/store/auth.store";
 import { useMyStaff, useRemoveStaff } from "@/src/hooks/useStaff";
 import { StaffMember } from "@/src/types/healthStructure.type";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
 
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.07)",
-  red: "#DC1E1E",
-  green: "#1D9E75",
-  amber: "#FAC775",
-  blue: "#60A5FA",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.42)",
-  textSubtle: "rgba(255,255,255,0.16)",
-} as const;
-
-const AVATAR_COLORS = [
-  { bg: "rgba(29,158,117,0.14)", text: COLORS.green },
-  { bg: "rgba(96,165,250,0.14)", text: COLORS.blue },
-  { bg: "rgba(220,30,30,0.12)", text: COLORS.red },
-  { bg: "rgba(250,199,117,0.14)", text: COLORS.amber },
+// ─── Config Avatar Colors (Dynamique) ────────────────────────
+const getAvatarColors = (colors: AppColors) => [
+  { bg: colors.success + "14", text: colors.success },
+  { bg: "#60A5FA14", text: "#60A5FA" }, // Bleu hors palette
+  { bg: colors.red + "12", text: colors.red },
+  { bg: colors.amber + "14", text: colors.amber },
 ];
 
 // ─── StaffRow ─────────────────────────────────────────────────
@@ -51,12 +39,67 @@ function StaffRow({
   isDirector: boolean;
   onDelete: (id: string, name: string) => void;
 }) {
+  const colors = useColors();
+  const AVATAR_COLORS = getAvatarColors(colors);
+
   const isAdmin = member.isStructureAdmin;
   const avatarColor = isAdmin
-    ? { bg: "rgba(250,199,117,0.14)", text: COLORS.amber }
+    ? { bg: colors.amber + "14", text: colors.amber }
     : AVATAR_COLORS[avatarColorIndex % AVATAR_COLORS.length];
 
   const initials = `${member.firstName[0]}${member.lastName[0]}`.toUpperCase();
+
+  const styles = useThemedStyles((c) => ({
+    card: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 13,
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      padding: 13,
+      marginBottom: 9,
+    },
+    avatar: {
+      width: 46,
+      height: 46,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    avatarText: { fontSize: 16, fontWeight: "900" },
+    info: { flex: 1, gap: 3 },
+    nameRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      flexWrap: "wrap",
+    },
+    name: { color: c.white, fontSize: 15, fontWeight: "700" },
+    directorPill: {
+      backgroundColor: c.amber + "13",
+      borderWidth: 0.5,
+      borderColor: c.amber + "30",
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+    },
+    directorPillText: { color: c.amber, fontSize: 10, fontWeight: "700" },
+    email: { color: c.textMuted, fontSize: 12 },
+    deleteBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 11,
+      backgroundColor: c.red + "08",
+      borderWidth: 0.5,
+      borderColor: c.red + "22",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+  }));
 
   return (
     <View style={styles.card}>
@@ -90,7 +133,7 @@ function StaffRow({
           }
           activeOpacity={0.7}
         >
-          <Ionicons name="trash-outline" size={16} color={COLORS.red} />
+          <Ionicons name="trash-outline" size={16} color={colors.red} />
         </TouchableOpacity>
       )}
     </View>
@@ -100,6 +143,7 @@ function StaffRow({
 // ─── Écran Principal ───────────────────────────────────────────
 export default function StaffScreen() {
   const router = useRouter();
+  const colors = useColors();
   const currentUser = useAuthStore((s) => s.user);
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
@@ -154,10 +198,96 @@ export default function StaffScreen() {
     router.push("/(health)/staff/add" as any);
   };
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    centered: { alignItems: "center", justifyContent: "center" },
+    listContent: { paddingHorizontal: 20, paddingTop: 4 },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingVertical: 14,
+    },
+    backBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerCenter: { alignItems: "center", gap: 2 },
+    headerTitle: { color: c.white, fontSize: 18, fontWeight: "800" },
+    headerCount: { color: c.textMuted, fontSize: 11, fontWeight: "600" },
+    pendingBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginHorizontal: 20,
+      marginBottom: 12,
+      backgroundColor: c.amber + "08",
+      borderWidth: 0.5,
+      borderColor: c.amber + "22",
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    pendingBannerText: {
+      color: c.amber,
+      fontSize: 12,
+      fontWeight: "600",
+      flex: 1,
+    },
+    sectionLabel: {
+      color: c.textSubtle,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+      marginBottom: 10,
+      marginTop: 6,
+    },
+    emptyState: {
+      alignItems: "center",
+      paddingTop: 60,
+      gap: 12,
+      paddingHorizontal: 20,
+    },
+    emptyTitle: { color: c.white, fontSize: 16, fontWeight: "700" },
+    emptySub: {
+      color: c.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    fab: {
+      position: "absolute",
+      right: 22,
+      width: 56,
+      height: 56,
+      borderRadius: 18,
+      backgroundColor: c.red,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: c.red,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.28,
+      shadowRadius: 14,
+      elevation: 10,
+    },
+    fabDisabled: {
+      backgroundColor: c.cardBorder,
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+  }));
+
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={COLORS.red} size="large" />
+        <ActivityIndicator color={colors.red} size="large" />
       </View>
     );
   }
@@ -182,7 +312,7 @@ export default function StaffScreen() {
           style={styles.backBtn}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+          <Ionicons name="arrow-back" size={19} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Notre Équipe</Text>
@@ -194,7 +324,7 @@ export default function StaffScreen() {
       {/* ── Banner pending ── */}
       {isPending && (
         <View style={styles.pendingBanner}>
-          <Ionicons name="time-outline" size={15} color={COLORS.amber} />
+          <Ionicons name="time-outline" size={15} color={colors.amber} />
           <Text style={styles.pendingBannerText}>
             Structure en attente de validation — ajout d&apos;agents désactivé
           </Text>
@@ -229,7 +359,7 @@ export default function StaffScreen() {
             <Ionicons
               name="people-outline"
               size={40}
-              color={COLORS.textSubtle}
+              color={colors.textSubtle}
             />
             <Text style={styles.emptyTitle}>Aucun agent enregistré</Text>
             <Text style={styles.emptySub}>
@@ -244,7 +374,7 @@ export default function StaffScreen() {
         style={[
           styles.fab,
           { bottom: tabBarHeight + 20 },
-          isPending && { backgroundColor: "#3A3A3A", shadowOpacity: 0 },
+          isPending && styles.fabDisabled,
         ]}
         onPress={handleAddStaff}
         activeOpacity={isPending ? 0.6 : 0.85}
@@ -252,152 +382,9 @@ export default function StaffScreen() {
         <Ionicons
           name="add"
           size={28}
-          color={isPending ? "rgba(255,255,255,0.35)" : COLORS.white}
+          color={isPending ? colors.textSubtle : colors.white}
         />
       </TouchableOpacity>
     </SafeAreaView>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  centered: { alignItems: "center", justifyContent: "center" },
-  listContent: { paddingHorizontal: 20, paddingTop: 4 },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  backBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCenter: { alignItems: "center", gap: 2 },
-  headerTitle: { color: COLORS.white, fontSize: 18, fontWeight: "800" },
-  headerCount: { color: COLORS.textMuted, fontSize: 11, fontWeight: "600" },
-
-  // Pending Banner
-  pendingBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "rgba(250,199,117,0.08)",
-    borderWidth: 0.5,
-    borderColor: "rgba(250,199,117,0.22)",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  pendingBannerText: {
-    color: COLORS.amber,
-    fontSize: 12,
-    fontWeight: "600",
-    flex: 1,
-  },
-
-  // Section label
-  sectionLabel: {
-    color: COLORS.textSubtle,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginBottom: 10,
-    marginTop: 6,
-  },
-
-  // Card
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 13,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    borderWidth: 0.5,
-    borderColor: COLORS.cardBorder,
-    padding: 13,
-    marginBottom: 9,
-  },
-  avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  avatarText: { fontSize: 16, fontWeight: "900" },
-  info: { flex: 1, gap: 3 },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    flexWrap: "wrap",
-  },
-  name: { color: COLORS.white, fontSize: 15, fontWeight: "700" },
-  directorPill: {
-    backgroundColor: "rgba(250,199,117,0.13)",
-    borderWidth: 0.5,
-    borderColor: "rgba(250,199,117,0.30)",
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  directorPillText: { color: COLORS.amber, fontSize: 10, fontWeight: "700" },
-  email: { color: COLORS.textMuted, fontSize: 12 },
-  deleteBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: "rgba(220,30,30,0.08)",
-    borderWidth: 0.5,
-    borderColor: "rgba(220,30,30,0.22)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-
-  // Empty
-  emptyState: {
-    alignItems: "center",
-    paddingTop: 60,
-    gap: 12,
-    paddingHorizontal: 20,
-  },
-  emptyTitle: { color: COLORS.white, fontSize: 16, fontWeight: "700" },
-  emptySub: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-
-  // FAB
-  fab: {
-    position: "absolute",
-    right: 22,
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: COLORS.red,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: COLORS.red,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.28,
-    shadowRadius: 14,
-    elevation: 10,
-  },
-});

@@ -38,6 +38,9 @@ import { savePendingQr } from "@/src/utils/qr.utils";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
 import { AppColors } from "@/src/theme/colors";
+// ✅ AJOUT : Imports pour la gestion d'erreur réseau
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { isNetworkError } from "@/src/utils/error.utils";
 
 // ─── InfoRow ───────────────────────────────────────────────────
 function InfoRow({
@@ -303,7 +306,9 @@ export default function AlertDetailScreen() {
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
 
-  const { data: alert, isLoading, isError } = useAlert(id);
+  // ✅ AJOUT : Extraction de `error` et `refetch` pour le NetworkErrorScreen
+  const { data: alert, isLoading, isError, error, refetch } = useAlert(id);
+
   const { data: activeEngagement } = useActiveEngagement();
   const { mutateAsync: cancelConfirmation, isPending: isCancelling } =
     useCancelConfirmation();
@@ -686,7 +691,18 @@ export default function AlertDetailScreen() {
     );
   }
 
+  // ✅ NOUVEAU : Gestion robuste des erreurs
   if (isError || !alert) {
+    // 1. Si c'est une erreur réseau → NetworkErrorScreen avec bouton Réessayer
+    if (isNetworkError(error)) {
+      return (
+        <View style={styles.container}>
+          <NetworkErrorScreen onRetry={refetch} />
+        </View>
+      );
+    }
+
+    // 2. Si c'est une erreur API (ex: 404 Alerte expirée/supprimée) → Message d'erreur classique
     return (
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="alert-circle-outline" size={40} color={colors.red} />

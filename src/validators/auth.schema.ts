@@ -49,7 +49,7 @@ export const donorStep2Schema = z.object({
 export const donorStep3Schema = z.object({
   bloodType: z.enum(bloodTypeValues as any, {
     message: "Sélectionnez votre groupe sanguin",
-  }),
+  }).optional(),
   dateOfBirth: z
     .string()
     .optional()

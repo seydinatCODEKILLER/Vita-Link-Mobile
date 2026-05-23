@@ -814,7 +814,7 @@ export default function RegisterDonorScreen() {
     <View style={styles.stepContent}>
       {/* Section groupe sanguin */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.fieldLabel}>Groupe sanguin *</Text>
+        <Text style={styles.fieldLabel}>Groupe sanguin <Text style={styles.optionalText}>(optionnel)</Text></Text>
         <View style={styles.rareLegend}>
           <View style={styles.rareBadge}>
             <Text style={styles.rareText}>Rare</Text>

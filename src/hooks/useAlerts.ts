@@ -12,22 +12,24 @@ export const useNearbyAlerts = () => {
   const user = useAuthStore((s) => s.user);
   const setAlerts = useAlertStore((s) => s.setAlerts);
 
+  const hasCoordinates = !!user?.latitude && !!user?.longitude;
+
   return useQuery({
     queryKey: QUERY_KEYS.nearbyAlerts,
     queryFn: async () => {
       const data = await alertsApi.getNearby({
-        lat: user?.latitude ?? undefined,
-        lng: user?.longitude ?? undefined,
+        lat: user?.latitude!,
+        lng: user?.longitude!,
       });
       setAlerts(data);
       return data;
     },
     refetchInterval: 30_000,
     staleTime: 15_000,
-    enabled: !!user,
+    enabled: hasCoordinates,
+    meta: { silent: true },
   });
 };
-
 // ── GET détail d'une alerte ───────────────────────────────────
 export const useAlert = (alertId: string) => {
   return useQuery({
