@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
@@ -16,41 +15,15 @@ import { useAuthStore } from "@/src/store/auth.store";
 import { useLeaderboard } from "@/src/hooks/useJambaar";
 import { LeaderboardEntry } from "@/src/types/domain.types";
 import { DonorGrade } from "@/src/types/shared.types";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.08)",
-  red: "#DC1E1E",
-  green: "#1D9E75",
-  amber: "#FAC775",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.45)",
-  textSubtle: "rgba(255,255,255,0.16)",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
 
 // ─── Types stricts pour les rangs ──────────────────────────────
-// On évite les constantes de couleur incompatibles en utilisant string
 interface RankStyle {
   color: string;
   bg: string;
   label: string;
 }
-
-const getRankStyle = (rank: number): RankStyle => {
-  if (rank === 1)
-    return { color: "#FFD700", bg: "rgba(255,215,0,0.10)", label: "👑" };
-  if (rank === 2)
-    return {
-      color: "#C0C0C0",
-      bg: "rgba(192,192,192,0.08)",
-      label: `#${rank}`,
-    };
-  if (rank === 3)
-    return { color: "#CD7F32", bg: "rgba(205,127,50,0.08)", label: `#${rank}` };
-  return { color: COLORS.textMuted, bg: "transparent", label: `#${rank}` };
-};
 
 // ─── Données statiques ─────────────────────────────────────────
 type ScopeType = "global" | "city" | "district";
@@ -71,24 +44,76 @@ const GRADE_EMOJI: Record<DonorGrade, string> = {
   AMBASSADEUR: "🦁",
 };
 
-const GRADE_COLOR: Record<DonorGrade, string> = {
-  ASPIRANT: COLORS.green,
-  SENTINELLE: COLORS.amber,
-  AMBASSADEUR: COLORS.red,
-};
-
 // ─── Composant Podium Top 3 ────────────────────────────────────
 function PodiumTop3({
   entries,
   myId,
+  colors,
 }: {
   entries: LeaderboardEntry[];
   myId?: string;
+  colors: AppColors;
 }) {
+  const podiumStyles = useThemedStyles((c) => ({
+    container: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "center",
+      gap: 8,
+      marginBottom: 24,
+      paddingHorizontal: 12,
+    },
+    col: { flex: 1, alignItems: "center", gap: 4 },
+    avatar: {
+      width: 52,
+      height: 52,
+      borderRadius: 16,
+      backgroundColor: c.cardBorder,
+      borderWidth: 2,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarMe: {
+      backgroundColor: c.red + "12",
+      borderColor: c.red + "60",
+    },
+    avatarEmoji: { fontSize: 26 },
+    name: {
+      color: c.white,
+      fontSize: 12,
+      fontWeight: "700",
+      textAlign: "center",
+    },
+    pts: { color: c.textMuted, fontSize: 10, fontWeight: "600" },
+    column: {
+      width: "100%",
+      borderRadius: 10,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    rankLabel: { fontSize: 16, fontWeight: "900" },
+  }));
+
+  const getRankStyle = (rank: number): RankStyle => {
+    if (rank === 1) return { color: "#FFD700", bg: "#FFD70010", label: "👑" };
+    if (rank === 2)
+      return { color: "#C0C0C0", bg: "#C0C0C008", label: `#${rank}` };
+    if (rank === 3)
+      return { color: "#CD7F32", bg: "#CD7F3208", label: `#${rank}` };
+    return { color: colors.textMuted, bg: "transparent", label: `#${rank}` };
+  };
+
+  const getGradeColor = (grade: DonorGrade) => {
+    if (grade === "ASPIRANT") return colors.success;
+    if (grade === "SENTINELLE") return colors.amber;
+    if (grade === "AMBASSADEUR") return colors.red;
+    return colors.textMuted;
+  };
+
   const top3 = entries.slice(0, 3);
   if (top3.length < 3) return null;
 
-  // Ordre d'affichage : 2e - 1er - 3e (classique podium)
   const order = [top3[1], top3[0], top3[2]];
   const heights = [70, 90, 55];
   const rankStyles = [getRankStyle(2), getRankStyle(1), getRankStyle(3)];
@@ -116,7 +141,7 @@ function PodiumTop3({
 
             {/* Nom */}
             <Text
-              style={[podiumStyles.name, isMe && { color: COLORS.red }]}
+              style={[podiumStyles.name, isMe && { color: colors.red }]}
               numberOfLines={1}
             >
               {entry.user.firstName}
@@ -147,72 +172,102 @@ function PodiumTop3({
   );
 }
 
-const podiumStyles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "center",
-    gap: 8,
-    marginBottom: 24,
-    paddingHorizontal: 12,
-  },
-  col: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarMe: {
-    backgroundColor: "rgba(220,30,30,0.12)",
-    borderColor: COLORS.red + "60",
-  },
-  avatarEmoji: { fontSize: 26 },
-  name: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  pts: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: "600",
-  },
-  column: {
-    width: "100%",
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rankLabel: {
-    fontSize: 16,
-    fontWeight: "900",
-  },
-});
-
 // ─── Composant Ligne Classement ────────────────────────────────
 function LeaderboardRow({
   item,
   isMe,
   index,
+  colors,
 }: {
   item: LeaderboardEntry;
   isMe: boolean;
   index: number;
+  colors: AppColors;
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(12)).current;
 
-  // ✅ CORRECTION : Lancement dans un useEffect
+  const rowStyles = useThemedStyles((c) => ({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      backgroundColor: c.cardBg,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      padding: 12,
+      marginBottom: 8,
+    },
+    rowMe: {
+      backgroundColor: c.red + "06",
+      borderWidth: 1.5,
+      borderColor: c.red + "25",
+    },
+    rankWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    rankText: { fontSize: 12, fontWeight: "900", letterSpacing: -0.3 },
+    avatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBorder,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    avatarMe: {
+      backgroundColor: c.red + "10",
+      borderColor: c.red + "30",
+    },
+    avatarEmoji: { fontSize: 20 },
+    infoBlock: { flex: 1, gap: 3 },
+    nameText: { color: c.white, fontSize: 13, fontWeight: "700" },
+    nameMe: { color: c.red, fontWeight: "800" },
+    metaRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+    metaGrade: { fontSize: 10, fontWeight: "600" },
+    metaDot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: c.textSubtle,
+    },
+    metaBlood: { color: c.textSubtle, fontSize: 10, fontWeight: "700" },
+    metaDons: { color: c.textSubtle, fontSize: 10 },
+    ptsBlock: { alignItems: "flex-end", flexShrink: 0 },
+    ptsValue: {
+      color: c.amber,
+      fontSize: 15,
+      fontWeight: "900",
+      letterSpacing: -0.5,
+    },
+    ptsLabel: { color: c.textSubtle, fontSize: 9, fontWeight: "600" },
+  }));
+
+  const getRankStyle = (rank: number): RankStyle => {
+    if (rank === 1) return { color: "#FFD700", bg: "#FFD70010", label: "👑" };
+    if (rank === 2)
+      return { color: "#C0C0C0", bg: "#C0C0C008", label: `#${rank}` };
+    if (rank === 3)
+      return { color: "#CD7F32", bg: "#CD7F3208", label: `#${rank}` };
+    return { color: colors.textMuted, bg: "transparent", label: `#${rank}` };
+  };
+
+  const getGradeColor = (grade: DonorGrade) => {
+    if (grade === "ASPIRANT") return colors.success;
+    if (grade === "SENTINELLE") return colors.amber;
+    if (grade === "AMBASSADEUR") return colors.red;
+    return colors.textMuted;
+  };
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -228,7 +283,7 @@ function LeaderboardRow({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []); // Tableau de dépendances vide = ne se joue qu'une fois
+  }, []);
 
   const rs = getRankStyle(item.rank);
   const grade = item.currentGrade as DonorGrade;
@@ -236,62 +291,68 @@ function LeaderboardRow({
   return (
     <Animated.View
       style={[
-        styles.row,
-        isMe && styles.rowMe,
+        rowStyles.row,
+        isMe && rowStyles.rowMe,
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
       ]}
     >
       {/* Rang */}
       <View
         style={[
-          styles.rankWrap,
-          { backgroundColor: isMe ? COLORS.red + "18" : rs.bg },
+          rowStyles.rankWrap,
+          { backgroundColor: isMe ? colors.red + "18" : rs.bg },
         ]}
       >
         <Text
-          style={[styles.rankText, { color: isMe ? COLORS.white : rs.color }]}
+          style={[
+            rowStyles.rankText,
+            { color: isMe ? colors.white : rs.color },
+          ]}
         >
           {item.rank === 1 ? "👑" : `#${item.rank}`}
         </Text>
       </View>
 
       {/* Avatar */}
-      <View style={[styles.avatar, isMe && styles.avatarMe]}>
-        <Text style={styles.avatarEmoji}>{GRADE_EMOJI[grade] ?? "🌱"}</Text>
+      <View style={[rowStyles.avatar, isMe && rowStyles.avatarMe]}>
+        <Text style={rowStyles.avatarEmoji}>{GRADE_EMOJI[grade] ?? "🌱"}</Text>
       </View>
 
       {/* Infos */}
-      <View style={styles.infoBlock}>
+      <View style={rowStyles.infoBlock}>
         <Text
-          style={[styles.nameText, isMe && styles.nameMe]}
+          style={[rowStyles.nameText, isMe && rowStyles.nameMe]}
           numberOfLines={1}
         >
           {item.user.firstName} {item.user.lastName}
           {isMe ? " 👤" : ""}
         </Text>
-        <View style={styles.metaRow}>
+        <View style={rowStyles.metaRow}>
           <Text
-            style={[styles.metaGrade, { color: GRADE_COLOR[grade] + "CC" }]}
+            style={[
+              rowStyles.metaGrade,
+              { color: getGradeColor(grade) + "CC" },
+            ]}
           >
             {GRADE_EMOJI[grade]} {grade}
           </Text>
-          <View style={styles.metaDot} />
-          <Text style={styles.metaBlood}>
+          <View style={rowStyles.metaDot} />
+          <Text style={rowStyles.metaBlood}>
             {item.user.bloodType?.replace("_", "") ?? "?"}
           </Text>
-          <View style={styles.metaDot} />
-          <Text style={styles.metaDons}>
+          <View style={rowStyles.metaDot} />
+          <Text style={rowStyles.metaDons}>
             {item.donationCount} don{item.donationCount > 1 ? "s" : ""}
           </Text>
         </View>
       </View>
 
       {/* Points */}
-      <View style={styles.ptsBlock}>
-        <Text style={[styles.ptsValue, isMe && { color: COLORS.red }]}>
+      <View style={rowStyles.ptsBlock}>
+        <Text style={[rowStyles.ptsValue, isMe && { color: colors.red }]}>
           {item.totalPoints.toLocaleString()}
         </Text>
-        <Text style={styles.ptsLabel}>pts</Text>
+        <Text style={rowStyles.ptsLabel}>pts</Text>
       </View>
     </Animated.View>
   );
@@ -301,6 +362,7 @@ function LeaderboardRow({
 export default function LeaderboardScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const colors = useColors();
   const [scope, setScope] = useState<ScopeType>("global");
 
   const queryParams = {
@@ -329,6 +391,121 @@ export default function LeaderboardScreen() {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    centered: { alignItems: "center", justifyContent: "center" },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingBottom: Platform.OS === "ios" ? 120 : 90,
+    },
+    haloTop: {
+      position: "absolute",
+      top: -60,
+      right: -40,
+      width: 200,
+      height: 200,
+      borderRadius: 100,
+      backgroundColor: c.amber + "05",
+    },
+    navHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingTop: 8,
+      paddingBottom: 16,
+      gap: 12,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    navCenter: { flex: 1, gap: 1 },
+    navEyebrow: {
+      color: c.textSubtle,
+      fontSize: 9,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+    },
+    navTitle: {
+      color: c.white,
+      fontSize: 22,
+      fontWeight: "900",
+      letterSpacing: -0.5,
+    },
+    myRankCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      backgroundColor: c.amber + "07",
+      borderWidth: 1,
+      borderColor: c.amber + "22",
+      borderRadius: 14,
+      padding: 12,
+      marginBottom: 16,
+    },
+    myRankText: {
+      color: c.white,
+      fontSize: 13,
+      fontWeight: "600",
+      flex: 1,
+    },
+    scopesRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 20,
+    },
+    scopePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      backgroundColor: c.cardBg,
+    },
+    scopePillActive: {
+      backgroundColor: c.amber + "12",
+      borderColor: c.amber + "35",
+    },
+    scopeText: {
+      color: c.textMuted,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    scopeTextActive: {
+      color: c.white,
+      fontWeight: "700",
+    },
+    restLabel: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 12,
+    },
+    restLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: c.cardBorder,
+    },
+    restText: {
+      color: c.textSubtle,
+      fontSize: 9,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+    },
+    loadingMore: {
+      paddingVertical: 20,
+      alignItems: "center",
+    },
+  }));
+
   const renderHeader = () => (
     <View>
       {/* Nav */}
@@ -338,12 +515,12 @@ export default function LeaderboardScreen() {
           style={styles.backBtn}
           activeOpacity={0.75}
         >
-          <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+          <Ionicons name="arrow-back" size={19} color={colors.white} />
         </TouchableOpacity>
         <View style={styles.navCenter}>
           <Text style={styles.navEyebrow}>PROGRAMME JAMBAAR</Text>
           <Text style={styles.navTitle}>
-            Classement <Text style={{ color: COLORS.amber }}>⚡</Text>
+            Classement <Text style={{ color: colors.amber }}>⚡</Text>
           </Text>
         </View>
         <View style={{ width: 40 }} />
@@ -352,10 +529,10 @@ export default function LeaderboardScreen() {
       {/* Ma position */}
       {myRank && (
         <View style={styles.myRankCard}>
-          <Ionicons name="podium" size={16} color={COLORS.amber} />
+          <Ionicons name="podium" size={16} color={colors.amber} />
           <Text style={styles.myRankText}>
             Vous êtes{" "}
-            <Text style={{ color: COLORS.red, fontWeight: "900" }}>
+            <Text style={{ color: colors.red, fontWeight: "900" }}>
               #{myRank}
             </Text>{" "}
             — {scopeLabel}
@@ -377,7 +554,7 @@ export default function LeaderboardScreen() {
               <Ionicons
                 name={s.icon}
                 size={13}
-                color={isActive ? COLORS.white : COLORS.textMuted}
+                color={isActive ? colors.white : colors.textMuted}
               />
               <Text
                 style={[styles.scopeText, isActive && styles.scopeTextActive]}
@@ -391,7 +568,7 @@ export default function LeaderboardScreen() {
 
       {/* Podium top 3 */}
       {leaderboard.length >= 3 && (
-        <PodiumTop3 entries={leaderboard} myId={user?.id} />
+        <PodiumTop3 entries={leaderboard} myId={user?.id} colors={colors} />
       )}
 
       {/* Label reste classement */}
@@ -408,19 +585,18 @@ export default function LeaderboardScreen() {
   const renderFooter = () =>
     isFetchingNextPage ? (
       <View style={styles.loadingMore}>
-        <ActivityIndicator color={COLORS.amber} size="small" />
+        <ActivityIndicator color={colors.amber} size="small" />
       </View>
     ) : null;
 
   if (isLoading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={COLORS.red} size="large" />
+        <ActivityIndicator color={colors.red} size="large" />
       </View>
     );
   }
 
-  // Les 3 premiers sont dans le podium, on affiche le reste en liste
   const listData = leaderboard.length > 3 ? leaderboard.slice(3) : leaderboard;
 
   return (
@@ -434,6 +610,7 @@ export default function LeaderboardScreen() {
             item={item}
             isMe={item.user.id === user?.id}
             index={index}
+            colors={colors}
           />
         )}
         ListHeaderComponent={renderHeader}
@@ -446,226 +623,3 @@ export default function LeaderboardScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  centered: { alignItems: "center", justifyContent: "center" },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "ios" ? 120 : 90,
-  },
-
-  // Halo
-  haloTop: {
-    position: "absolute",
-    top: -60,
-    right: -40,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(250,199,117,0.05)",
-  },
-
-  // ── Nav ──
-  navHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingTop: 8,
-    paddingBottom: 16,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navCenter: { flex: 1, gap: 1 },
-  navEyebrow: {
-    color: COLORS.textSubtle,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-  navTitle: {
-    color: COLORS.white,
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-
-  // ── My Rank ──
-  myRankCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(250,199,117,0.07)",
-    borderWidth: 1,
-    borderColor: "rgba(250,199,117,0.22)",
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 16,
-  },
-  myRankText: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: "600",
-    flex: 1,
-  },
-
-  // ── Scopes ──
-  scopesRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 20,
-  },
-  scopePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    backgroundColor: COLORS.cardBg,
-  },
-  scopePillActive: {
-    backgroundColor: "rgba(250,199,117,0.12)",
-    borderColor: "rgba(250,199,117,0.35)",
-  },
-  scopeText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  scopeTextActive: {
-    color: COLORS.white,
-    fontWeight: "700",
-  },
-
-  // ── Rest label ──
-  restLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 12,
-  },
-  restLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.cardBorder,
-  },
-  restText: {
-    color: COLORS.textSubtle,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-  },
-
-  // ── Row ──
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    padding: 12,
-    marginBottom: 8,
-  },
-  rowMe: {
-    backgroundColor: "rgba(220,30,30,0.06)",
-    borderWidth: 1.5,
-    borderColor: "rgba(220,30,30,0.25)",
-  },
-
-  // Rang
-  rankWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  rankText: {
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: -0.3,
-  },
-
-  // Avatar
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  avatarMe: {
-    backgroundColor: "rgba(220,30,30,0.10)",
-    borderColor: "rgba(220,30,30,0.30)",
-  },
-  avatarEmoji: { fontSize: 20 },
-
-  // Info
-  infoBlock: { flex: 1, gap: 3 },
-  nameText: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  nameMe: { color: COLORS.red, fontWeight: "800" },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  metaGrade: { fontSize: 10, fontWeight: "600" },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: COLORS.textSubtle,
-  },
-  metaBlood: {
-    color: COLORS.textSubtle,
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  metaDons: {
-    color: COLORS.textSubtle,
-    fontSize: 10,
-  },
-
-  // Points
-  ptsBlock: { alignItems: "flex-end", flexShrink: 0 },
-  ptsValue: {
-    color: COLORS.amber,
-    fontSize: 15,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-  ptsLabel: {
-    color: COLORS.textSubtle,
-    fontSize: 9,
-    fontWeight: "600",
-  },
-
-  // Load more
-  loadingMore: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-});

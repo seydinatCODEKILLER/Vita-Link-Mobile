@@ -10,13 +10,24 @@ import { SplashScreen } from "@/src/components/ui/SplashScreen";
 import { useAuthStore } from "@/src/store/auth.store";
 import Toast from "react-native-toast-message";
 import { toastConfig } from "@/src/config/toast.config";
+import { useThemeStore } from "@/src/store/theme.store";
+import { useColors } from "@/src/theme/useTheme";
 
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
   const isLoading = useAuthStore((s) => s.isLoading);
 
+  // Tous les hooks au niveau racine — jamais dans le JSX
+  const hydrateTheme = useThemeStore((s) => s.hydrateTheme);
+  const theme = useThemeStore((s) => s.theme);
+  const colors = useColors();
+
   useEffect(() => {
-    initialize();
+    const init = async () => {
+      await hydrateTheme(); // thème d'abord pour éviter le flash
+      await initialize();
+    };
+    init();
   }, []);
 
   if (isLoading) {
@@ -32,14 +43,12 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
-        {/* ✅ QueryClientProvider contient désormais le queryClient
-            avec QueryCache + MutationCache configurés globalement */}
         <QueryClientProvider client={queryClient}>
-          <StatusBar style="auto" />
+          <StatusBar style={theme === "dark" ? "light" : "dark"} />
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: "#080808" },
+              contentStyle: { backgroundColor: colors.bg },
             }}
           >
             <Stack.Screen name="index" />

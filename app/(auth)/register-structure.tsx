@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
   Animated,
   ActivityIndicator,
   Keyboard,
@@ -19,7 +18,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormInput } from "@/src/components/ui/FormInput";
 import { useRegisterHealthStructure } from "@/src/hooks/useAuth";
-import * as Location from "expo-location"; // ✅ AJOUT
+import * as Location from "expo-location";
 import {
   structureStep1Schema,
   structureStep2Schema,
@@ -27,19 +26,9 @@ import {
   type StructureStep2Values,
   type RegisterStructureFormValues,
 } from "@/src/validators/auth.schema";
-
-const COLORS = {
-  bg: "#080808",
-  red: "#DC1E1E",
-  redGlow: "rgba(220,30,30,0.13)",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.40)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  cardBg: "rgba(255,255,255,0.05)",
-  cardBorder: "rgba(255,255,255,0.09)",
-  success: "#22C55E",
-  amber: "#FAC775",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useThemeStore } from "@/src/store/theme.store";
+import { AppColors } from "@/src/theme/colors";
 
 const STEPS = [
   {
@@ -54,8 +43,31 @@ const STEPS = [
   },
 ];
 
-function PasswordStrength({ password }: { password: string }) {
+// ─── Password Strength ─────────────────────────────────────────
+function PasswordStrength({
+  password,
+  colors,
+}: {
+  password: string;
+  colors: AppColors;
+}) {
+  const styles = useThemedStyles((c) => ({
+    strengthCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      borderRadius: 10,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+      marginTop: -8,
+      marginBottom: 8,
+    },
+    strengthText: { fontSize: 11, flex: 1, lineHeight: 18 },
+  }));
+
   if (!password) return null;
+
   const checks = {
     length: password.length >= 8,
     upper: /[A-Z]/.test(password),
@@ -64,6 +76,7 @@ function PasswordStrength({ password }: { password: string }) {
   const passed = Object.values(checks).filter(Boolean).length;
   const isStrong = passed === 3;
   const isMedium = passed === 2;
+
   const bgColor = isStrong
     ? "rgba(34,197,94,0.08)"
     : isMedium
@@ -84,11 +97,13 @@ function PasswordStrength({ password }: { password: string }) {
     : isMedium
       ? ("shield-outline" as const)
       : ("alert-circle-outline" as const);
+
   const hints = [
     { check: checks.length, label: "8+ caractères" },
     { check: checks.upper, label: "Majuscule" },
     { check: checks.digit, label: "Chiffre" },
   ];
+
   return (
     <View
       style={[styles.strengthCard, { backgroundColor: bgColor, borderColor }]}
@@ -109,18 +124,218 @@ function PasswordStrength({ password }: { password: string }) {
   );
 }
 
+// ─── Écran principal ───────────────────────────────────────────
 export default function RegisterStructureScreen() {
   const router = useRouter();
   const { mutateAsync: registerStructure, isPending } =
     useRegisterHealthStructure();
-  const [currentStep, setCurrentStep] = useState(1);
+  const colors = useColors();
+  const theme = useThemeStore((s) => s.theme);
 
-  // ✅ AJOUT : state géolocalisation
+  const [currentStep, setCurrentStep] = useState(1);
   const [isGeolocating, setIsGeolocating] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    safeArea: { flex: 1 },
+    haloTop: {
+      position: "absolute",
+      top: -80,
+      right: -60,
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      backgroundColor: c.redGlow,
+    },
+    haloBottom: {
+      position: "absolute",
+      bottom: 60,
+      left: -60,
+      width: 180,
+      height: 180,
+      borderRadius: 90,
+      backgroundColor: c.haloLight,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 20,
+      gap: 12,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerCenter: { flex: 1, alignItems: "center", gap: 6 },
+    progressRow: { flexDirection: "row", gap: 6, width: "100%" },
+    progressSegment: { flex: 1, height: 3, borderRadius: 2 },
+    progressActive: { backgroundColor: c.red },
+    progressInactive: { backgroundColor: c.cardBorder },
+    stepCounter: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    stepIconBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: "rgba(220,30,30,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(220,30,30,0.22)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    titleBlock: { paddingHorizontal: 24, marginBottom: 4, gap: 3 },
+    eyebrow: {
+      color: c.textSubtle,
+      fontSize: 10,
+      fontWeight: "600",
+      letterSpacing: 2,
+    },
+    title: {
+      color: c.white,
+      fontSize: 26,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
+    subtitle: { color: c.textMuted, fontSize: 13, lineHeight: 20 },
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 },
+    stepContent: { gap: 2 },
+    geoWrapper: { marginBottom: 16 },
+    labelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 8,
+    },
+    geoLabel: {
+      color: c.white,
+      fontSize: 13,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+      opacity: 0.75,
+    },
+    geoRequired: { color: c.red, fontSize: 12, fontWeight: "600" },
+    geoBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      paddingVertical: 13,
+      paddingHorizontal: 14,
+    },
+    geoBtnDefault: {
+      backgroundColor: "rgba(220,30,30,0.06)",
+      borderColor: "rgba(220,30,30,0.25)",
+    },
+    geoBtnSuccess: {
+      backgroundColor: "rgba(34,197,94,0.06)",
+      borderColor: "rgba(34,197,94,0.25)",
+    },
+    geoBtnError: { borderColor: "#EF4444" },
+    geoIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    geoBtnLabel: { color: c.white, fontSize: 14, fontWeight: "600" },
+    geoBtnCoords: {
+      color: "rgba(34,197,94,0.70)",
+      fontSize: 11,
+      marginTop: 2,
+      fontFamily: "monospace",
+    },
+    geoBtnSub: { color: c.textMuted, fontSize: 11, marginTop: 2 },
+    geoErrorRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      marginTop: 6,
+      marginLeft: 2,
+    },
+    geoErrorText: { color: "#EF4444", fontSize: 12, flex: 1 },
+    pendingCard: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 12,
+      backgroundColor: "rgba(250,199,117,0.07)",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: "rgba(250,199,117,0.20)",
+      padding: 14,
+      marginTop: 4,
+    },
+    pendingIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: "rgba(250,199,117,0.12)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pendingTitle: {
+      color: c.amber,
+      fontSize: 13,
+      fontWeight: "700",
+      marginBottom: 2,
+    },
+    pendingText: {
+      color: "rgba(250,199,117,0.65)",
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    footer: { paddingHorizontal: 24, paddingBottom: 10, gap: 14 },
+    ctaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: c.red,
+      borderRadius: 16,
+      paddingVertical: 17,
+    },
+    ctaBtnDisabled: { opacity: 0.5 },
+    ctaBtnText: {
+      color: c.white,
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    ctaBtnIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    loginRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loginText: { color: c.textMuted, fontSize: 14 },
+    loginLink: { color: c.red, fontSize: 14, fontWeight: "700" },
+  }));
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -178,26 +393,22 @@ export default function RegisterStructureScreen() {
       registrationNumber: "",
       address: "",
       region: undefined,
-      latitude: undefined, // ✅ AJOUT
-      longitude: undefined, // ✅ AJOUT
+      latitude: undefined,
+      longitude: undefined,
       structurePhone: "",
       structureEmail: "",
     },
   });
 
   const watchedPassword = form1.watch("password");
-  // ✅ AJOUT : observer lat/lng pour l'affichage du bouton
   const watchedLatitude = form2.watch("latitude");
   const watchedLongitude = form2.watch("longitude");
 
-  // ✅ AJOUT : handler géolocalisation
   const handleGeolocate = useCallback(async () => {
     setIsGeolocating(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        // Le toast global gère l'affichage via QueryCache,
-        // mais ici c'est une action UI — on throw pour le catch
         throw new Error(
           "Permission de localisation refusée. Activez-la dans les paramètres.",
         );
@@ -210,8 +421,6 @@ export default function RegisterStructureScreen() {
         shouldValidate: true,
       });
     } catch (err: any) {
-      // On utilise setError pour afficher l'erreur sous le bouton,
-      // cohérent avec le pattern des autres champs du formulaire
       form2.setError("latitude", {
         message: err?.message ?? "Impossible de récupérer la position",
       });
@@ -252,12 +461,10 @@ export default function RegisterStructureScreen() {
             address: finalData.address,
             structurePhone: finalData.structurePhone || undefined,
             structureEmail: finalData.structureEmail || undefined,
-            latitude: finalData.latitude, // ✅ AJOUT
-            longitude: finalData.longitude, // ✅ AJOUT
+            latitude: finalData.latitude,
+            longitude: finalData.longitude,
           });
-        } catch {
-          // Toast géré dans le hook
-        }
+        } catch {}
       },
       () => {},
     )();
@@ -342,7 +549,7 @@ export default function RegisterStructureScreen() {
           />
         )}
       />
-      <PasswordStrength password={watchedPassword} />
+      <PasswordStrength password={watchedPassword} colors={colors} />
       <Controller
         control={form1.control}
         name="confirmPassword"
@@ -430,7 +637,6 @@ export default function RegisterStructureScreen() {
           )}
         />
 
-        {/* ✅ AJOUT : Bouton géolocalisation — obligatoire pour créer des alertes */}
         <View style={styles.geoWrapper}>
           <View style={styles.labelRow}>
             <Text style={styles.geoLabel}>Position GPS de la structure</Text>
@@ -449,7 +655,7 @@ export default function RegisterStructureScreen() {
           >
             {isGeolocating ? (
               <>
-                <ActivityIndicator size="small" color={COLORS.white} />
+                <ActivityIndicator size="small" color={colors.white} />
                 <Text style={styles.geoBtnLabel}>Localisation en cours...</Text>
               </>
             ) : (
@@ -471,14 +677,14 @@ export default function RegisterStructureScreen() {
                         : "locate-outline"
                     }
                     size={18}
-                    color={hasLocation ? COLORS.success : COLORS.red}
+                    color={hasLocation ? colors.success : colors.red}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text
                     style={[
                       styles.geoBtnLabel,
-                      { color: hasLocation ? COLORS.success : COLORS.white },
+                      { color: hasLocation ? colors.success : colors.white },
                     ]}
                   >
                     {hasLocation
@@ -507,7 +713,6 @@ export default function RegisterStructureScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Erreur de validation Zod sous le bouton */}
           {locationError && (
             <View style={styles.geoErrorRow}>
               <Ionicons name="alert-circle-outline" size={13} color="#EF4444" />
@@ -552,7 +757,7 @@ export default function RegisterStructureScreen() {
 
         <View style={styles.pendingCard}>
           <View style={styles.pendingIconWrap}>
-            <Ionicons name="time-outline" size={18} color={COLORS.amber} />
+            <Ionicons name="time-outline" size={18} color={colors.amber} />
           </View>
           <View style={{ flex: 1, gap: 3 }}>
             <Text style={styles.pendingTitle}>Vérification sous 24-48h</Text>
@@ -570,7 +775,7 @@ export default function RegisterStructureScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
       <View style={styles.haloTop} />
       <View style={styles.haloBottom} />
 
@@ -583,7 +788,7 @@ export default function RegisterStructureScreen() {
             style={styles.backBtn}
             activeOpacity={0.75}
           >
-            <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+            <Ionicons name="arrow-back" size={19} color={colors.white} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <View style={styles.progressRow}>
@@ -604,7 +809,7 @@ export default function RegisterStructureScreen() {
             </Text>
           </View>
           <View style={styles.stepIconBadge}>
-            <Ionicons name={stepInfo.icon} size={16} color={COLORS.red} />
+            <Ionicons name={stepInfo.icon} size={16} color={colors.red} />
           </View>
         </Animated.View>
 
@@ -636,7 +841,6 @@ export default function RegisterStructureScreen() {
           >
             {renderStep1()}
           </Animated.View>
-
           <Animated.View
             style={{
               opacity: opacityAnim,
@@ -656,7 +860,7 @@ export default function RegisterStructureScreen() {
             disabled={isPending}
           >
             {isPending ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
+              <ActivityIndicator color={colors.white} size="small" />
             ) : (
               <>
                 <Text style={styles.ctaBtnText}>
@@ -668,7 +872,7 @@ export default function RegisterStructureScreen() {
                       currentStep === 1 ? "arrow-forward" : "checkmark-outline"
                     }
                     size={17}
-                    color={COLORS.white}
+                    color={colors.white}
                   />
                 </View>
               </>
@@ -689,217 +893,3 @@ export default function RegisterStructureScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  safeArea: { flex: 1 },
-  haloTop: {
-    position: "absolute",
-    top: -80,
-    right: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: COLORS.redGlow,
-  },
-  haloBottom: {
-    position: "absolute",
-    bottom: 60,
-    left: -60,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "rgba(220,30,30,0.07)",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCenter: { flex: 1, alignItems: "center", gap: 6 },
-  progressRow: { flexDirection: "row", gap: 6, width: "100%" },
-  progressSegment: { flex: 1, height: 3, borderRadius: 2 },
-  progressActive: { backgroundColor: COLORS.red },
-  progressInactive: { backgroundColor: COLORS.cardBorder },
-  stepCounter: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  stepIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "rgba(220,30,30,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(220,30,30,0.22)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titleBlock: { paddingHorizontal: 24, marginBottom: 4, gap: 3 },
-  eyebrow: {
-    color: COLORS.textSubtle,
-    fontSize: 10,
-    fontWeight: "600",
-    letterSpacing: 2,
-  },
-  title: {
-    color: COLORS.white,
-    fontSize: 26,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  subtitle: { color: COLORS.textMuted, fontSize: 13, lineHeight: 20 },
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 },
-  stepContent: { gap: 2 },
-  strengthCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    marginTop: -8,
-    marginBottom: 8,
-  },
-  strengthText: { fontSize: 11, flex: 1, lineHeight: 18 },
-
-  // ✅ AJOUT : styles géolocalisation
-  geoWrapper: { marginBottom: 16 },
-  labelRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 8,
-  },
-  geoLabel: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-  },
-  geoRequired: { color: COLORS.red, fontSize: 12, fontWeight: "600" },
-  geoBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
-  },
-  geoBtnDefault: {
-    backgroundColor: "rgba(220,30,30,0.06)",
-    borderColor: "rgba(220,30,30,0.25)",
-  },
-  geoBtnSuccess: {
-    backgroundColor: "rgba(34,197,94,0.06)",
-    borderColor: "rgba(34,197,94,0.25)",
-  },
-  geoBtnError: {
-    borderColor: "#EF4444",
-  },
-  geoIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  geoBtnLabel: { color: COLORS.white, fontSize: 14, fontWeight: "600" },
-  geoBtnCoords: {
-    color: "rgba(34,197,94,0.70)",
-    fontSize: 11,
-    marginTop: 2,
-    fontFamily: "monospace",
-  },
-  geoBtnSub: { color: COLORS.textMuted, fontSize: 11, marginTop: 2 },
-  geoErrorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 6,
-    marginLeft: 2,
-  },
-  geoErrorText: { color: "#EF4444", fontSize: 12, flex: 1 },
-
-  pendingCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    backgroundColor: "rgba(250,199,117,0.07)",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(250,199,117,0.20)",
-    padding: 14,
-    marginTop: 4,
-  },
-  pendingIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "rgba(250,199,117,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  pendingTitle: {
-    color: COLORS.amber,
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  pendingText: {
-    color: "rgba(250,199,117,0.65)",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  footer: { paddingHorizontal: 24, paddingBottom: 10, gap: 14 },
-  ctaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: COLORS.red,
-    borderRadius: 16,
-    paddingVertical: 17,
-  },
-  ctaBtnDisabled: { opacity: 0.5 },
-  ctaBtnText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-  ctaBtnIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loginRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loginText: { color: COLORS.textMuted, fontSize: 14 },
-  loginLink: { color: COLORS.red, fontSize: 14, fontWeight: "700" },
-});

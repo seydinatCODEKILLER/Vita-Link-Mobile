@@ -1,15 +1,44 @@
-import { View, ActivityIndicator, Text } from "react-native";
+import { View, Text, ActivityIndicator } from "react-native";
+import { useColors } from "@/src/theme/useTheme";
 
 export function SplashScreen() {
+  const colors = useColors();
+
   return (
-    <View className="flex-1 bg-white items-center justify-center gap-4">
-      <View className="w-20 h-20 bg-red-600 rounded-3xl items-center justify-center">
-        <Text className="text-white font-bold text-4xl">🩸</Text>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.bg,
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 16,
+      }}
+    >
+      <View
+        style={{
+          width: 80,
+          height: 80,
+          backgroundColor: colors.red,
+          borderRadius: 24,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text style={{ fontSize: 36 }}>🩸</Text>
       </View>
-      <Text className="text-3xl font-bold text-gray-900">
-        Vita<Text className="text-red-600">Link</Text>
+
+      <Text
+        style={{
+          color: colors.white,
+          fontSize: 30,
+          fontWeight: "800",
+          letterSpacing: -0.5,
+        }}
+      >
+        Vita<Text style={{ color: colors.red }}>Link</Text>
       </Text>
-      <ActivityIndicator color="#dc2626" className="mt-4" />
+
+      <ActivityIndicator color={colors.red} style={{ marginTop: 8 }} />
     </View>
   );
 }

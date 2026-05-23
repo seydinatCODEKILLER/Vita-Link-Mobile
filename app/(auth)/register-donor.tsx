@@ -6,7 +6,6 @@ import {
   ScrollView,
   Platform,
   Animated,
-  StyleSheet,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -31,22 +30,9 @@ import {
   type RegisterDonorFormValues,
 } from "@/src/validators/auth.schema";
 import { registrationManager } from "@/src/utils/registration.utils";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  red: "#DC1E1E",
-  redGlow: "rgba(220,30,30,0.14)",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.45)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  cardBg: "rgba(255,255,255,0.05)",
-  cardBorder: "rgba(255,255,255,0.09)",
-  inputBg: "#141414",
-  inputBorder: "rgba(255,255,255,0.10)",
-  success: "#22C55E",
-  amber: "#FAC775",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useThemeStore } from "@/src/store/theme.store";
+import { AppColors } from "@/src/theme/colors";
 
 // ─── Données statiques ─────────────────────────────────────────
 const BLOOD_TYPES = [
@@ -84,7 +70,22 @@ const STEPS = [
 ];
 
 // ─── Step Progress Bar ─────────────────────────────────────────
-function StepProgress({ current, total }: { current: number; total: number }) {
+function StepProgress({
+  current,
+  total,
+  colors,
+}: {
+  current: number;
+  total: number;
+  colors: AppColors;
+}) {
+  const styles = useThemedStyles((c) => ({
+    progressRow: { flexDirection: "row", gap: 6, width: "100%" },
+    progressSegment: { flex: 1, height: 3, borderRadius: 2 },
+    active: { backgroundColor: c.red },
+    inactive: { backgroundColor: c.cardBorder },
+  }));
+
   return (
     <View style={styles.progressRow}>
       {Array.from({ length: total }).map((_, i) => (
@@ -92,11 +93,7 @@ function StepProgress({ current, total }: { current: number; total: number }) {
           key={i}
           style={[
             styles.progressSegment,
-            i < current
-              ? styles.progressSegmentActive
-              : i === current - 1
-                ? styles.progressSegmentCurrent
-                : styles.progressSegmentInactive,
+            i < current ? styles.active : styles.inactive,
           ]}
         />
       ))}
@@ -109,11 +106,52 @@ function GenderSelector({
   value,
   onChange,
   error,
+  colors,
 }: {
   value: string | undefined;
   onChange: (v: string) => void;
   error?: string;
+  colors: AppColors;
 }) {
+  const styles = useThemedStyles((c) => ({
+    genderRow: { flexDirection: "row", gap: 12, marginBottom: 4 },
+    genderBtn: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      padding: 14,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      position: "relative",
+    },
+    defaultBtn: { backgroundColor: c.cardBg, borderColor: c.cardBorder },
+    selectedBtn: {
+      backgroundColor: "rgba(220,30,30,0.12)",
+      borderColor: c.red,
+    },
+    iconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    defaultIcon: { backgroundColor: "rgba(255,255,255,0.06)" },
+    selectedIcon: { backgroundColor: c.red },
+    label: { color: c.textMuted, fontSize: 14, fontWeight: "600", flex: 1 },
+    selectedLabel: { color: c.white },
+    check: { position: "absolute", top: 8, right: 8 },
+    errorRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      marginTop: 4,
+      marginLeft: 2,
+    },
+    errorText: { color: "#EF4444", fontSize: 12, flex: 1 },
+  }));
+
   return (
     <View style={{ gap: 8 }}>
       <View style={styles.genderRow}>
@@ -126,37 +164,30 @@ function GenderSelector({
               activeOpacity={0.75}
               style={[
                 styles.genderBtn,
-                selected ? styles.genderBtnSelected : styles.genderBtnDefault,
+                selected ? styles.selectedBtn : styles.defaultBtn,
               ]}
             >
               <View
                 style={[
-                  styles.genderIconWrap,
-                  selected
-                    ? styles.genderIconWrapSelected
-                    : styles.genderIconWrapDefault,
+                  styles.iconWrap,
+                  selected ? styles.selectedIcon : styles.defaultIcon,
                 ]}
               >
                 <Ionicons
                   name={g.icon}
                   size={20}
-                  color={selected ? COLORS.white : COLORS.textMuted}
+                  color={selected ? colors.white : colors.textMuted}
                 />
               </View>
-              <Text
-                style={[
-                  styles.genderLabel,
-                  selected && styles.genderLabelSelected,
-                ]}
-              >
+              <Text style={[styles.label, selected && styles.selectedLabel]}>
                 {g.label}
               </Text>
               {selected && (
-                <View style={styles.genderCheck}>
+                <View style={styles.check}>
                   <Ionicons
                     name="checkmark-circle"
                     size={16}
-                    color={COLORS.white}
+                    color={colors.white}
                   />
                 </View>
               )}
@@ -179,11 +210,50 @@ function BloodTypeGrid({
   value,
   onChange,
   error,
+  colors,
 }: {
   value: string | undefined;
   onChange: (v: string) => void;
   error?: string;
+  colors: AppColors;
 }) {
+  const styles = useThemedStyles((c) => ({
+    bloodGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+    cell: {
+      width: "22%",
+      aspectRatio: 1,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1.5,
+      position: "relative",
+    },
+    defaultCell: { backgroundColor: c.cardBg, borderColor: c.cardBorder },
+    selectedCell: { backgroundColor: c.red, borderColor: c.red },
+    defaultLabel: { color: c.textMuted, fontSize: 17, fontWeight: "800" },
+    selectedLabel: { color: c.white },
+    rareBadge: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      backgroundColor: "rgba(250,199,117,0.18)",
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+      borderRadius: 4,
+    },
+    rareBadgeSelected: { backgroundColor: "rgba(255,255,255,0.20)" },
+    rareText: { color: c.amber, fontSize: 8, fontWeight: "700" },
+    check: { position: "absolute", top: 4, left: 4 },
+    errorRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      marginTop: 4,
+      marginLeft: 2,
+    },
+    errorText: { color: "#EF4444", fontSize: 12, flex: 1 },
+  }));
+
   return (
     <View style={{ gap: 10 }}>
       <View style={styles.bloodGrid}>
@@ -196,15 +266,12 @@ function BloodTypeGrid({
               onPress={() => onChange(bt.value)}
               activeOpacity={0.75}
               style={[
-                styles.bloodCell,
-                selected ? styles.bloodCellSelected : styles.bloodCellDefault,
+                styles.cell,
+                selected ? styles.selectedCell : styles.defaultCell,
               ]}
             >
               <Text
-                style={[
-                  styles.bloodLabel,
-                  selected && styles.bloodLabelSelected,
-                ]}
+                style={[styles.defaultLabel, selected && styles.selectedLabel]}
               >
                 {bt.label}
               </Text>
@@ -219,11 +286,11 @@ function BloodTypeGrid({
                 </View>
               )}
               {selected && (
-                <View style={styles.bloodCheck}>
+                <View style={styles.check}>
                   <Ionicons
                     name="checkmark-circle"
                     size={14}
-                    color={COLORS.white}
+                    color={colors.white}
                   />
                 </View>
               )}
@@ -245,6 +312,8 @@ function BloodTypeGrid({
 export default function RegisterDonorScreen() {
   const router = useRouter();
   const { mutateAsync: registerDonor, isPending } = useRegisterDonor();
+  const colors = useColors();
+  const theme = useThemeStore((s) => s.theme);
 
   const [currentStep, setCurrentStep] = useState(1);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -254,6 +323,244 @@ export default function RegisterDonorScreen() {
 
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    safeArea: { flex: 1 },
+    haloTop: {
+      position: "absolute",
+      top: -100,
+      right: -80,
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      backgroundColor: c.redGlow,
+    },
+    haloBottom: {
+      position: "absolute",
+      bottom: 80,
+      left: -60,
+      width: 180,
+      height: 180,
+      borderRadius: 90,
+      backgroundColor: c.haloLight,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 20,
+      gap: 12,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerCenter: {
+      flex: 1,
+      alignItems: "center",
+      gap: 6,
+    },
+    stepCounter: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+      letterSpacing: 0.5,
+    },
+    stepIconBadge: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: "rgba(220,30,30,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(220,30,30,0.22)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    titleBlock: {
+      paddingHorizontal: 24,
+      marginBottom: 4,
+      gap: 4,
+    },
+    stepTitle: {
+      color: c.white,
+      fontSize: 26,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
+    stepSubtitle: {
+      color: c.textMuted,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    scroll: { flex: 1 },
+    scrollContent: {
+      paddingHorizontal: 24,
+      paddingTop: 20,
+      paddingBottom: 24,
+    },
+    stepContent: { gap: 2 },
+    fieldLabel: {
+      color: c.white,
+      fontSize: 13,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+      marginBottom: 10,
+      marginTop: 4,
+      opacity: 0.75,
+    },
+    optionalText: {
+      color: c.textSubtle,
+      fontWeight: "400",
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 10,
+    },
+    rareLegend: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    rareLegendText: {
+      color: c.textMuted,
+      fontSize: 11,
+    },
+    rareBadge: {
+      backgroundColor: "rgba(250,199,117,0.18)",
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+      borderRadius: 4,
+    },
+    rareText: { color: c.amber, fontSize: 8, fontWeight: "700" },
+    divider: {
+      height: 1,
+      backgroundColor: c.cardBorder,
+      marginVertical: 20,
+    },
+    datePickerBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: c.inputBg,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: c.cardBorder,
+      padding: 15,
+    },
+    datePickerBtnFilled: {
+      borderColor: "rgba(220,30,30,0.35)",
+      backgroundColor: "rgba(220,30,30,0.06)",
+    },
+    datePickerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      flex: 1,
+    },
+    datePickerText: {
+      color: c.textMuted,
+      fontSize: 14,
+    },
+    datePickerTextFilled: {
+      color: c.white,
+      fontWeight: "500",
+    },
+    iosPickerContainer: {
+      backgroundColor: c.cardBg,
+      borderRadius: 14,
+      marginTop: 8,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    iosPickerDone: {
+      alignItems: "flex-end",
+      padding: 12,
+      borderTopWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    iosPickerDoneText: {
+      color: c.red,
+      fontWeight: "700",
+      fontSize: 15,
+    },
+    infoCard: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 12,
+      backgroundColor: "rgba(34,197,94,0.07)",
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: "rgba(34,197,94,0.18)",
+      padding: 14,
+      marginTop: 4,
+    },
+    infoCardIcon: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
+      backgroundColor: "rgba(34,197,94,0.12)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    infoCardTitle: {
+      color: c.success,
+      fontSize: 13,
+      fontWeight: "700",
+      marginBottom: 2,
+    },
+    infoCardText: {
+      color: "rgba(34,197,94,0.70)",
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    footer: {
+      paddingHorizontal: 24,
+      paddingBottom: 10,
+      gap: 14,
+    },
+    ctaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: c.red,
+      borderRadius: 16,
+      paddingVertical: 17,
+    },
+    ctaBtnDisabled: { opacity: 0.55 },
+    ctaBtnText: {
+      color: c.white,
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    ctaBtnIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    loginRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    loginText: { color: c.textMuted, fontSize: 14 },
+    loginLink: { color: c.red, fontSize: 14, fontWeight: "700" },
+  }));
 
   const animateTransition = useCallback(() => {
     Animated.parallel([
@@ -346,7 +653,6 @@ export default function RegisterDonorScreen() {
           : undefined,
       });
 
-      // ✅ Sauvegarde propre
       await registrationManager.savePendingDonor(finalData);
 
       router.push({
@@ -439,6 +745,7 @@ export default function RegisterDonorScreen() {
             value={field.value}
             onChange={field.onChange}
             error={fieldState.error?.message}
+            colors={colors}
           />
         )}
       />
@@ -488,7 +795,7 @@ export default function RegisterDonorScreen() {
           <Ionicons
             name="shield-checkmark-outline"
             size={18}
-            color={COLORS.success}
+            color={colors.success}
           />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
@@ -502,7 +809,7 @@ export default function RegisterDonorScreen() {
     </View>
   );
 
-  // ── Step 3 : Profil médical ──
+  // ── Step 3 : Profil médical ── ✅ CORRECTION APPLIQUÉE ICI
   const renderStep3 = () => (
     <View style={styles.stepContent}>
       {/* Section groupe sanguin */}
@@ -512,6 +819,7 @@ export default function RegisterDonorScreen() {
           <View style={styles.rareBadge}>
             <Text style={styles.rareText}>Rare</Text>
           </View>
+          {/* ✅ CORRECTION : Ajout du '>' manquant pour le composant Text */}
           <Text style={styles.rareLegendText}>= groupe rare</Text>
         </View>
       </View>
@@ -524,6 +832,7 @@ export default function RegisterDonorScreen() {
             value={field.value}
             onChange={field.onChange}
             error={fieldState.error?.message}
+            colors={colors}
           />
         )}
       />
@@ -551,7 +860,7 @@ export default function RegisterDonorScreen() {
                 <Ionicons
                   name="calendar-outline"
                   size={18}
-                  color={field.value ? COLORS.red : COLORS.textMuted}
+                  color={field.value ? colors.red : colors.textMuted}
                 />
                 <Text
                   style={[
@@ -567,7 +876,7 @@ export default function RegisterDonorScreen() {
               <Ionicons
                 name="chevron-forward"
                 size={16}
-                color={field.value ? COLORS.red : COLORS.textMuted}
+                color={field.value ? colors.red : colors.textMuted}
               />
             </TouchableOpacity>
 
@@ -585,7 +894,7 @@ export default function RegisterDonorScreen() {
                     if (date) field.onChange(date.toISOString());
                   }}
                   display="spinner"
-                  themeVariant="dark"
+                  themeVariant={theme === "dark" ? "dark" : "light"}
                 />
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(false)}
@@ -597,13 +906,23 @@ export default function RegisterDonorScreen() {
             )}
 
             {fieldState.error && (
-              <View style={styles.errorRow}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 5,
+                  marginTop: 4,
+                  marginLeft: 2,
+                }}
+              >
                 <Ionicons
                   name="alert-circle-outline"
                   size={13}
                   color="#EF4444"
                 />
-                <Text style={styles.errorText}>{fieldState.error.message}</Text>
+                <Text style={{ color: "#EF4444", fontSize: 12, flex: 1 }}>
+                  {fieldState.error.message}
+                </Text>
               </View>
             )}
           </View>
@@ -617,7 +936,7 @@ export default function RegisterDonorScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
       {/* Halos décoratifs */}
       <View style={styles.haloTop} />
@@ -633,11 +952,15 @@ export default function RegisterDonorScreen() {
             style={styles.backBtn}
             activeOpacity={0.75}
           >
-            <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+            <Ionicons name="arrow-back" size={19} color={colors.white} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <StepProgress current={currentStep} total={STEPS.length} />
+            <StepProgress
+              current={currentStep}
+              total={STEPS.length}
+              colors={colors}
+            />
             <Text style={styles.stepCounter}>
               {currentStep} / {STEPS.length}
             </Text>
@@ -645,7 +968,7 @@ export default function RegisterDonorScreen() {
 
           {/* Badge step */}
           <View style={styles.stepIconBadge}>
-            <Ionicons name={stepInfo.icon} size={16} color={COLORS.red} />
+            <Ionicons name={stepInfo.icon} size={16} color={colors.red} />
           </View>
         </View>
 
@@ -691,7 +1014,7 @@ export default function RegisterDonorScreen() {
             disabled={isPending}
           >
             {isPending ? (
-              <ActivityIndicator color={COLORS.white} size="small" />
+              <ActivityIndicator color={colors.white} size="small" />
             ) : (
               <>
                 <Text style={styles.ctaBtnText}>
@@ -701,7 +1024,7 @@ export default function RegisterDonorScreen() {
                   <Ionicons
                     name={currentStep < 3 ? "arrow-forward" : "mail-outline"}
                     size={17}
-                    color={COLORS.white}
+                    color={colors.white}
                   />
                 </View>
               </>
@@ -722,398 +1045,3 @@ export default function RegisterDonorScreen() {
     </View>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  safeArea: { flex: 1 },
-
-  // ── Halos ──
-  haloTop: {
-    position: "absolute",
-    top: -100,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: COLORS.redGlow,
-  },
-  haloBottom: {
-    position: "absolute",
-    bottom: 80,
-    left: -60,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "rgba(220,30,30,0.06)",
-  },
-
-  // ── Header ──
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 20,
-    gap: 12,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-  },
-  stepCounter: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
-  progressRow: {
-    flexDirection: "row",
-    gap: 6,
-    width: "100%",
-  },
-  progressSegment: {
-    flex: 1,
-    height: 3,
-    borderRadius: 2,
-  },
-  progressSegmentActive: {
-    backgroundColor: COLORS.red,
-  },
-  progressSegmentCurrent: {
-    backgroundColor: COLORS.red,
-  },
-  progressSegmentInactive: {
-    backgroundColor: COLORS.cardBorder,
-  },
-  stepIconBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "rgba(220,30,30,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(220,30,30,0.22)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // ── Titre ──
-  titleBlock: {
-    paddingHorizontal: 24,
-    marginBottom: 4,
-    gap: 4,
-  },
-  stepTitle: {
-    color: COLORS.white,
-    fontSize: 26,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  stepSubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-
-  // ── Scroll ──
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 24,
-  },
-  stepContent: { gap: 2 },
-
-  // ── Nom en ligne ──
-  nameRow: {
-    flexDirection: "row",
-    gap: 12,
-  },
-
-  // ── Labels ──
-  fieldLabel: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    marginBottom: 10,
-    marginTop: 4,
-  },
-  optionalText: {
-    color: COLORS.textSubtle,
-    fontWeight: "400",
-  },
-
-  // ── Genre ──
-  genderRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 4,
-  },
-  genderBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    position: "relative",
-  },
-  genderBtnDefault: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.cardBorder,
-  },
-  genderBtnSelected: {
-    backgroundColor: "rgba(220,30,30,0.12)",
-    borderColor: COLORS.red,
-  },
-  genderIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  genderIconWrapDefault: {
-    backgroundColor: "rgba(255,255,255,0.06)",
-  },
-  genderIconWrapSelected: {
-    backgroundColor: COLORS.red,
-  },
-  genderLabel: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    fontWeight: "600",
-    flex: 1,
-  },
-  genderLabelSelected: {
-    color: COLORS.white,
-  },
-  genderCheck: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-  },
-
-  // ── Blood type ──
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  rareLegend: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  rareLegendText: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-  bloodGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  bloodCell: {
-    width: "22%",
-    aspectRatio: 1,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    position: "relative",
-  },
-  bloodCellDefault: {
-    backgroundColor: COLORS.cardBg,
-    borderColor: COLORS.cardBorder,
-  },
-  bloodCellSelected: {
-    backgroundColor: COLORS.red,
-    borderColor: COLORS.red,
-  },
-  bloodLabel: {
-    color: COLORS.textMuted,
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  bloodLabelSelected: {
-    color: COLORS.white,
-  },
-  rareBadge: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "rgba(250,199,117,0.18)",
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  rareBadgeSelected: {
-    backgroundColor: "rgba(255,255,255,0.20)",
-  },
-  rareText: {
-    color: COLORS.amber,
-    fontSize: 8,
-    fontWeight: "700",
-  },
-  bloodCheck: {
-    position: "absolute",
-    top: 4,
-    left: 4,
-  },
-
-  // ── Divider ──
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.cardBorder,
-    marginVertical: 20,
-  },
-
-  // ── Date picker ──
-  datePickerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#141414",
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.inputBorder,
-    padding: 15,
-  },
-  datePickerBtnFilled: {
-    borderColor: "rgba(220,30,30,0.35)",
-    backgroundColor: "rgba(220,30,30,0.06)",
-  },
-  datePickerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  datePickerText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-  datePickerTextFilled: {
-    color: COLORS.white,
-    fontWeight: "500",
-  },
-  iosPickerContainer: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    marginTop: 8,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  iosPickerDone: {
-    alignItems: "flex-end",
-    padding: 12,
-    borderTopWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  iosPickerDoneText: {
-    color: COLORS.red,
-    fontWeight: "700",
-    fontSize: 15,
-  },
-
-  // ── Info card ──
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    backgroundColor: "rgba(34,197,94,0.07)",
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "rgba(34,197,94,0.18)",
-    padding: 14,
-    marginTop: 4,
-  },
-  infoCardIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: "rgba(34,197,94,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  infoCardTitle: {
-    color: COLORS.success,
-    fontSize: 13,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  infoCardText: {
-    color: "rgba(34,197,94,0.70)",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-
-  // ── Erreurs ──
-  errorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 4,
-    marginLeft: 2,
-  },
-  errorText: {
-    color: "#EF4444",
-    fontSize: 12,
-    flex: 1,
-  },
-
-  // ── Footer ──
-  footer: {
-    paddingHorizontal: 24,
-    paddingBottom: 10,
-    gap: 14,
-  },
-  ctaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: COLORS.red,
-    borderRadius: 16,
-    paddingVertical: 17,
-  },
-  ctaBtnDisabled: { opacity: 0.55 },
-  ctaBtnText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-  ctaBtnIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  loginRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  loginText: { color: COLORS.textMuted, fontSize: 14 },
-  loginLink: { color: COLORS.red, fontSize: 14, fontWeight: "700" },
-  success: { color: COLORS.success },
-});

@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Animated,
   ActivityIndicator,
   Keyboard,
@@ -18,19 +17,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { FormInput } from "@/src/components/ui/FormInput";
 import { useResendOtp } from "@/src/hooks/useAuth";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  red: "#DC1E1E",
-  redGlow: "rgba(220,30,30,0.13)",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.40)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  cardBg: "rgba(255,255,255,0.05)",
-  cardBorder: "rgba(255,255,255,0.09)",
-  success: "#22C55E",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useThemeStore } from "@/src/store/theme.store";
 
 // ─── Schema ────────────────────────────────────────────────────
 const reconnectSchema = z.object({
@@ -43,6 +31,8 @@ type ReconnectValues = z.infer<typeof reconnectSchema>;
 export default function ReconnectDonorScreen() {
   const router = useRouter();
   const { mutateAsync: sendOtp, isPending } = useResendOtp();
+  const colors = useColors();
+  const theme = useThemeStore((s) => s.theme);
 
   // ── Animations ──
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -76,15 +66,12 @@ export default function ReconnectDonorScreen() {
   const onSubmit = async (values: ReconnectValues) => {
     Keyboard.dismiss();
     try {
-      // Envoie l'OTP via l'API existante
       await sendOtp(values.email);
 
-      // Redirige vers l'écran de vérification OTP en passant juste l'email
       router.push({
         pathname: "/(auth)/otp-verify",
         params: {
           email: values.email,
-          // On passe des params vides pour les autres car c'est une reco, pas une inscription
           phone: "",
           firstName: "",
           lastName: "",
@@ -98,10 +85,123 @@ export default function ReconnectDonorScreen() {
     }
   };
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    safeArea: { flex: 1, paddingHorizontal: 24 },
+    haloBottomLeft: {
+      position: "absolute",
+      bottom: -60,
+      left: -60,
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      backgroundColor: c.redGlow,
+    },
+    haloTopRight: {
+      position: "absolute",
+      top: -40,
+      right: -40,
+      width: 160,
+      height: 160,
+      borderRadius: 80,
+      backgroundColor: c.haloLight,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+      marginBottom: 32,
+    },
+    body: { flex: 1 },
+    headerBlock: {
+      marginBottom: 32,
+      gap: 20,
+      alignItems: "center",
+    },
+    iconWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 20,
+      backgroundColor: "rgba(220,30,30,0.10)",
+      borderWidth: 1,
+      borderColor: "rgba(220,30,30,0.22)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    titleBlock: {
+      gap: 8,
+      alignItems: "center",
+    },
+    title: {
+      color: c.white,
+      fontSize: 26,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+      textAlign: "center",
+    },
+    subtitle: {
+      color: c.textMuted,
+      fontSize: 14,
+      lineHeight: 21,
+      textAlign: "center",
+      paddingHorizontal: 16,
+    },
+    formBlock: {
+      marginBottom: 16,
+    },
+    infoCard: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+      backgroundColor: "rgba(34,197,94,0.07)",
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: "rgba(34,197,94,0.18)",
+      padding: 14,
+      marginBottom: 24,
+    },
+    infoText: {
+      flex: 1,
+      color: "rgba(34,197,94,0.70)",
+      fontSize: 12,
+      lineHeight: 18,
+    },
+    ctaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: c.red,
+      borderRadius: 16,
+      paddingVertical: 17,
+    },
+    ctaBtnDisabled: { opacity: 0.5 },
+    ctaBtnText: {
+      color: c.white,
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    ctaBtnIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  }));
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
         {/* Halos décoratifs */}
         <View style={styles.haloBottomLeft} />
@@ -114,7 +214,7 @@ export default function ReconnectDonorScreen() {
             style={styles.backBtn}
             activeOpacity={0.75}
           >
-            <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+            <Ionicons name="arrow-back" size={19} color={colors.white} />
           </TouchableOpacity>
 
           {/* ── Corps ── */}
@@ -130,12 +230,12 @@ export default function ReconnectDonorScreen() {
             {/* Header */}
             <View style={styles.headerBlock}>
               <View style={styles.iconWrap}>
-                <Ionicons name="mail-outline" size={28} color={COLORS.red} />
+                <Ionicons name="mail-outline" size={28} color={colors.red} />
               </View>
               <View style={styles.titleBlock}>
                 <Text style={styles.title}>Bon retour Jambaar 👋</Text>
                 <Text style={styles.subtitle}>
-                  Entrez l’email de votre compte pour recevoir un code de
+                  Entrez l&apos;email de votre compte pour recevoir un code de
                   connexion sécurisé.
                 </Text>
               </View>
@@ -169,7 +269,7 @@ export default function ReconnectDonorScreen() {
               <Ionicons
                 name="shield-checkmark-outline"
                 size={16}
-                color={COLORS.success}
+                color={colors.success}
               />
               <Text style={styles.infoText}>
                 Pas besoin de mot de passe. Un code à 6 chiffres sera envoyé
@@ -185,7 +285,7 @@ export default function ReconnectDonorScreen() {
               disabled={isPending}
             >
               {isPending ? (
-                <ActivityIndicator color={COLORS.white} size="small" />
+                <ActivityIndicator color={colors.white} size="small" />
               ) : (
                 <>
                   <Text style={styles.ctaBtnText}>Recevoir mon code</Text>
@@ -193,7 +293,7 @@ export default function ReconnectDonorScreen() {
                     <Ionicons
                       name="arrow-forward"
                       size={17}
-                      color={COLORS.white}
+                      color={colors.white}
                     />
                   </View>
                 </>
@@ -205,131 +305,3 @@ export default function ReconnectDonorScreen() {
     </TouchableWithoutFeedback>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  safeArea: { flex: 1, paddingHorizontal: 24 },
-
-  // ── Halos ──
-  haloBottomLeft: {
-    position: "absolute",
-    bottom: -60,
-    left: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: COLORS.redGlow,
-  },
-  haloTopRight: {
-    position: "absolute",
-    top: -40,
-    right: -40,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(220,30,30,0.07)",
-  },
-
-  // ── Back ──
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 32,
-  },
-
-  // ── Body ──
-  body: { flex: 1 },
-
-  // ── Header ──
-  headerBlock: {
-    marginBottom: 32,
-    gap: 20,
-    alignItems: "center",
-  },
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    backgroundColor: "rgba(220,30,30,0.10)",
-    borderWidth: 1,
-    borderColor: "rgba(220,30,30,0.22)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  titleBlock: {
-    gap: 8,
-    alignItems: "center",
-  },
-  title: {
-    color: COLORS.white,
-    fontSize: 26,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-    textAlign: "center",
-  },
-  subtitle: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: "center",
-    paddingHorizontal: 16,
-  },
-
-  // ── Formulaire ──
-  formBlock: {
-    marginBottom: 16,
-  },
-
-  // ── Info Card ──
-  infoCard: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    backgroundColor: "rgba(34,197,94,0.07)",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(34,197,94,0.18)",
-    padding: 14,
-    marginBottom: 24,
-  },
-  infoText: {
-    flex: 1,
-    color: "rgba(34,197,94,0.70)",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-
-  // ── CTA ──
-  ctaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: COLORS.red,
-    borderRadius: 16,
-    paddingVertical: 17,
-  },
-  ctaBtnDisabled: { opacity: 0.5 },
-  ctaBtnText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-  ctaBtnIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});

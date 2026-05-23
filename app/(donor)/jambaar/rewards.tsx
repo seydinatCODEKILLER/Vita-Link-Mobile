@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
@@ -16,27 +15,10 @@ import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 import { useAuthStore } from "@/src/store/auth.store";
 import { useJambaarProfile } from "@/src/hooks/useJambaar";
-import {
-  useMyCoupons,
-  useRedeemReward,
-} from "@/src/hooks/useCoupons";
+import { useMyCoupons, useRedeemReward } from "@/src/hooks/useCoupons";
 import { Coupon, Reward } from "@/src/types/domain.types";
 import { useRewards } from "@/src/hooks/useRewards";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.08)",
-  red: "#DC1E1E",
-  green: "#1D9E75",
-  amber: "#FAC775",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.45)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  lockedBg: "rgba(255,255,255,0.03)",
-  lockedBorder: "rgba(255,255,255,0.05)",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 
 type TabType = "catalogue" | "coupons";
 type CouponFilter = "ACTIVE" | "USED" | "EXPIRED";
@@ -53,9 +35,80 @@ function RewardCard({
   onRedeem: (id: string) => void;
   isRedeeming: boolean;
 }) {
+  const colors = useColors();
   const canAfford = userPoints >= reward.pointsCost;
   const pointsNeeded = reward.pointsCost - userPoints;
   const progressPct = Math.min((userPoints / reward.pointsCost) * 100, 100);
+
+  const styles = useThemedStyles((c) => ({
+    rewardCard: {
+      backgroundColor: c.cardBg,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      padding: 16,
+      marginBottom: 12,
+      gap: 10,
+    },
+    partnerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    partnerIcon: {
+      width: 24,
+      height: 24,
+      borderRadius: 6,
+      backgroundColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    partnerName: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+      flex: 1,
+    },
+    rewardTitle: {
+      color: c.white,
+      fontSize: 16,
+      fontWeight: "800",
+      letterSpacing: -0.3,
+    },
+    rewardDesc: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
+    costBlock: { gap: 6 },
+    costRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    costValue: { fontSize: 14, fontWeight: "800" },
+    missingText: { color: c.textSubtle, fontSize: 11, fontWeight: "600" },
+    costBarBg: {
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.cardBorder,
+      overflow: "hidden",
+    },
+    costBarFill: { height: "100%", borderRadius: 2 },
+    redeemBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 12,
+      borderRadius: 12,
+      marginTop: 4,
+    },
+    redeemActive: { backgroundColor: c.success },
+    redeemLocked: {
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    redeemText: { color: c.white, fontSize: 13, fontWeight: "700" },
+    redeemTextLocked: {
+      color: c.textSubtle,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+  }));
 
   return (
     <View style={styles.rewardCard}>
@@ -64,7 +117,7 @@ function RewardCard({
           <Ionicons
             name="business-outline"
             size={14}
-            color={COLORS.textMuted}
+            color={colors.textMuted}
           />
         </View>
         <Text style={styles.partnerName} numberOfLines={1}>
@@ -84,7 +137,7 @@ function RewardCard({
           <Text
             style={[
               styles.costValue,
-              { color: canAfford ? COLORS.green : COLORS.amber },
+              { color: canAfford ? colors.success : colors.amber },
             ]}
           >
             {reward.pointsCost} pts
@@ -99,7 +152,7 @@ function RewardCard({
               styles.costBarFill,
               {
                 width: `${progressPct}%`,
-                backgroundColor: canAfford ? COLORS.green : COLORS.amber,
+                backgroundColor: canAfford ? colors.success : colors.amber,
               },
             ]}
           />
@@ -116,10 +169,10 @@ function RewardCard({
         disabled={!canAfford || isRedeeming}
       >
         {isRedeeming ? (
-          <ActivityIndicator color={COLORS.white} size="small" />
+          <ActivityIndicator color={colors.white} size="small" />
         ) : canAfford ? (
           <>
-            <Ionicons name="gift-outline" size={16} color={COLORS.white} />
+            <Ionicons name="gift-outline" size={16} color={colors.white} />
             <Text style={styles.redeemText}>Échanger</Text>
           </>
         ) : (
@@ -127,7 +180,7 @@ function RewardCard({
             <Ionicons
               name="lock-closed-outline"
               size={14}
-              color={COLORS.textSubtle}
+              color={colors.textSubtle}
             />
             <Text style={styles.redeemTextLocked}>Points insuffisants</Text>
           </>
@@ -139,14 +192,67 @@ function RewardCard({
 
 // ─── Composant Coupon Card ────────────────────────────────────
 function CouponCard({ coupon }: { coupon: Coupon }) {
+  const colors = useColors();
   const isActive = coupon.status === "ACTIVE";
   const isUsed = coupon.status === "USED";
   const statusColor = isActive
-    ? COLORS.green
+    ? colors.success
     : isUsed
-      ? COLORS.textMuted
-      : COLORS.amber;
+      ? colors.textMuted
+      : colors.amber;
   const statusLabel = isActive ? "Actif" : isUsed ? "Utilisé" : "Expiré";
+
+  const styles = useThemedStyles((c) => ({
+    couponCard: {
+      flexDirection: "row",
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      padding: 14,
+      marginBottom: 10,
+      gap: 12,
+      overflow: "hidden",
+    },
+    couponActive: { borderWidth: 1.5, borderColor: c.success + "30" },
+    couponStripe: {
+      width: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 10,
+      flexShrink: 0,
+    },
+    couponTypeIcon: { fontSize: 20 },
+    couponContent: { flex: 1, gap: 4 },
+    couponTitle: { color: c.white, fontSize: 14, fontWeight: "700" },
+    couponPartner: { color: c.textMuted, fontSize: 11 },
+    couponMeta: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 4,
+    },
+    couponStatusPill: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 6,
+      borderWidth: 1,
+    },
+    couponStatusText: { fontSize: 10, fontWeight: "700" },
+    couponExpiry: { color: c.textSubtle, fontSize: 10 },
+    couponCodeBlock: {
+      alignItems: "flex-end",
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+    couponCodeLabel: {
+      color: c.textSubtle,
+      fontSize: 8,
+      fontWeight: "700",
+      letterSpacing: 1,
+    },
+    couponCodeValue: { color: c.amber, fontSize: 11, fontWeight: "800" },
+  }));
 
   return (
     <View style={[styles.couponCard, isActive && styles.couponActive]}>
@@ -198,6 +304,7 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 // ─── Écran principal ───────────────────────────────────────────
 export default function RewardsScreen() {
   const router = useRouter();
+  const colors = useColors();
   const user = useAuthStore((s) => s.user);
   const { data: profileData } = useJambaarProfile();
   const { data: rewards, isLoading: rewardsLoading } = useRewards();
@@ -241,6 +348,134 @@ export default function RewardsScreen() {
     );
   };
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    loader: { flex: 1, justifyContent: "center", alignItems: "center" },
+    listContent: {
+      paddingHorizontal: 20,
+      paddingBottom: Platform.OS === "ios" ? 120 : 90,
+    },
+    topHalo: {
+      position: "absolute",
+      top: -60,
+      left: "50%",
+      marginLeft: -100,
+      width: 200,
+      height: 200,
+      borderRadius: 100,
+      backgroundColor: c.amber + "06",
+    },
+    navHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingTop: 8,
+      paddingBottom: 16,
+      paddingHorizontal: 20,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    navTitle: {
+      color: c.white,
+      fontSize: 20,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
+    balanceCard: {
+      backgroundColor: c.cardBg,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: c.amber + "25",
+      padding: 18,
+      marginHorizontal: 20,
+      marginBottom: 20,
+      overflow: "hidden",
+      position: "relative",
+    },
+    balanceHalo: {
+      position: "absolute",
+      top: -30,
+      right: -30,
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: c.amber + "08",
+    },
+    balanceTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      marginBottom: 8,
+    },
+    balanceLabel: { color: c.textMuted, fontSize: 12, fontWeight: "600" },
+    balanceRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
+    balanceValue: {
+      color: c.amber,
+      fontSize: 36,
+      fontWeight: "900",
+      letterSpacing: -1.5,
+    },
+    balanceUnit: { color: c.textMuted, fontSize: 16, fontWeight: "700" },
+    tabRow: {
+      flexDirection: "row",
+      marginHorizontal: 20,
+      marginBottom: 20,
+      backgroundColor: c.cardBg,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      padding: 4,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+      paddingVertical: 10,
+      borderRadius: 10,
+    },
+    tabActive: { backgroundColor: c.amber + "12" },
+    tabText: { color: c.textMuted, fontSize: 13, fontWeight: "600" },
+    tabTextActive: { color: c.white, fontWeight: "700" },
+    couponsContainer: { flex: 1 },
+    filterRow: {
+      flexDirection: "row",
+      gap: 8,
+      paddingHorizontal: 20,
+      marginBottom: 16,
+    },
+    filterPill: {
+      paddingVertical: 6,
+      paddingHorizontal: 14,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      backgroundColor: c.cardBg,
+    },
+    filterActive: {
+      backgroundColor: c.amber + "12",
+      borderColor: c.amber + "35",
+    },
+    filterText: { color: c.textMuted, fontSize: 12, fontWeight: "600" },
+    filterTextActive: { color: c.white, fontWeight: "700" },
+    emptyState: {
+      alignItems: "center",
+      justifyContent: "center",
+      paddingTop: 60,
+      gap: 12,
+    },
+    emptyTitle: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
+  }));
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topHalo} />
@@ -252,10 +487,10 @@ export default function RewardsScreen() {
           style={styles.backBtn}
           activeOpacity={0.75}
         >
-          <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+          <Ionicons name="arrow-back" size={19} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.navTitle}>
-          Boutique <Text style={{ color: COLORS.amber }}>Jambaar</Text>
+          Boutique <Text style={{ color: colors.amber }}>Jambaar</Text>
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -264,7 +499,7 @@ export default function RewardsScreen() {
       <View style={styles.balanceCard}>
         <View style={styles.balanceHalo} />
         <View style={styles.balanceTop}>
-          <Ionicons name="wallet-outline" size={18} color={COLORS.amber} />
+          <Ionicons name="wallet-outline" size={18} color={colors.amber} />
           <Text style={styles.balanceLabel}>Votre solde</Text>
         </View>
         <View style={styles.balanceRow}>
@@ -285,7 +520,7 @@ export default function RewardsScreen() {
           <Ionicons
             name="gift-outline"
             size={16}
-            color={activeTab === "catalogue" ? COLORS.white : COLORS.textMuted}
+            color={activeTab === "catalogue" ? colors.white : colors.textMuted}
           />
           <Text
             style={[
@@ -305,7 +540,7 @@ export default function RewardsScreen() {
           <Ionicons
             name="ticket-outline"
             size={16}
-            color={activeTab === "coupons" ? COLORS.white : COLORS.textMuted}
+            color={activeTab === "coupons" ? colors.white : colors.textMuted}
           />
           <Text
             style={[
@@ -322,7 +557,7 @@ export default function RewardsScreen() {
       {activeTab === "catalogue" ? (
         rewardsLoading ? (
           <View style={styles.loader}>
-            <ActivityIndicator color={COLORS.amber} size="large" />
+            <ActivityIndicator color={colors.amber} size="large" />
           </View>
         ) : (
           <FlatList
@@ -343,7 +578,7 @@ export default function RewardsScreen() {
                 <Ionicons
                   name="gift-outline"
                   size={40}
-                  color={COLORS.textSubtle}
+                  color={colors.textSubtle}
                 />
                 <Text style={styles.emptyTitle}>
                   Aucune récompense disponible
@@ -382,7 +617,7 @@ export default function RewardsScreen() {
 
           {couponsLoading ? (
             <ActivityIndicator
-              color={COLORS.amber}
+              color={colors.amber}
               size="large"
               style={{ marginTop: 40 }}
             />
@@ -398,7 +633,7 @@ export default function RewardsScreen() {
                   <Ionicons
                     name="ticket-outline"
                     size={40}
-                    color={COLORS.textSubtle}
+                    color={colors.textSubtle}
                   />
                   <Text style={styles.emptyTitle}>
                     Aucun coupon dans cette catégorie
@@ -412,248 +647,3 @@ export default function RewardsScreen() {
     </SafeAreaView>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  loader: { flex: 1, justifyContent: "center", alignItems: "center" },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "ios" ? 120 : 90,
-  },
-  topHalo: {
-    position: "absolute",
-    top: -60,
-    left: "50%",
-    marginLeft: -100,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: "rgba(250,199,117,0.06)",
-  },
-  navHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 8,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  navTitle: {
-    color: COLORS.white,
-    fontSize: 20,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  balanceCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(250,199,117,0.25)",
-    padding: 18,
-    marginHorizontal: 20,
-    marginBottom: 20,
-    overflow: "hidden",
-    position: "relative",
-  },
-  balanceHalo: {
-    position: "absolute",
-    top: -30,
-    right: -30,
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "rgba(250,199,117,0.08)",
-  },
-  balanceTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 8,
-  },
-  balanceLabel: { color: COLORS.textMuted, fontSize: 12, fontWeight: "600" },
-  balanceRow: { flexDirection: "row", alignItems: "baseline", gap: 6 },
-  balanceValue: {
-    color: COLORS.amber,
-    fontSize: 36,
-    fontWeight: "900",
-    letterSpacing: -1.5,
-  },
-  balanceUnit: { color: COLORS.textMuted, fontSize: 16, fontWeight: "700" },
-  tabRow: {
-    flexDirection: "row",
-    marginHorizontal: 20,
-    marginBottom: 20,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-  tabActive: { backgroundColor: "rgba(250,199,117,0.12)" },
-  tabText: { color: COLORS.textMuted, fontSize: 13, fontWeight: "600" },
-  tabTextActive: { color: COLORS.white, fontWeight: "700" },
-  rewardCard: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    padding: 16,
-    marginBottom: 12,
-    gap: 10,
-  },
-  partnerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  partnerIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.05)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  partnerName: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    flex: 1,
-  },
-  rewardTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "800",
-    letterSpacing: -0.3,
-  },
-  rewardDesc: { color: COLORS.textMuted, fontSize: 12, lineHeight: 18 },
-  costBlock: { gap: 6 },
-  costRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  costValue: { fontSize: 14, fontWeight: "800" },
-  missingText: { color: COLORS.textSubtle, fontSize: 11, fontWeight: "600" },
-  costBarBg: {
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.07)",
-    overflow: "hidden",
-  },
-  costBarFill: { height: "100%", borderRadius: 2 },
-  redeemBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginTop: 4,
-  },
-  redeemActive: { backgroundColor: COLORS.green },
-  redeemLocked: {
-    backgroundColor: COLORS.lockedBg,
-    borderWidth: 1,
-    borderColor: COLORS.lockedBorder,
-  },
-  redeemText: { color: COLORS.white, fontSize: 13, fontWeight: "700" },
-  redeemTextLocked: {
-    color: COLORS.textSubtle,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  couponsContainer: { flex: 1 },
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  filterPill: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    backgroundColor: COLORS.cardBg,
-  },
-  filterActive: {
-    backgroundColor: "rgba(250,199,117,0.12)",
-    borderColor: "rgba(250,199,117,0.35)",
-  },
-  filterText: { color: COLORS.textMuted, fontSize: 12, fontWeight: "600" },
-  filterTextActive: { color: COLORS.white, fontWeight: "700" },
-  couponCard: {
-    flexDirection: "row",
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    padding: 14,
-    marginBottom: 10,
-    gap: 12,
-    overflow: "hidden",
-  },
-  couponActive: { borderWidth: 1.5, borderColor: "rgba(29,158,117,0.30)" },
-  couponStripe: {
-    width: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 10,
-    flexShrink: 0,
-  },
-  couponTypeIcon: { fontSize: 20 },
-  couponContent: { flex: 1, gap: 4 },
-  couponTitle: { color: COLORS.white, fontSize: 14, fontWeight: "700" },
-  couponPartner: { color: COLORS.textMuted, fontSize: 11 },
-  couponMeta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  couponStatusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  couponStatusText: { fontSize: 10, fontWeight: "700" },
-  couponExpiry: { color: COLORS.textSubtle, fontSize: 10 },
-  couponCodeBlock: {
-    alignItems: "flex-end",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  couponCodeLabel: {
-    color: COLORS.textSubtle,
-    fontSize: 8,
-    fontWeight: "700",
-    letterSpacing: 1,
-  },
-  couponCodeValue: { color: COLORS.amber, fontSize: 11, fontWeight: "800" },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 60,
-    gap: 12,
-  },
-  emptyTitle: { color: COLORS.textMuted, fontSize: 14, fontWeight: "600" },
-});

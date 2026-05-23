@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   Platform,
@@ -32,22 +31,8 @@ import {
   editProfileSchema,
   EditProfileValues,
 } from "@/src/validators/profile.schema";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  red: "#DC1E1E",
-  redGlow: "rgba(220,30,30,0.14)",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.45)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.08)",
-  inputBg: "#141414",
-  inputBorder: "rgba(255,255,255,0.10)",
-  success: "#22C55E",
-  amber: "#FAC775",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
 
 // ─── Données statiques ─────────────────────────────────────────
 const BLOOD_TYPES = [
@@ -66,17 +51,18 @@ const GENDERS = [
   { value: "FEMALE", label: "Femme", icon: "female-outline" as const },
 ] as const;
 
-// ─── Composants réutilisés (Gender / Blood / Date) ─────────────
-
+// ─── GenderSelector ────────────────────────────────────────────
 function GenderSelector({
   value,
   onChange,
+  colors,
 }: {
   value: string | undefined | null;
   onChange: (v: string) => void;
+  colors: AppColors;
 }) {
   return (
-    <View style={styles.genderRow}>
+    <View style={{ flexDirection: "row", gap: 12, marginBottom: 8 }}>
       {GENDERS.map((g) => {
         const selected = value === g.value;
         return (
@@ -85,29 +71,50 @@ function GenderSelector({
             onPress={() => onChange(g.value)}
             activeOpacity={0.75}
             style={[
-              styles.genderBtn,
-              selected ? styles.genderBtnSelected : styles.genderBtnDefault,
+              {
+                flex: 1,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                padding: 14,
+                borderRadius: 14,
+                borderWidth: 1.5,
+              },
+              selected
+                ? {
+                    backgroundColor: "rgba(220,30,30,0.12)",
+                    borderColor: colors.red,
+                  }
+                : {
+                    backgroundColor: colors.inputBg,
+                    borderColor: "rgba(255,255,255,0.10)",
+                  },
             ]}
           >
             <View
-              style={[
-                styles.genderIconWrap,
-                selected
-                  ? styles.genderIconWrapSelected
-                  : styles.genderIconWrapDefault,
-              ]}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: selected
+                  ? colors.red
+                  : "rgba(255,255,255,0.06)",
+              }}
             >
               <Ionicons
                 name={g.icon}
                 size={20}
-                color={selected ? COLORS.white : COLORS.textMuted}
+                color={selected ? "#FFFFFF" : colors.textMuted}
               />
             </View>
             <Text
-              style={[
-                styles.genderLabel,
-                selected && styles.genderLabelSelected,
-              ]}
+              style={{
+                fontSize: 14,
+                fontWeight: "600",
+                color: selected ? colors.white : colors.textMuted,
+              }}
             >
               {g.label}
             </Text>
@@ -118,15 +125,25 @@ function GenderSelector({
   );
 }
 
+// ─── BloodTypeGrid ─────────────────────────────────────────────
 function BloodTypeGrid({
   value,
   onChange,
+  colors,
 }: {
   value: string | undefined | null;
   onChange: (v: string) => void;
+  colors: AppColors;
 }) {
   return (
-    <View style={styles.bloodGrid}>
+    <View
+      style={{
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: 10,
+        marginBottom: 8,
+      }}
+    >
       {BLOOD_TYPES.map((bt) => {
         const selected = value === bt.value;
         return (
@@ -134,13 +151,23 @@ function BloodTypeGrid({
             key={bt.value}
             onPress={() => onChange(bt.value)}
             activeOpacity={0.75}
-            style={[
-              styles.bloodCell,
-              selected ? styles.bloodCellSelected : styles.bloodCellDefault,
-            ]}
+            style={{
+              width: "22%",
+              aspectRatio: 1,
+              borderRadius: 14,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1.5,
+              backgroundColor: selected ? colors.red : colors.inputBg,
+              borderColor: selected ? colors.red : "rgba(255,255,255,0.10)",
+            }}
           >
             <Text
-              style={[styles.bloodLabel, selected && styles.bloodLabelSelected]}
+              style={{
+                fontSize: 17,
+                fontWeight: "800",
+                color: selected ? "#FFFFFF" : colors.textMuted,
+              }}
             >
               {bt.label}
             </Text>
@@ -154,6 +181,7 @@ function BloodTypeGrid({
 // ─── Écran Principal ───────────────────────────────────────────
 export default function EditProfileScreen() {
   const router = useRouter();
+  const colors = useColors();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
 
@@ -162,6 +190,137 @@ export default function EditProfileScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    safeArea: { flex: 1 },
+    haloTop: {
+      position: "absolute",
+      top: -100,
+      right: -80,
+      width: 260,
+      height: 260,
+      borderRadius: 130,
+      backgroundColor: c.redGlow,
+    },
+
+    // Header
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 16,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: { color: c.white, fontSize: 18, fontWeight: "800" },
+    saveBtn: { color: c.red, fontSize: 16, fontWeight: "700" },
+
+    scroll: { flex: 1 },
+    scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+
+    // Avatar
+    avatarSection: {
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 28,
+      paddingTop: 10,
+    },
+    avatarImage: { width: 96, height: 96, borderRadius: 28 },
+    avatarPlaceholder: {
+      width: 96,
+      height: 96,
+      borderRadius: 28,
+      backgroundColor: c.cardBg,
+      borderWidth: 1.5,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarHint: { color: c.textMuted, fontSize: 13, fontWeight: "500" },
+
+    // Sections
+    sectionTitle: {
+      color: c.textSubtle,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+      marginBottom: 12,
+    },
+    formBlock: {
+      backgroundColor: c.cardBg,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      padding: 16,
+      marginBottom: 24,
+      gap: 4,
+    },
+    fieldLabel: {
+      color: c.white,
+      fontSize: 13,
+      fontWeight: "600",
+      letterSpacing: 0.3,
+      marginBottom: 10,
+      opacity: 0.75,
+    },
+    optionalText: { color: c.textSubtle, fontWeight: "400" },
+    divider: {
+      height: 1,
+      backgroundColor: c.cardBorder,
+      marginVertical: 16,
+    },
+    errorText: { color: "#EF4444", fontSize: 12, marginTop: 6, marginLeft: 4 },
+
+    // Date Picker
+    datePickerBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: c.inputBg,
+      borderRadius: 14,
+      borderWidth: 1.5,
+      borderColor: "rgba(255,255,255,0.10)",
+      padding: 15,
+    },
+    datePickerBtnFilled: {
+      borderColor: "rgba(220,30,30,0.35)",
+      backgroundColor: "rgba(220,30,30,0.06)",
+    },
+    datePickerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      flex: 1,
+    },
+    datePickerText: { color: c.textMuted, fontSize: 14 },
+    datePickerTextFilled: { color: c.white, fontWeight: "500" },
+    iosPickerContainer: {
+      backgroundColor: c.cardBg,
+      borderRadius: 14,
+      marginTop: 8,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    iosPickerDone: {
+      alignItems: "flex-end",
+      padding: 12,
+      borderTopWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    iosPickerDoneText: { color: c.red, fontWeight: "700", fontSize: 15 },
+  }));
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -208,8 +367,7 @@ export default function EditProfileScreen() {
     });
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      const imageUri = result.assets[0].uri;
-      await uploadAvatar(imageUri);
+      await uploadAvatar(result.assets[0].uri);
     }
   };
 
@@ -219,7 +377,7 @@ export default function EditProfileScreen() {
       const updatedUser = await usersApi.updateAvatar(uri);
       await updateUser({ avatarUrl: updatedUser.avatarUrl });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch (error) {
+    } catch {
       Alert.alert("Erreur", "Impossible de mettre à jour la photo de profil.");
     } finally {
       setIsUploading(false);
@@ -263,13 +421,10 @@ export default function EditProfileScreen() {
         dateOfBirth: data.dateOfBirth ?? undefined,
       };
 
-      // Mise à jour des infos classiques
-      let updatedUser: User = await usersApi.updateProfile(payload);
+      const updatedUser: User = await usersApi.updateProfile(payload);
 
-      // Mise à jour du groupe sanguin (si modifié)
       if (data.bloodType && data.bloodType !== user?.bloodType) {
-        // Si ton backend sépare la mise à jour du groupe sanguin, fais un call spécifique ici
-        // Sinon, inclus bloodType dans le payload du UpdateProfilePayload
+        // call spécifique groupe sanguin si besoin
       }
 
       await updateUser({
@@ -292,11 +447,9 @@ export default function EditProfileScreen() {
     }
   };
 
-  const dateOfBirthValue = watch("dateOfBirth");
-
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="auto" />
       <View style={styles.haloTop} />
 
       <SafeAreaView style={styles.safeArea}>
@@ -307,7 +460,7 @@ export default function EditProfileScreen() {
             style={styles.backBtn}
             activeOpacity={0.75}
           >
-            <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+            <Ionicons name="arrow-back" size={19} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Modifier le profil</Text>
           <TouchableOpacity
@@ -316,7 +469,7 @@ export default function EditProfileScreen() {
             activeOpacity={0.7}
           >
             {isSaving ? (
-              <ActivityIndicator color={COLORS.red} />
+              <ActivityIndicator color={colors.red} />
             ) : (
               <Text style={styles.saveBtn}>Enregistrer</Text>
             )}
@@ -336,7 +489,7 @@ export default function EditProfileScreen() {
                 activeOpacity={0.8}
                 disabled={isUploading}
               >
-                <View style={styles.avatarWrap}>
+                <View style={{ position: "relative" }}>
                   {user?.avatarUrl ? (
                     <Image
                       source={{ uri: user.avatarUrl }}
@@ -347,24 +500,31 @@ export default function EditProfileScreen() {
                       <Ionicons
                         name="person"
                         size={36}
-                        color={COLORS.textSubtle}
+                        color={colors.textSubtle}
                       />
                     </View>
                   )}
-                  {isUploading ? (
-                    <View style={styles.avatarBadge}>
-                      <ActivityIndicator size="small" color={COLORS.white} />
-                    </View>
-                  ) : (
-                    <View
-                      style={[
-                        styles.avatarBadge,
-                        { backgroundColor: COLORS.red },
-                      ]}
-                    >
-                      <Ionicons name="camera" size={11} color={COLORS.white} />
-                    </View>
-                  )}
+                  <View
+                    style={{
+                      position: "absolute",
+                      bottom: -4,
+                      right: -4,
+                      width: 28,
+                      height: 28,
+                      borderRadius: 10,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderWidth: 2,
+                      borderColor: colors.bg,
+                      backgroundColor: isUploading ? colors.cardBg : colors.red,
+                    }}
+                  >
+                    {isUploading ? (
+                      <ActivityIndicator size="small" color={colors.white} />
+                    ) : (
+                      <Ionicons name="camera" size={11} color="#FFFFFF" />
+                    )}
+                  </View>
                 </View>
               </TouchableOpacity>
               <Text style={styles.avatarHint}>Changer la photo de profil</Text>
@@ -410,12 +570,13 @@ export default function EditProfileScreen() {
                   <GenderSelector
                     value={field.value}
                     onChange={field.onChange}
+                    colors={colors}
                   />
                 )}
               />
             </View>
 
-            {/* ── Infos Médicales ── */}
+            {/* ── Profil Médical ── */}
             <Text style={styles.sectionTitle}>PROFIL MÉDICAL</Text>
             <View style={styles.formBlock}>
               <Text style={styles.fieldLabel}>Groupe sanguin *</Text>
@@ -427,6 +588,7 @@ export default function EditProfileScreen() {
                     <BloodTypeGrid
                       value={field.value}
                       onChange={field.onChange}
+                      colors={colors}
                     />
                     {fieldState.error && (
                       <Text style={styles.errorText}>
@@ -460,7 +622,7 @@ export default function EditProfileScreen() {
                         <Ionicons
                           name="calendar-outline"
                           size={18}
-                          color={field.value ? COLORS.red : COLORS.textMuted}
+                          color={field.value ? colors.red : colors.textMuted}
                         />
                         <Text
                           style={[
@@ -512,201 +674,3 @@ export default function EditProfileScreen() {
     </View>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  safeArea: { flex: 1 },
-  haloTop: {
-    position: "absolute",
-    top: -100,
-    right: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: COLORS.redGlow,
-  },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 16,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { color: COLORS.white, fontSize: 18, fontWeight: "800" },
-  saveBtn: { color: COLORS.red, fontSize: 16, fontWeight: "700" },
-
-  scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-
-  // Avatar
-  avatarSection: {
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 28,
-    paddingTop: 10,
-  },
-  avatarWrap: { position: "relative" },
-  avatarImage: { width: 96, height: 96, borderRadius: 28 },
-  avatarPlaceholder: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1.5,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarBadge: {
-    position: "absolute",
-    bottom: -4,
-    right: -4,
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: COLORS.bg,
-  },
-  avatarHint: { color: COLORS.textMuted, fontSize: 13, fontWeight: "500" },
-
-  // Sections
-  sectionTitle: {
-    color: COLORS.textSubtle,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginBottom: 12,
-  },
-  formBlock: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    padding: 16,
-    marginBottom: 24,
-    gap: 4,
-  },
-  fieldLabel: {
-    color: "rgba(255,255,255,0.75)",
-    fontSize: 13,
-    fontWeight: "600",
-    letterSpacing: 0.3,
-    marginBottom: 10,
-  },
-  optionalText: { color: COLORS.textSubtle, fontWeight: "400" },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.cardBorder,
-    marginVertical: 16,
-  },
-  errorText: { color: "#EF4444", fontSize: 12, marginTop: 6, marginLeft: 4 },
-
-  // Gender
-  genderRow: { flexDirection: "row", gap: 12, marginBottom: 8 },
-  genderBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1.5,
-  },
-  genderBtnDefault: {
-    backgroundColor: COLORS.inputBg,
-    borderColor: COLORS.inputBorder,
-  },
-  genderBtnSelected: {
-    backgroundColor: "rgba(220,30,30,0.12)",
-    borderColor: COLORS.red,
-  },
-  genderIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  genderIconWrapDefault: { backgroundColor: "rgba(255,255,255,0.06)" },
-  genderIconWrapSelected: { backgroundColor: COLORS.red },
-  genderLabel: { color: COLORS.textMuted, fontSize: 14, fontWeight: "600" },
-  genderLabelSelected: { color: COLORS.white },
-
-  // Blood Grid
-  bloodGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 8,
-  },
-  bloodCell: {
-    width: "22%",
-    aspectRatio: 1,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-  },
-  bloodCellDefault: {
-    backgroundColor: COLORS.inputBg,
-    borderColor: COLORS.inputBorder,
-  },
-  bloodCellSelected: { backgroundColor: COLORS.red, borderColor: COLORS.red },
-  bloodLabel: { color: COLORS.textMuted, fontSize: 17, fontWeight: "800" },
-  bloodLabelSelected: { color: COLORS.white },
-
-  // Date Picker
-  datePickerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: COLORS.inputBg,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.inputBorder,
-    padding: 15,
-  },
-  datePickerBtnFilled: {
-    borderColor: "rgba(220,30,30,0.35)",
-    backgroundColor: "rgba(220,30,30,0.06)",
-  },
-  datePickerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  datePickerText: { color: COLORS.textMuted, fontSize: 14 },
-  datePickerTextFilled: { color: COLORS.white, fontWeight: "500" },
-  iosPickerContainer: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 14,
-    marginTop: 8,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  iosPickerDone: {
-    alignItems: "flex-end",
-    padding: 12,
-    borderTopWidth: 1,
-    borderColor: COLORS.cardBorder,
-  },
-  iosPickerDoneText: { color: COLORS.red, fontWeight: "700", fontSize: 15 },
-});

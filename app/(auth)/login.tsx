@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Animated,
   ActivityIndicator,
   Keyboard,
@@ -19,23 +18,15 @@ import { FormInput } from "@/src/components/ui/FormInput";
 import { useLogin } from "@/src/hooks/useAuth";
 import { loginSchema, type LoginValues } from "@/src/validators/auth.schema";
 import { useAuthStore } from "@/src/store/auth.store";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  red: "#DC1E1E",
-  redGlow: "rgba(220,30,30,0.13)",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.40)",
-  textSubtle: "rgba(255,255,255,0.18)",
-  cardBg: "rgba(255,255,255,0.05)",
-  cardBorder: "rgba(255,255,255,0.09)",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useThemeStore } from "@/src/store/theme.store";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { mutateAsync: login, isPending } = useLogin();
   const user = useAuthStore((s) => s.user);
+  const colors = useColors();
+  const theme = useThemeStore((s) => s.theme);
 
   // ── Redirect si déjà connecté ──
   useEffect(() => {
@@ -84,10 +75,165 @@ export default function LoginScreen() {
     }
   };
 
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    safeArea: { flex: 1, paddingHorizontal: 24 },
+    haloBottomLeft: {
+      position: "absolute",
+      bottom: -60,
+      left: -60,
+      width: 220,
+      height: 220,
+      borderRadius: 110,
+      backgroundColor: c.redGlow,
+    },
+    haloTopRight: {
+      position: "absolute",
+      top: -40,
+      right: -40,
+      width: 160,
+      height: 160,
+      borderRadius: 80,
+      backgroundColor: c.haloLight,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 8,
+      marginBottom: 32,
+    },
+    body: { flex: 1 },
+    headerBlock: {
+      marginBottom: 32,
+      gap: 20,
+    },
+    proBadgeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    proIconWrap: {
+      width: 44,
+      height: 44,
+      backgroundColor: c.red,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    proBadgeText: { gap: 2 },
+    proEyebrow: {
+      color: c.textSubtle,
+      fontSize: 9,
+      fontWeight: "600",
+      letterSpacing: 2,
+    },
+    proTitle: {
+      color: c.white,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    titleBlock: { gap: 6 },
+    title: {
+      color: c.white,
+      fontSize: 28,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
+    subtitle: {
+      color: c.textMuted,
+      fontSize: 14,
+      lineHeight: 21,
+    },
+    formBlock: { marginBottom: 8 },
+    forgotRow: {
+      alignSelf: "flex-end",
+      paddingVertical: 4,
+      marginTop: -4,
+      marginBottom: 8,
+    },
+    forgotText: {
+      color: c.red,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    ctaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 10,
+      backgroundColor: c.red,
+      borderRadius: 16,
+      paddingVertical: 17,
+      marginBottom: 24,
+    },
+    ctaBtnDisabled: { opacity: 0.5 },
+    ctaBtnText: {
+      color: c.white,
+      fontSize: 16,
+      fontWeight: "700",
+      letterSpacing: 0.2,
+    },
+    ctaBtnIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: "rgba(255,255,255,0.18)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    dividerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 24,
+    },
+    dividerLine: {
+      flex: 1,
+      height: 1,
+      backgroundColor: c.cardBorder,
+    },
+    dividerText: {
+      color: c.textSubtle,
+      fontSize: 12,
+    },
+    donorRow: {
+      flexDirection: "row",
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    donorText: {
+      color: c.textMuted,
+      fontSize: 14,
+    },
+    donorLink: {
+      color: c.red,
+      fontSize: 14,
+      fontWeight: "700",
+    },
+    securityRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      paddingBottom: 10,
+    },
+    securityText: {
+      color: c.textSubtle,
+      fontSize: 11,
+      letterSpacing: 0.3,
+    },
+  }));
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style={theme === "dark" ? "light" : "dark"} />
 
         {/* Halos décoratifs */}
         <View style={styles.haloBottomLeft} />
@@ -100,7 +246,7 @@ export default function LoginScreen() {
             style={styles.backBtn}
             activeOpacity={0.75}
           >
-            <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+            <Ionicons name="arrow-back" size={19} color={colors.white} />
           </TouchableOpacity>
 
           {/* ── Corps ── */}
@@ -118,12 +264,12 @@ export default function LoginScreen() {
               {/* Badge espace pro */}
               <View style={styles.proBadgeRow}>
                 <View style={styles.proIconWrap}>
-                  <Ionicons name="business" size={20} color={COLORS.white} />
+                  <Ionicons name="business" size={20} color={colors.white} />
                 </View>
                 <View style={styles.proBadgeText}>
                   <Text style={styles.proEyebrow}>ESPACE PROFESSIONNEL</Text>
                   <Text style={styles.proTitle}>
-                    Vita<Text style={{ color: COLORS.red }}>Link</Text>
+                    Vita<Text style={{ color: colors.red }}>Link</Text>
                   </Text>
                 </View>
               </View>
@@ -195,7 +341,7 @@ export default function LoginScreen() {
               disabled={isPending}
             >
               {isPending ? (
-                <ActivityIndicator color={COLORS.white} size="small" />
+                <ActivityIndicator color={colors.white} size="small" />
               ) : (
                 <>
                   <Text style={styles.ctaBtnText}>Se connecter</Text>
@@ -203,7 +349,7 @@ export default function LoginScreen() {
                     <Ionicons
                       name="arrow-forward"
                       size={17}
-                      color={COLORS.white}
+                      color={colors.white}
                     />
                   </View>
                 </>
@@ -234,7 +380,7 @@ export default function LoginScreen() {
             <Ionicons
               name="shield-checkmark-outline"
               size={13}
-              color={COLORS.textSubtle}
+              color={colors.textSubtle}
             />
             <Text style={styles.securityText}>
               Connexion sécurisée · Données chiffrées
@@ -245,183 +391,3 @@ export default function LoginScreen() {
     </TouchableWithoutFeedback>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-  safeArea: { flex: 1, paddingHorizontal: 24 },
-
-  // ── Halos ──
-  haloBottomLeft: {
-    position: "absolute",
-    bottom: -60,
-    left: -60,
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: COLORS.redGlow,
-  },
-  haloTopRight: {
-    position: "absolute",
-    top: -40,
-    right: -40,
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(220,30,30,0.07)",
-  },
-
-  // ── Back ──
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 32,
-  },
-
-  // ── Body ──
-  body: { flex: 1 },
-
-  // ── Header ──
-  headerBlock: {
-    marginBottom: 32,
-    gap: 20,
-  },
-  proBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  proIconWrap: {
-    width: 44,
-    height: 44,
-    backgroundColor: COLORS.red,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  proBadgeText: {
-    gap: 2,
-  },
-  proEyebrow: {
-    color: COLORS.textSubtle,
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 2,
-  },
-  proTitle: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  titleBlock: {
-    gap: 6,
-  },
-  title: {
-    color: COLORS.white,
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    lineHeight: 21,
-  },
-
-  // ── Formulaire ──
-  formBlock: {
-    marginBottom: 8,
-  },
-  forgotRow: {
-    alignSelf: "flex-end",
-    paddingVertical: 4,
-    marginTop: -4,
-    marginBottom: 8,
-  },
-  forgotText: {
-    color: COLORS.red,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  // ── CTA ──
-  ctaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: COLORS.red,
-    borderRadius: 16,
-    paddingVertical: 17,
-    marginBottom: 24,
-  },
-  ctaBtnDisabled: { opacity: 0.5 },
-  ctaBtnText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-  ctaBtnIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: "rgba(255,255,255,0.18)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // ── Divider ──
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.cardBorder,
-  },
-  dividerText: {
-    color: COLORS.textSubtle,
-    fontSize: 12,
-  },
-
-  // ── Lien donneur ──
-  donorRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  donorText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-  donorLink: {
-    color: COLORS.red,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-
-  // ── Sécurité ──
-  securityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingBottom: 10,
-  },
-  securityText: {
-    color: COLORS.textSubtle,
-    fontSize: 11,
-    letterSpacing: 0.3,
-  },
-});

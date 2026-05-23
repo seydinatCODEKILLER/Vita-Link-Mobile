@@ -1,29 +1,15 @@
 import React, { useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Animated,
-  Share,
-} from "react-native";
+import { View, Text, TouchableOpacity, Animated, Share } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Alert } from "@/src/types/alert.types";
 import { getTimeRemaining } from "@/src/utils/format.utils";
 import * as Haptics from "expo-haptics";
 import { useIsEligible } from "@/src/hooks/useAuthStore";
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
 
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.08)",
-  red: "#DC1E1E",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.45)",
-  textSubtle: "rgba(255,255,255,0.20)",
-  standardGreen: "#1D9E75",
-  amber: "#FAC775",
-} as const;
+// Couleurs sémantiques fixes — indépendantes du thème
+const STANDARD_GREEN = "#1D9E75";
 
 // ─── Mapping labels ────────────────────────────────────────────
 const SERVICE_LABELS: Record<string, string> = {
@@ -45,38 +31,54 @@ const BLOOD_TYPE_LABELS: Record<string, string> = {
   O_NEG: "O−",
 };
 
-// ─── Quota progress bar ────────────────────────────────────────
+// ─── QuotaBar ──────────────────────────────────────────────────
 function QuotaBar({
   confirmed,
   needed,
   isVital,
+  colors,
 }: {
   confirmed: number;
   needed: number;
   isVital: boolean;
+  colors: AppColors;
 }) {
   const pct = Math.min((confirmed / needed) * 100, 100);
   return (
-    <View style={styles.quotaRow}>
-      <View style={styles.quotaBarBg}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <View
+        style={{
+          flex: 1,
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: colors.cardBorder,
+          overflow: "hidden",
+        }}
+      >
         <View
-          style={[
-            styles.quotaBarFill,
-            {
-              width: `${pct}%` as any,
-              backgroundColor: isVital ? COLORS.red : COLORS.standardGreen,
-            },
-          ]}
+          style={{
+            width: `${pct}%` as any,
+            height: "100%",
+            borderRadius: 2,
+            backgroundColor: isVital ? colors.red : STANDARD_GREEN,
+          }}
         />
       </View>
-      <Text style={styles.quotaText}>
+      <Text
+        style={{
+          color: colors.textMuted,
+          fontSize: 10,
+          fontWeight: "600",
+          flexShrink: 0,
+        }}
+      >
         {confirmed}/{needed} poches
       </Text>
     </View>
   );
 }
 
-// ─── Composant principal ───────────────────────────────────────
+// ─── AlertCard ─────────────────────────────────────────────────
 interface AlertCardProps {
   alert: Alert;
   onPress: (alertId: string) => void;
@@ -84,12 +86,177 @@ interface AlertCardProps {
 }
 
 export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
+  const colors = useColors();
   const isVital = alert.urgencyLevel === "VITAL";
-  const { isEligible, daysLeft } = useIsEligible();
+  const { isEligible } = useIsEligible();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
-  // Pulsation pour VITAL
+  const styles = useThemedStyles((c) => ({
+    touchable: { marginBottom: 12 },
+
+    card: {
+      backgroundColor: c.cardBg,
+      borderRadius: 18,
+      borderWidth: 1.5,
+      borderColor: c.cardBorder,
+      overflow: "hidden",
+    },
+    cardVital: {
+      borderColor: "rgba(220,30,30,0.35)",
+      backgroundColor: "rgba(220,30,30,0.04)",
+    },
+    cardIneligible: { opacity: 0.6 },
+
+    // ── Bande VITAL ──
+    vitalBand: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      backgroundColor: "rgba(220,30,30,0.14)",
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: "rgba(220,30,30,0.18)",
+    },
+    vitalDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: c.red,
+    },
+    vitalBandText: {
+      color: c.red,
+      fontSize: 10,
+      fontWeight: "800",
+      letterSpacing: 1.5,
+    },
+
+    // ── Corps ──
+    body: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      padding: 14,
+      paddingBottom: 10,
+    },
+
+    // Badge groupe sanguin
+    bloodBadge: {
+      width: 58,
+      height: 58,
+      borderRadius: 14,
+      backgroundColor: "rgba(220,30,30,0.10)",
+      borderWidth: 1.5,
+      borderColor: "rgba(220,30,30,0.25)",
+      alignItems: "center",
+      justifyContent: "center",
+      flexShrink: 0,
+      position: "relative",
+    },
+    bloodBadgeVital: { backgroundColor: c.red, borderColor: c.red },
+    bloodText: {
+      color: c.red,
+      fontSize: 20,
+      fontWeight: "900",
+      letterSpacing: -0.5,
+    },
+    bloodTextVital: { color: "#FFFFFF" },
+    rareBadge: {
+      position: "absolute",
+      bottom: -6,
+      backgroundColor: c.amber + "33",
+      borderRadius: 4,
+      paddingHorizontal: 4,
+      paddingVertical: 1,
+    },
+    rareText: { color: c.amber, fontSize: 8, fontWeight: "700" },
+
+    // Bloc info
+    infoBlock: { flex: 1, gap: 6 },
+    infoTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    hospitalName: { color: c.white, fontSize: 14, fontWeight: "700", flex: 1 },
+    urgencyBadge: {
+      paddingHorizontal: 7,
+      paddingVertical: 3,
+      borderRadius: 6,
+      borderWidth: 1,
+    },
+    urgencyBadgeVital: {
+      backgroundColor: "rgba(220,30,30,0.15)",
+      borderColor: "rgba(220,30,30,0.35)",
+    },
+    urgencyBadgeStd: {
+      backgroundColor: "rgba(29,158,117,0.12)",
+      borderColor: "rgba(29,158,117,0.28)",
+    },
+    urgencyText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
+    urgencyTextVital: { color: c.red },
+    urgencyTextStd: { color: STANDARD_GREEN },
+
+    // Meta row
+    metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+    metaText: { color: c.textMuted, fontSize: 11 },
+    dot: {
+      width: 3,
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: c.textSubtle,
+      marginHorizontal: 2,
+    },
+
+    // Footer
+    footer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderTopWidth: 1,
+      borderTopColor: c.cardBorder,
+    },
+    timerBlock: { flexDirection: "row", alignItems: "center", gap: 5 },
+    timerText: { color: c.textMuted, fontSize: 12, fontWeight: "500" },
+    timerTextVital: { color: c.red, fontWeight: "700" },
+
+    ctaBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: "rgba(220,30,30,0.85)",
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+    },
+    ctaBtnVital: {
+      backgroundColor: c.red,
+      shadowColor: c.red,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.4,
+      shadowRadius: 8,
+      elevation: 6,
+    },
+    ctaBtnText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+
+    relayBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: c.amber + "26",
+      borderWidth: 1,
+      borderColor: c.amber + "4D",
+      paddingVertical: 8,
+      paddingHorizontal: 14,
+      borderRadius: 10,
+    },
+    relayBtnText: { color: c.amber, fontSize: 13, fontWeight: "700" },
+  }));
+
   useEffect(() => {
     if (!isVital) return;
     const pulse = Animated.loop(
@@ -134,7 +301,7 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
       await Share.share({
         message: `🚨 URGENCE : L'hôpital ${alert.healthStructure.name} a besoin de sang ${bloodLabel} ! Si tu es disponible et éligible, télécharge Vita-Link ou rends-y toi.`,
       });
-    } catch (error) {
+    } catch {
       // Silencieux
     }
   };
@@ -170,7 +337,6 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
 
         {/* ── Corps principal ── */}
         <View style={styles.body}>
-          {/* Colonne gauche : groupe sanguin */}
           <View style={[styles.bloodBadge, isVital && styles.bloodBadgeVital]}>
             <Text style={[styles.bloodText, isVital && styles.bloodTextVital]}>
               {bloodLabel}
@@ -182,9 +348,7 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
             )}
           </View>
 
-          {/* Colonne droite : infos */}
           <View style={styles.infoBlock}>
-            {/* Nom hôpital + badge urgence */}
             <View style={styles.infoTop}>
               <Text style={styles.hospitalName} numberOfLines={1}>
                 {alert.healthStructure.name}
@@ -206,48 +370,45 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
               </View>
             </View>
 
-            {/* Service + Distance */}
             <View style={styles.metaRow}>
               <Ionicons
                 name="medkit-outline"
                 size={12}
-                color={COLORS.textMuted}
+                color={colors.textMuted}
               />
               <Text style={styles.metaText}>{serviceLabel}</Text>
               <View style={styles.dot} />
               <Ionicons
                 name="location-outline"
                 size={12}
-                color={COLORS.textMuted}
+                color={colors.textMuted}
               />
               <Text style={styles.metaText}>{distanceText}</Text>
             </View>
 
-            {/* Quota bar */}
             <QuotaBar
               confirmed={alert.quantityConfirmed}
               needed={alert.quantityNeeded}
               isVital={isVital}
+              colors={colors}
             />
           </View>
         </View>
 
-        {/* ── Footer : timer + CTA ── */}
+        {/* ── Footer ── */}
         <View style={styles.footer}>
           <View style={styles.timerBlock}>
             <Ionicons
               name="time-outline"
               size={13}
-              color={isVital ? COLORS.red : COLORS.textMuted}
+              color={isVital ? colors.red : colors.textMuted}
             />
             <Text style={[styles.timerText, isVital && styles.timerTextVital]}>
               {timeRemaining}
             </Text>
           </View>
 
-          {/* ✅ NOUVEAU : Logique de bouton conditionnelle */}
           {isEligible ? (
-            // CAS 1 : Éligible -> Bouton normal "J'y vais"
             <TouchableOpacity
               style={[styles.ctaBtn, isVital && styles.ctaBtnVital]}
               onPress={(e) => {
@@ -256,11 +417,10 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
               }}
               activeOpacity={0.8}
             >
-              <Ionicons name="heart" size={13} color={COLORS.white} />
+              <Ionicons name="heart" size={13} color="#FFFFFF" />
               <Text style={styles.ctaBtnText}>J&apos;y vais</Text>
             </TouchableOpacity>
           ) : (
-            // CAS 2 : Inéligible -> Bouton "Relayer"
             <TouchableOpacity
               style={styles.relayBtn}
               onPress={(e) => {
@@ -269,7 +429,7 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
               }}
               activeOpacity={0.8}
             >
-              <Ionicons name="share-outline" size={13} color={COLORS.amber} />
+              <Ionicons name="share-outline" size={13} color={colors.amber} />
               <Text style={styles.relayBtnText}>Relayer</Text>
             </TouchableOpacity>
           )}
@@ -278,231 +438,3 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
     </TouchableOpacity>
   );
 };
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  touchable: { marginBottom: 12 },
-
-  cardIneligible: {
-    opacity: 0.6,
-  },
-  relayBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(250,199,117,0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(250,199,117,0.30)",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  relayBtnText: {
-    color: COLORS.amber,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: COLORS.cardBorder,
-    overflow: "hidden",
-  },
-  cardVital: {
-    borderColor: "rgba(220,30,30,0.35)",
-    backgroundColor: "rgba(220,30,30,0.04)",
-  },
-
-  // ── Bande VITAL ──
-  vitalBand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    backgroundColor: "rgba(220,30,30,0.14)",
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(220,30,30,0.18)",
-  },
-  vitalDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.red,
-  },
-  vitalBandText: {
-    color: COLORS.red,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-
-  // ── Corps ──
-  body: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    padding: 14,
-    paddingBottom: 10,
-  },
-
-  // Badge groupe sanguin
-  bloodBadge: {
-    width: 58,
-    height: 58,
-    borderRadius: 14,
-    backgroundColor: "rgba(220,30,30,0.10)",
-    borderWidth: 1.5,
-    borderColor: "rgba(220,30,30,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    position: "relative",
-  },
-  bloodBadgeVital: {
-    backgroundColor: COLORS.red,
-    borderColor: COLORS.red,
-  },
-  bloodText: {
-    color: COLORS.red,
-    fontSize: 20,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-  bloodTextVital: {
-    color: COLORS.white,
-  },
-  rareBadge: {
-    position: "absolute",
-    bottom: -6,
-    backgroundColor: "rgba(250,199,117,0.20)",
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  rareText: {
-    color: COLORS.amber,
-    fontSize: 8,
-    fontWeight: "700",
-  },
-
-  // Bloc info
-  infoBlock: { flex: 1, gap: 6 },
-  infoTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
-  },
-  hospitalName: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "700",
-    flex: 1,
-  },
-  urgencyBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  urgencyBadgeVital: {
-    backgroundColor: "rgba(220,30,30,0.15)",
-    borderColor: "rgba(220,30,30,0.35)",
-  },
-  urgencyBadgeStd: {
-    backgroundColor: "rgba(29,158,117,0.12)",
-    borderColor: "rgba(29,158,117,0.28)",
-  },
-  urgencyText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.5 },
-  urgencyTextVital: { color: COLORS.red },
-  urgencyTextStd: { color: COLORS.standardGreen },
-
-  // Meta row
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  metaText: { color: COLORS.textMuted, fontSize: 11 },
-  dot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: COLORS.textSubtle,
-    marginHorizontal: 2,
-  },
-
-  // Quota
-  quotaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  quotaBarBg: {
-    flex: 1,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    overflow: "hidden",
-  },
-  quotaBarFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  quotaText: {
-    color: COLORS.textMuted,
-    fontSize: 10,
-    fontWeight: "600",
-    flexShrink: 0,
-  },
-
-  // Footer
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.06)",
-  },
-  timerBlock: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  timerText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  timerTextVital: {
-    color: COLORS.red,
-    fontWeight: "700",
-  },
-  ctaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(220,30,30,0.85)",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-  },
-  ctaBtnVital: {
-    backgroundColor: COLORS.red,
-    shadowColor: COLORS.red,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  ctaBtnText: {
-    color: COLORS.white,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-});

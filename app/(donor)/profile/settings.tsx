@@ -3,7 +3,6 @@ import {
   View,
   Text,
   ScrollView,
-  StyleSheet,
   TouchableOpacity,
   Switch,
   Alert,
@@ -20,32 +19,21 @@ import * as Linking from "expo-linking";
 import { useAuthStore } from "@/src/store/auth.store";
 import { useLocation } from "@/src/hooks/useLocation";
 import { usersApi } from "@/src/api/users.api";
-
-// ─── Palette ──────────────────────────────────────────────────
-const COLORS = {
-  bg: "#080808",
-  cardBg: "#111111",
-  cardBorder: "rgba(255,255,255,0.08)",
-  red: "#DC1E1E",
-  redGlow: "rgba(220,30,30,0.12)",
-  green: "#1D9E75",
-  greenGlow: "rgba(29,158,117,0.12)",
-  amber: "#FAC775",
-  amberGlow: "rgba(250,199,117,0.10)",
-  white: "#FFFFFF",
-  textMuted: "rgba(255,255,255,0.45)",
-  textSubtle: "rgba(255,255,255,0.18)",
-} as const;
+import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useThemeStore } from "@/src/store/theme.store";
+import { ThemeToggle } from "@/src/components/ui/ThemeToggle";
+import { AppColors } from "@/src/theme/colors";
 
 // ─── Row component ─────────────────────────────────────────────
 function SettingRow({
   icon,
   label,
   hint,
-  color = COLORS.textMuted,
+  color,
   right,
   onPress,
   last,
+  colors,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -54,56 +42,111 @@ function SettingRow({
   right?: React.ReactNode;
   onPress?: () => void;
   last?: boolean;
+  colors: AppColors;
 }) {
+  const rowColor = color ?? colors.textMuted;
+
   return (
     <TouchableOpacity
-      style={[styles.row, !last && styles.rowBorder]}
+      style={[
+        rowStyles(colors).row,
+        !last && { borderBottomWidth: 1, borderBottomColor: colors.cardBorder },
+      ]}
       onPress={onPress}
       activeOpacity={onPress ? 0.6 : 1}
       disabled={!onPress}
     >
-      <View style={[styles.rowIcon, { backgroundColor: color + "15" }]}>
-        <Ionicons name={icon} size={17} color={color} />
+      <View
+        style={[
+          rowStyles(colors).rowIcon,
+          { backgroundColor: rowColor + "15" },
+        ]}
+      >
+        <Ionicons name={icon} size={17} color={rowColor} />
       </View>
-      <View style={styles.rowContent}>
-        <Text
-          style={[styles.rowLabel, color !== COLORS.textMuted && { color }]}
-        >
+      <View style={rowStyles(colors).rowContent}>
+        <Text style={[rowStyles(colors).rowLabel, color ? { color } : {}]}>
           {label}
         </Text>
-        {hint && <Text style={styles.rowHint}>{hint}</Text>}
+        {hint && <Text style={rowStyles(colors).rowHint}>{hint}</Text>}
       </View>
       {right ??
         (onPress && (
           <Ionicons
             name="chevron-forward"
             size={14}
-            color={COLORS.textSubtle}
+            color={colors.textSubtle}
           />
         ))}
     </TouchableOpacity>
   );
 }
 
+const rowStyles = (colors: AppColors) => ({
+  row: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+    padding: 14,
+    minHeight: 50,
+  },
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    flexShrink: 0 as const,
+  },
+  rowContent: { flex: 1, gap: 2 },
+  rowLabel: { color: colors.white, fontSize: 14, fontWeight: "500" as const },
+  rowHint: { color: colors.textMuted, fontSize: 11 },
+});
+
 // ─── Info Banner ───────────────────────────────────────────────
 function InfoBanner({
   icon,
   text,
-  color = COLORS.amber,
+  color,
+  colors,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   text: string;
   color?: string;
+  colors: AppColors;
 }) {
+  const bannerColor = color ?? colors.amber;
   return (
     <View
-      style={[
-        styles.infoBanner,
-        { borderColor: color + "25", backgroundColor: color + "08" },
-      ]}
+      style={{
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 10,
+        padding: 12,
+        marginHorizontal: 12,
+        marginBottom: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: bannerColor + "25",
+        backgroundColor: bannerColor + "08",
+      }}
     >
-      <Ionicons name={icon} size={15} color={color} style={{ marginTop: 1 }} />
-      <Text style={styles.infoText}>{text}</Text>
+      <Ionicons
+        name={icon}
+        size={15}
+        color={bannerColor}
+        style={{ marginTop: 1 }}
+      />
+      <Text
+        style={{
+          flex: 1,
+          color: colors.textMuted,
+          fontSize: 11,
+          lineHeight: 16,
+        }}
+      >
+        {text}
+      </Text>
     </View>
   );
 }
@@ -114,6 +157,8 @@ export default function SettingsScreen() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const { requestAndSync: syncLocation } = useLocation();
+  const colors = useColors();
+  const theme = useThemeStore((s) => s.theme);
 
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isCheckingPush, setIsCheckingPush] = useState(true);
@@ -122,6 +167,121 @@ export default function SettingsScreen() {
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(16)).current;
+
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+    haloTop: {
+      position: "absolute",
+      top: -80,
+      right: -40,
+      width: 200,
+      height: 200,
+      borderRadius: 100,
+      backgroundColor: c.redGlow,
+      opacity: 0.5,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 20,
+      paddingTop: 8,
+      paddingBottom: 24,
+    },
+    backBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 12,
+      backgroundColor: c.cardBg,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      color: c.white,
+      fontSize: 22,
+      fontWeight: "900",
+      letterSpacing: -0.5,
+    },
+    scroll: { flex: 1 },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingBottom: Platform.OS === "ios" ? 100 : 80,
+    },
+    sectionTitle: {
+      color: c.textSubtle,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 1.5,
+      marginBottom: 10,
+      marginTop: 8,
+    },
+    card: {
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      marginBottom: 8,
+      overflow: "hidden",
+    },
+    pushRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 14,
+      paddingRight: 6,
+      minHeight: 50,
+    },
+    versionText: {
+      color: c.textSubtle,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    deleteCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 14,
+      minHeight: 50,
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.red + "40",
+    },
+    deleteArrow: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: c.red + "15",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    themeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 14,
+      minHeight: 50,
+    },
+    themeIconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: c.amber + "15",
+    },
+    themeLabel: {
+      color: c.white,
+      fontSize: 14,
+      fontWeight: "500",
+    },
+    themeHint: {
+      color: c.textMuted,
+      fontSize: 11,
+    },
+  }));
 
   useEffect(() => {
     Animated.parallel([
@@ -139,22 +299,19 @@ export default function SettingsScreen() {
   }, []);
 
   useEffect(() => {
-    const checkPushStatus = async () => {
+    (async () => {
       try {
         const { status } = await Notifications.getPermissionsAsync();
         setPushEnabled(status === "granted");
       } catch {
-        // Silencieux
       } finally {
         setIsCheckingPush(false);
       }
-    };
-    checkPushStatus();
+    })();
   }, []);
 
   const handleTogglePush = async (value: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     if (value) {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status === "granted") {
@@ -208,7 +365,6 @@ export default function SettingsScreen() {
 
   const handleDeleteAccount = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-
     Alert.alert(
       "Supprimer mon compte",
       "Cette action est irréversible. Toutes vos données seront anonymisées et vos points Jambaar perdus.",
@@ -250,9 +406,11 @@ export default function SettingsScreen() {
     );
   };
 
+  // Couleur dynamique pour le push switch
+  const pushColor = "#1D9E75";
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Halo décoratif */}
       <View style={styles.haloTop} />
 
       {/* ── Header ── */}
@@ -262,10 +420,11 @@ export default function SettingsScreen() {
           style={styles.backBtn}
           activeOpacity={0.75}
         >
-          <Ionicons name="arrow-back" size={19} color={COLORS.white} />
+          <Ionicons name="arrow-back" size={19} color={colors.white} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Paramètres</Text>
-        <View style={{ width: 40 }} />
+        {/* ThemeToggle dans le header à la place du spacer vide */}
+        <ThemeToggle size={40} />
       </Animated.View>
 
       <ScrollView
@@ -276,51 +435,83 @@ export default function SettingsScreen() {
         <Animated.View
           style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
         >
+          {/* ── Apparence ── */}
+          <Text style={styles.sectionTitle}>APPARENCE</Text>
+          <View style={styles.card}>
+            <View style={styles.themeRow}>
+              <View style={styles.themeIconWrap}>
+                <Ionicons
+                  name={theme === "dark" ? "moon-outline" : "sunny-outline"}
+                  size={17}
+                  color={colors.amber}
+                />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={styles.themeLabel}>Thème de l&apos;interface</Text>
+                <Text style={styles.themeHint}>
+                  {theme === "dark" ? "Mode sombre" : "Mode clair"}
+                </Text>
+              </View>
+              <ThemeToggle size={36} />
+            </View>
+          </View>
+
           {/* ── Notifications ── */}
           <Text style={styles.sectionTitle}>NOTIFICATIONS</Text>
           <View style={styles.card}>
-            <View style={[styles.row, { paddingRight: 6 }]}>
+            <View style={styles.pushRow}>
               <View
                 style={[
-                  styles.rowIcon,
+                  {
+                    width: 34,
+                    height: 34,
+                    borderRadius: 10,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  },
                   {
                     backgroundColor: pushEnabled
-                      ? COLORS.green + "15"
-                      : "rgba(255,255,255,0.05)",
+                      ? pushColor + "15"
+                      : colors.cardBorder,
                   },
                 ]}
               >
                 <Ionicons
                   name="notifications-outline"
                   size={17}
-                  color={pushEnabled ? COLORS.green : COLORS.textMuted}
+                  color={pushEnabled ? pushColor : colors.textMuted}
                 />
               </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowLabel}>Notifications push</Text>
-                <Text style={styles.rowHint}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text
+                  style={{
+                    color: colors.white,
+                    fontSize: 14,
+                    fontWeight: "500",
+                  }}
+                >
+                  Notifications push
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: 11 }}>
                   {pushEnabled ? "Activées" : "Désactivées"}
                 </Text>
               </View>
               {isCheckingPush ? (
-                <ActivityIndicator size="small" color={COLORS.textMuted} />
+                <ActivityIndicator size="small" color={colors.textMuted} />
               ) : (
                 <Switch
-                  trackColor={{
-                    false: "rgba(255,255,255,0.10)",
-                    true: COLORS.green,
-                  }}
-                  thumbColor={COLORS.white}
+                  trackColor={{ false: colors.cardBorder, true: pushColor }}
+                  thumbColor={colors.cardBg}
                   value={pushEnabled}
                   onValueChange={handleTogglePush}
-                  ios_backgroundColor="rgba(255,255,255,0.10)"
+                  ios_backgroundColor={colors.cardBorder}
                 />
               )}
             </View>
-
             <InfoBanner
               icon="information-circle-outline"
               text="Les notifications vous alertent en temps réel lorsqu'un hôpital proche a besoin de votre groupe sanguin."
+              colors={colors}
             />
           </View>
 
@@ -335,19 +526,21 @@ export default function SettingsScreen() {
                   ? "Position actuelle disponible"
                   : "Nécessaire pour les alertes"
               }
-              color={COLORS.amber}
+              color={colors.amber}
               onPress={handleSyncLocation}
               right={
                 isSyncingLocation ? (
-                  <ActivityIndicator size="small" color={COLORS.amber} />
+                  <ActivityIndicator size="small" color={colors.amber} />
                 ) : undefined
               }
+              last
+              colors={colors}
             />
-
             <InfoBanner
               icon="shield-checkmark-outline"
               text="Votre position n'est utilisée que pour vous envoyer des alertes de don proches. Elle n'est jamais partagée."
-              color={COLORS.green}
+              color={colors.success}
+              colors={colors}
             />
           </View>
 
@@ -357,37 +550,55 @@ export default function SettingsScreen() {
             <SettingRow
               icon="document-text-outline"
               label="Conditions d'utilisation"
-              last
+              colors={colors}
             />
-            <View style={styles.rowBorder} />
             <SettingRow
               icon="shield-outline"
               label="Politique de confidentialité"
-              last
+              colors={colors}
             />
-            <View style={styles.rowBorder} />
-            <View style={styles.row}>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 12,
+                padding: 14,
+                minHeight: 50,
+              }}
+            >
               <View
-                style={[
-                  styles.rowIcon,
-                  { backgroundColor: "rgba(255,255,255,0.05)" },
-                ]}
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.cardBorder,
+                }}
               >
                 <Ionicons
                   name="information-circle-outline"
                   size={17}
-                  color={COLORS.textMuted}
+                  color={colors.textMuted}
                 />
               </View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowLabel}>Version</Text>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    color: colors.white,
+                    fontSize: 14,
+                    fontWeight: "500",
+                  }}
+                >
+                  Version
+                </Text>
               </View>
               <Text style={styles.versionText}>1.0.0</Text>
             </View>
           </View>
 
           {/* ── Zone dangereuse ── */}
-          <Text style={[styles.sectionTitle, { color: COLORS.red }]}>
+          <Text style={[styles.sectionTitle, { color: colors.red }]}>
             ZONE DANGEREUSE
           </Text>
           <TouchableOpacity
@@ -397,181 +608,39 @@ export default function SettingsScreen() {
             disabled={isDeleting}
           >
             <View
-              style={[styles.rowIcon, { backgroundColor: COLORS.red + "15" }]}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colors.red + "15",
+              }}
             >
-              <Ionicons name="trash-outline" size={17} color={COLORS.red} />
+              <Ionicons name="trash-outline" size={17} color={colors.red} />
             </View>
-            <View style={styles.rowContent}>
-              <Text style={[styles.rowLabel, { color: COLORS.red }]}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text
+                style={{ color: colors.red, fontSize: 14, fontWeight: "500" }}
+              >
                 Supprimer mon compte
               </Text>
-              <Text style={styles.rowHint}>
+              <Text style={{ color: colors.textMuted, fontSize: 11 }}>
                 Anonymisation définitive de vos données
               </Text>
             </View>
             {isDeleting ? (
-              <ActivityIndicator size="small" color={COLORS.red} />
+              <ActivityIndicator size="small" color={colors.red} />
             ) : (
               <View style={styles.deleteArrow}>
-                <Ionicons name="chevron-forward" size={14} color={COLORS.red} />
+                <Ionicons name="chevron-forward" size={14} color={colors.red} />
               </View>
             )}
           </TouchableOpacity>
 
-          {/* ✅ Espaceur pour rendre le bouton visible au-dessus de la tab bar */}
           <View style={{ height: Platform.OS === "ios" ? 120 : 100 }} />
         </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-// ─── Styles ────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.bg },
-
-  // Halo
-  haloTop: {
-    position: "absolute",
-    top: -80,
-    right: -40,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: COLORS.redGlow,
-    opacity: 0.5,
-  },
-
-  // Header
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.cardBg,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    color: COLORS.white,
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: -0.5,
-  },
-
-  // Scroll
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === "ios" ? 100 : 80,
-  },
-
-  // Sections
-  sectionTitle: {
-    color: COLORS.textSubtle,
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    marginBottom: 10,
-    marginTop: 8,
-  },
-
-  // Card
-  card: {
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.cardBorder,
-    marginBottom: 8,
-    overflow: "hidden",
-  },
-
-  // Rows
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    minHeight: 50,
-  },
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.cardBorder,
-  },
-  rowIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  rowContent: {
-    flex: 1,
-    gap: 2,
-  },
-  rowLabel: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  rowHint: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-  },
-
-  // Info Banner
-  infoBanner: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    padding: 12,
-    marginHorizontal: 12,
-    marginBottom: 12,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  infoText: {
-    flex: 1,
-    color: COLORS.textMuted,
-    fontSize: 11,
-    lineHeight: 16,
-  },
-
-  // Version
-  versionText: {
-    color: COLORS.textSubtle,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  // Delete Card
-  deleteCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 14,
-    minHeight: 50,
-    backgroundColor: COLORS.cardBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(220,30,30,0.25)",
-  },
-  deleteArrow: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: COLORS.red + "15",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
