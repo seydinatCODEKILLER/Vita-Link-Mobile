@@ -12,14 +12,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAlertResponses, useCloseAlert } from "@/src/hooks/useAlerts";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { AlertResponseStatus } from "@/src/types/shared.types";
 import { useSocket } from "@/src/hooks/useSocket";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
-// ✅ AJOUT : Imports pour la gestion d'erreur réseau
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
 
@@ -52,6 +50,54 @@ const getResponseConfig = (
   },
 });
 
+// ─── Skeleton Dashboard ────────────────────────────────────────
+function DashboardSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 18,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+    },
+    line: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+  }));
+
+  return (
+    <View
+      style={{ paddingHorizontal: 20, paddingTop: 10, gap: 20, opacity: 0.6 }}
+    >
+      <View
+        style={[
+          styles.cardBg,
+          { flexDirection: "row", alignItems: "center", gap: 14, padding: 16 },
+        ]}
+      >
+        <View
+          style={{
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            backgroundColor: colors.cardBorder,
+          }}
+        />
+        <View style={{ flex: 1, gap: 8 }}>
+          <View style={[styles.line, { width: "50%" }]} />
+          <View style={[styles.line, { width: "70%", height: 8 }]} />
+        </View>
+      </View>
+      <View style={[styles.cardBg, { height: 120 }]} />
+      <View style={{ gap: 8 }}>
+        <View style={[styles.line, { width: "40%", height: 8 }]} />
+        <View style={[styles.cardBg, { height: 200 }]} />
+      </View>
+    </View>
+  );
+}
+
 // ─── SummaryCard ───────────────────────────────────────────────
 function SummaryCard({
   confirmed,
@@ -81,7 +127,6 @@ function SummaryCard({
         gap: 16,
       }}
     >
-      {/* Stats row */}
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         {[
           {
@@ -134,7 +179,6 @@ function SummaryCard({
         ))}
       </View>
 
-      {/* Quota */}
       <View style={{ gap: 8 }}>
         <Text
           style={{ color: colors.textMuted, fontSize: 13, fontWeight: "600" }}
@@ -249,18 +293,19 @@ function DonorResponseRow({
 // ─── Écran Principal ───────────────────────────────────────────
 export default function AlertDashboardScreen() {
   const router = useRouter();
-  const queryClient = useQueryClient();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
   const { socketRef } = useSocket();
   const colors = useColors();
   const responseConfig = getResponseConfig(colors);
+  
 
-  // ✅ AJOUT : Extraction de `isError`, `error` et `refetch`
   const { data, isLoading, isError, error, refetch } =
     useAlertResponses(alertId);
 
   const { mutateAsync: closeAlert, isPending: isClosing } = useCloseAlert();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const hasNetworkError = isError && isNetworkError(error);
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
@@ -338,7 +383,11 @@ export default function AlertDashboardScreen() {
       borderRadius: 16,
       paddingVertical: 16,
     },
-    closeBtnDisabled: { opacity: 0.5 },
+    closeBtnDisabled: {
+      opacity: 0.4,
+      backgroundColor: "transparent",
+      borderColor: colors.cardBorder,
+    },
     closeBtnText: { color: c.red, fontSize: 16, fontWeight: "700" },
     errorText: { color: c.textMuted, fontSize: 16 },
     errorBack: {
@@ -392,26 +441,26 @@ export default function AlertDashboardScreen() {
     );
   };
 
-  if (isLoading) {
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if (isLoading && !data) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <DashboardSkeleton colors={colors} />
+      </SafeAreaView>
     );
   }
 
-  // ✅ NOUVEAU : Gestion robuste des erreurs
-  if (isError || !data) {
-    // 1. Si c'est une erreur réseau → NetworkErrorScreen avec bouton Réessayer
-    if (isNetworkError(error)) {
-      return (
-        <View style={styles.container}>
-          <NetworkErrorScreen onRetry={refetch} />
-        </View>
-      );
-    }
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
 
-    // 2. Si c'est une erreur API (ex: 404 Alerte supprimée) → Message d'erreur avec retour
+  // ── 3. Erreur API (404, etc.) ou données indisponibles ─────
+  if (isError || !data) {
     return (
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="alert-circle-outline" size={40} color={colors.red} />
@@ -426,6 +475,7 @@ export default function AlertDashboardScreen() {
     );
   }
 
+  // ── 4. Rendu normal ─────────────────────────────────────────
   const { alert, responses, summary } = data;
   const isVital = alert.urgencyLevel === "VITAL";
   const isActive = alert.status === "ACTIVE";
@@ -515,9 +565,21 @@ export default function AlertDashboardScreen() {
           {/* ── Réponses ── */}
           {responses.length === 0 ? (
             <View style={styles.emptyState}>
-              <ActivityIndicator color={colors.textSubtle} size="small" />
+              {/* On ne montre le loader QUE si l'alerte est encore active */}
+              {isActive && (
+                <ActivityIndicator color={colors.textSubtle} size="small" />
+              )}
+              <Ionicons
+                name={
+                  isActive ? "time-outline" : "checkmark-done-circle-outline"
+                }
+                size={24}
+                color={colors.textSubtle}
+              />
               <Text style={styles.emptyText}>
-                En attente de réponses des donneurs...
+                {isActive
+                  ? "En attente de réponses des donneurs..."
+                  : "Aucun donneur ne s'est présenté pour cette alerte."}
               </Text>
             </View>
           ) : (
@@ -536,29 +598,44 @@ export default function AlertDashboardScreen() {
       </ScrollView>
 
       {/* ── Footer ── */}
-      {isActive && (
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.closeBtn, isClosing && styles.closeBtnDisabled]}
-            onPress={handleCloseAlert}
-            disabled={isClosing}
-            activeOpacity={0.8}
-          >
-            {isClosing ? (
-              <ActivityIndicator color={colors.red} size="small" />
-            ) : (
-              <>
-                <Ionicons
-                  name="close-circle-outline"
-                  size={20}
-                  color={colors.red}
-                />
-                <Text style={styles.closeBtnText}>Fermer l&apos;alerte</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={[
+            styles.closeBtn,
+            (!isActive || isClosing) && styles.closeBtnDisabled,
+          ]}
+          onPress={() => {
+            if (!isActive) {
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Warning,
+              );
+              return;
+            }
+            handleCloseAlert();
+          }}
+          disabled={!isActive || isClosing}
+          activeOpacity={0.8}
+        >
+          {isClosing ? (
+            <ActivityIndicator color={colors.red} size="small" />
+          ) : (
+            <>
+              <Ionicons
+                name={isActive ? "close-circle-outline" : "lock-closed-outline"}
+                size={20}
+                color={colors.red}
+              />
+              <Text style={styles.closeBtnText}>
+                {isActive
+                  ? "Fermer l'alerte"
+                  : alert.status === "EXPIRED"
+                    ? "Alerte expirée"
+                    : "Alerte clôturée"}
+              </Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }

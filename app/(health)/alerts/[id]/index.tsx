@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,7 +16,70 @@ import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { useAuthStore } from "@/src/store/auth.store";
 import dayjs from "dayjs";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
 
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+
+// ─── Skeleton Détail Alerte ────────────────────────────────────
+function AlertDetailSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 20,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+    },
+    line: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, gap: 12, opacity: 0.6 }}>
+      {/* Fake Hero */}
+      <View style={[styles.cardBg, { padding: 18, gap: 14 }]}>
+        <View style={{ flexDirection: "row", gap: 14 }}>
+          <View
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: 16,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+          <View style={{ flex: 1, gap: 8, justifyContent: "center" }}>
+            <View style={[styles.line, { width: "70%" }]} />
+            <View style={[styles.line, { width: "40%", height: 8 }]} />
+          </View>
+        </View>
+        <View
+          style={{
+            height: 30,
+            borderRadius: 11,
+            backgroundColor: colors.cardBorder,
+          }}
+        />
+      </View>
+      {/* Fake Info Grid */}
+      <View style={{ flexDirection: "row", gap: 9 }}>
+        <View
+          style={[styles.cardBg, { flex: 1, height: 90, borderRadius: 14 }]}
+        />
+        <View
+          style={[styles.cardBg, { flex: 1, height: 90, borderRadius: 14 }]}
+        />
+      </View>
+      {/* Fake Progress */}
+      <View style={[styles.cardBg, { height: 80, borderRadius: 14 }]} />
+    </View>
+  );
+}
+
+// ─── Écran Principal ───────────────────────────────────────────
 export default function AlertDetailScreen() {
   const router = useRouter();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
@@ -25,10 +87,14 @@ export default function AlertDetailScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const colors = useColors();
 
-  const { data: alert, isLoading } = useAlert(alertId);
+  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
+  const { data: alert, isLoading, isError, error, refetch } = useAlert(alertId);
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(14)).current;
+
+  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
+  const hasNetworkError = isError && isNetworkError(error);
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
@@ -246,14 +312,44 @@ export default function AlertDetailScreen() {
     ]).start();
   }, []);
 
-  if (isLoading) {
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.back();
+        }}
+        style={styles.backBtn}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="arrow-back" size={19} color={colors.white} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>Détails Alerte</Text>
+      <View style={{ width: 38 }} />
+    </View>
+  );
+
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if (isLoading && !alert) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <AlertDetailSkeleton colors={colors} />
+      </SafeAreaView>
     );
   }
 
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !alert) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Alerte introuvable (Erreur 404 légitime) ────────────
   if (!alert) {
     return (
       <View style={[styles.container, styles.centered]}>
@@ -267,6 +363,7 @@ export default function AlertDetailScreen() {
     );
   }
 
+  // ── 4. Rendu normal ─────────────────────────────────────────
   const isVital = alert.urgencyLevel === "VITAL";
   const isActive = alert.status === "ACTIVE";
   const isExpired = alert.status === "EXPIRED";
@@ -281,17 +378,11 @@ export default function AlertDetailScreen() {
     100,
   );
 
-  const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.back();
-  };
-
   const handleGoToDashboard = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push(`/(health)/alerts/${alertId}/dashboard`);
   };
 
-  // Couleur statut
   const statusColor = isActive
     ? colors.success
     : isExpired
@@ -315,17 +406,7 @@ export default function AlertDetailScreen() {
           }}
         >
           {/* ── Header ── */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={handleGoBack}
-              style={styles.backBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={19} color={colors.white} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Détails Alerte</Text>
-            <View style={{ width: 38 }} />
-          </View>
+          {renderHeader()}
 
           {/* ── Hero Card ── */}
           <View

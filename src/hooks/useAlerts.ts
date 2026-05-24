@@ -59,7 +59,10 @@ export const useAlertResponses = (alertId: string) => {
     queryKey: QUERY_KEYS.alertResponses(alertId),
     queryFn: () => alertsApi.getResponses(alertId),
     enabled: !!alertId,
-    refetchInterval: 10_000,
+    refetchInterval: (query) => {
+      const isActive = query.state.data?.alert?.status === "ACTIVE";
+      return isActive ? 10_000 : false;
+    },
     staleTime: 5_000,
   });
 };
