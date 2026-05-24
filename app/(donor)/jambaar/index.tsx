@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  ActivityIndicator,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,6 +17,10 @@ import { useAuthStore } from "@/src/store/auth.store";
 import { DonorGrade } from "@/src/types/shared.types";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
+
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 
 const GRADE_CONFIG: Record<
   DonorGrade,
@@ -42,6 +45,75 @@ const GRADE_CONFIG: Record<
     glowAlpha: "26",
   },
 };
+
+// ─── Skeleton Jambaar ──────────────────────────────────────────
+function JambaarSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    line: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, gap: 12, opacity: 0.6 }}>
+      {/* Fake Grade Card */}
+      <View
+        style={[styles.cardBg, { height: 180, borderRadius: 24, padding: 20 }]}
+      >
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+          }}
+        >
+          <View style={{ gap: 8, width: "60%" }}>
+            <View style={[styles.line, { width: "40%" }]} />
+            <View style={[styles.line, { width: "80%", height: 20 }]} />
+            <View style={[styles.line, { width: "50%" }]} />
+          </View>
+          <View
+            style={{
+              width: 60,
+              height: 60,
+              borderRadius: 18,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+        </View>
+        <View style={{ marginTop: 20, gap: 8 }}>
+          <View
+            style={{
+              height: 6,
+              borderRadius: 3,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+          <View style={[styles.line, { width: "60%" }]} />
+        </View>
+      </View>
+      {/* Fake Stats */}
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <View style={[styles.cardBg, { flex: 1, height: 90 }]} />
+        <View style={[styles.cardBg, { flex: 1, height: 90 }]} />
+      </View>
+      <View style={{ flexDirection: "row", gap: 12 }}>
+        <View style={[styles.cardBg, { flex: 1, height: 90 }]} />
+        <View style={[styles.cardBg, { flex: 1, height: 90 }]} />
+      </View>
+      {/* Fake Actions */}
+      <View style={[styles.cardBg, { height: 180 }]} />
+    </View>
+  );
+}
 
 // ─── Stat Card ─────────────────────────────────────────────────
 function StatCard({
@@ -163,8 +235,10 @@ function ActionBtn({
 export default function JambaarProfileScreen() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { data, isLoading } = useJambaarProfile();
   const colors = useColors();
+
+  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
+  const { data, isLoading, isError, error, refetch } = useJambaarProfile();
 
   const progressWidth = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -301,13 +375,46 @@ export default function JambaarProfileScreen() {
     }
   }, [data?.progression]);
 
-  if (isLoading || !data) {
+  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
+  const hasNetworkError = isError && isNetworkError(error);
+
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if (isLoading && !data) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <View style={{ gap: 2 }}>
+            <Text style={styles.eyebrow}>PROGRAMME</Text>
+            <Text style={styles.headerTitle}>
+              Jambaar <Text style={{ color: colors.red }}>Life</Text>
+            </Text>
+          </View>
+        </View>
+        <JambaarSkeleton colors={colors} />
+      </SafeAreaView>
     );
   }
+
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <View style={{ gap: 2 }}>
+            <Text style={styles.eyebrow}>PROGRAMME</Text>
+            <Text style={styles.headerTitle}>
+              Jambaar <Text style={{ color: colors.red }}>Life</Text>
+            </Text>
+          </View>
+        </View>
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal ─────────────────────────────────────────
+  // (Si on a des données en cache même en cas d'erreur légère, on les affiche)
+  if (!data) return null;
 
   const { profile, progression, ranks } = data;
   const gradeConfig =

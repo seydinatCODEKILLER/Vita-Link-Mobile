@@ -19,8 +19,75 @@ import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+
 dayjs.extend(relativeTime);
 dayjs.locale("fr");
+
+// ─── Skeleton Dons ─────────────────────────────────────────────
+function DonationsSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    line: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, gap: 12, opacity: 0.6 }}>
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={[styles.cardBg, { padding: 16, gap: 12 }]}>
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-between" }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+                alignItems: "center",
+                width: "50%",
+              }}
+            >
+              <View
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 8,
+                  backgroundColor: colors.cardBorder,
+                }}
+              />
+              <View style={[styles.line, { flex: 1 }]} />
+            </View>
+            <View style={[styles.line, { width: "20%" }]} />
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 12,
+                backgroundColor: colors.cardBorder,
+              }}
+            />
+            <View style={{ gap: 6, flex: 1 }}>
+              <View style={[styles.line, { width: "30%" }]} />
+              <View style={[styles.line, { width: "50%", height: 8 }]} />
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 // ─── Donation Card ─────────────────────────────────────────────
 function DonationCard({ item, colors }: { item: Donation; colors: AppColors }) {
@@ -192,6 +259,7 @@ export default function DonationsScreen() {
     data,
     isLoading,
     isError,
+    error,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -201,6 +269,13 @@ export default function DonationsScreen() {
 
   const donations: Donation[] =
     data?.pages.flatMap((page) => page.donations) ?? [];
+
+  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
+  const hasNetworkError = isError && isNetworkError(error);
+
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
@@ -255,34 +330,45 @@ export default function DonationsScreen() {
     loaderMore: { paddingVertical: 20, alignItems: "center" },
   }));
 
-  const handleLoadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  const renderHeader = () => (
+    <View style={styles.header}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={styles.backBtn}
+        activeOpacity={0.75}
+      >
+        <Ionicons name="arrow-back" size={19} color={colors.white} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>
+        Mes <Text style={{ color: colors.red }}>Dons</Text>
+      </Text>
+      <View style={{ width: 40 }} />
+    </View>
+  );
 
-  if (isLoading) {
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if (isLoading && !data) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <DonationsSkeleton colors={colors} />
+      </SafeAreaView>
     );
   }
 
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal ─────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="arrow-back" size={19} color={colors.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          Mes <Text style={{ color: colors.red }}>Dons</Text>
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
-
       <FlatList
         data={donations}
         keyExtractor={(item) => item.id}
@@ -293,6 +379,7 @@ export default function DonationsScreen() {
         refreshing={isRefetching}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
+        ListHeaderComponent={renderHeader}
         ListFooterComponent={
           isFetchingNextPage ? (
             <View style={styles.loaderMore}>

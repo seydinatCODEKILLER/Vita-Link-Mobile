@@ -18,6 +18,10 @@ import { DonorGrade } from "@/src/types/shared.types";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+
 // ─── Types stricts pour les rangs ──────────────────────────────
 interface RankStyle {
   color: string;
@@ -43,6 +47,94 @@ const GRADE_EMOJI: Record<DonorGrade, string> = {
   SENTINELLE: "⚔️",
   AMBASSADEUR: "🦁",
 };
+
+// ─── Skeleton Leaderboard ──────────────────────────────────────
+function LeaderboardSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    line: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, opacity: 0.6 }}>
+      {/* Fake Scopes */}
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 24 }}>
+        {[1, 2, 3].map((i) => (
+          <View
+            key={i}
+            style={[styles.cardBg, { height: 32, borderRadius: 20, width: 90 }]}
+          />
+        ))}
+      </View>
+      {/* Fake Podium */}
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          gap: 8,
+          marginBottom: 30,
+        }}
+      >
+        <View
+          style={[
+            styles.cardBg,
+            { height: 90, width: "30%", borderRadius: 10 },
+          ]}
+        />
+        <View
+          style={[
+            styles.cardBg,
+            { height: 110, width: "30%", borderRadius: 10 },
+          ]}
+        />
+        <View
+          style={[
+            styles.cardBg,
+            { height: 70, width: "30%", borderRadius: 10 },
+          ]}
+        />
+      </View>
+      {/* Fake Rows */}
+      {[1, 2, 3, 4, 5].map((i) => (
+        <View
+          key={i}
+          style={[
+            styles.cardBg,
+            {
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+              padding: 12,
+              marginBottom: 8,
+            },
+          ]}
+        >
+          <View
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 10,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={[styles.line, { width: "50%" }]} />
+            <View style={[styles.line, { width: "30%", height: 8 }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 // ─── Composant Podium Top 3 ────────────────────────────────────
 function PodiumTop3({
@@ -126,7 +218,6 @@ function PodiumTop3({
         const grade = entry.currentGrade as DonorGrade;
         return (
           <View key={entry.user.id} style={podiumStyles.col}>
-            {/* Avatar */}
             <View
               style={[
                 podiumStyles.avatar,
@@ -139,7 +230,6 @@ function PodiumTop3({
               </Text>
             </View>
 
-            {/* Nom */}
             <Text
               style={[podiumStyles.name, isMe && { color: colors.red }]}
               numberOfLines={1}
@@ -150,7 +240,6 @@ function PodiumTop3({
               {entry.totalPoints.toLocaleString()}
             </Text>
 
-            {/* Colonne podium */}
             <View
               style={[
                 podiumStyles.column,
@@ -296,7 +385,6 @@ function LeaderboardRow({
         { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
       ]}
     >
-      {/* Rang */}
       <View
         style={[
           rowStyles.rankWrap,
@@ -313,12 +401,10 @@ function LeaderboardRow({
         </Text>
       </View>
 
-      {/* Avatar */}
       <View style={[rowStyles.avatar, isMe && rowStyles.avatarMe]}>
         <Text style={rowStyles.avatarEmoji}>{GRADE_EMOJI[grade] ?? "🌱"}</Text>
       </View>
 
-      {/* Infos */}
       <View style={rowStyles.infoBlock}>
         <Text
           style={[rowStyles.nameText, isMe && rowStyles.nameMe]}
@@ -347,7 +433,6 @@ function LeaderboardRow({
         </View>
       </View>
 
-      {/* Points */}
       <View style={rowStyles.ptsBlock}>
         <Text style={[rowStyles.ptsValue, isMe && { color: colors.red }]}>
           {item.totalPoints.toLocaleString()}
@@ -374,8 +459,17 @@ export default function LeaderboardScreen() {
         : undefined,
   };
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useLeaderboard(queryParams);
+  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useLeaderboard(queryParams);
 
   const leaderboard: LeaderboardEntry[] =
     (data as any)?.pages?.flatMap((p: any) => p.leaderboard) ??
@@ -386,6 +480,9 @@ export default function LeaderboardScreen() {
     (data as any)?.pages?.[0]?.myRank ?? (data as any)?.myRank ?? null;
   const scopeLabel =
     (data as any)?.pages?.[0]?.scope ?? (data as any)?.scope ?? "Global";
+
+  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
+  const hasNetworkError = isError && isNetworkError(error);
 
   const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
@@ -508,7 +605,6 @@ export default function LeaderboardScreen() {
 
   const renderHeader = () => (
     <View>
-      {/* Nav */}
       <View style={styles.navHeader}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -526,7 +622,6 @@ export default function LeaderboardScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Ma position */}
       {myRank && (
         <View style={styles.myRankCard}>
           <Ionicons name="podium" size={16} color={colors.amber} />
@@ -540,7 +635,6 @@ export default function LeaderboardScreen() {
         </View>
       )}
 
-      {/* Tabs scope */}
       <View style={styles.scopesRow}>
         {SCOPES.map((s) => {
           const isActive = scope === s.key;
@@ -566,12 +660,10 @@ export default function LeaderboardScreen() {
         })}
       </View>
 
-      {/* Podium top 3 */}
       {leaderboard.length >= 3 && (
         <PodiumTop3 entries={leaderboard} myId={user?.id} colors={colors} />
       )}
 
-      {/* Label reste classement */}
       {leaderboard.length > 3 && (
         <View style={styles.restLabel}>
           <View style={styles.restLine} />
@@ -589,14 +681,57 @@ export default function LeaderboardScreen() {
       </View>
     ) : null;
 
-  if (isLoading) {
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if (isLoading && !data) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.navHeader}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="arrow-back" size={19} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.navCenter}>
+            <Text style={styles.navEyebrow}>PROGRAMME JAMBAAR</Text>
+            <Text style={styles.navTitle}>
+              Classement <Text style={{ color: colors.amber }}>⚡</Text>
+            </Text>
+          </View>
+          <View style={{ width: 40 }} />
+        </View>
+        <LeaderboardSkeleton colors={colors} />
+      </SafeAreaView>
     );
   }
 
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.navHeader}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="arrow-back" size={19} color={colors.white} />
+          </TouchableOpacity>
+          <View style={styles.navCenter}>
+            <Text style={styles.navEyebrow}>PROGRAMME JAMBAAR</Text>
+            <Text style={styles.navTitle}>
+              Classement <Text style={{ color: colors.amber }}>⚡</Text>
+            </Text>
+          </View>
+          <View style={{ width: 40 }} />
+        </View>
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal ─────────────────────────────────────────
   const listData = leaderboard.length > 3 ? leaderboard.slice(3) : leaderboard;
 
   return (

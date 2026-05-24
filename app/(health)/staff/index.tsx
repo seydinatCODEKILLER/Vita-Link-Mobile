@@ -19,13 +19,107 @@ import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+
 // ─── Config Avatar Colors (Dynamique) ────────────────────────
 const getAvatarColors = (colors: AppColors) => [
   { bg: colors.success + "14", text: colors.success },
-  { bg: "#60A5FA14", text: "#60A5FA" }, // Bleu hors palette
+  { bg: "#60A5FA14", text: "#60A5FA" },
   { bg: colors.red + "12", text: colors.red },
   { bg: colors.amber + "14", text: colors.amber },
 ];
+
+// ─── Skeleton Staff ────────────────────────────────────────────
+function StaffSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+    },
+    line: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, gap: 9, opacity: 0.6 }}>
+      {/* Fake Section */}
+      <View
+        style={[
+          styles.line,
+          { width: "30%", height: 8, marginTop: 6, marginBottom: 10 },
+        ]}
+      />
+      {[1, 2].map((i) => (
+        <View
+          key={`dir-${i}`}
+          style={[
+            styles.cardBg,
+            {
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 13,
+              padding: 13,
+            },
+          ]}
+        >
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 14,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={[styles.line, { width: "50%" }]} />
+            <View style={[styles.line, { width: "70%", height: 8 }]} />
+          </View>
+        </View>
+      ))}
+      {/* Fake Section 2 */}
+      <View
+        style={[
+          styles.line,
+          { width: "40%", height: 8, marginTop: 16, marginBottom: 10 },
+        ]}
+      />
+      {[1, 2, 3].map((i) => (
+        <View
+          key={`agt-${i}`}
+          style={[
+            styles.cardBg,
+            {
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 13,
+              padding: 13,
+            },
+          ]}
+        >
+          <View
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: 14,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+          <View style={{ flex: 1, gap: 6 }}>
+            <View style={[styles.line, { width: "60%" }]} />
+            <View style={[styles.line, { width: "80%", height: 8 }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 // ─── StaffRow ─────────────────────────────────────────────────
 function StaffRow({
@@ -148,8 +242,13 @@ export default function StaffScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
 
-  const { data: staff, isLoading } = useMyStaff();
+  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
+  const { data: staff, isLoading, isError, error, refetch } = useMyStaff();
+
   const { mutateAsync: removeStaff } = useRemoveStaff();
+
+  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
+  const hasNetworkError = isError && isNetworkError(error);
 
   const isDirector = currentUser?.isStructureAdmin ?? false;
 
@@ -284,28 +383,8 @@ export default function StaffScreen() {
     },
   }));
 
-  if (isLoading) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
-    );
-  }
-
-  type ListItem =
-    | { type: "section"; label: string }
-    | { type: "member"; member: StaffMember; index: number };
-
-  const listData: ListItem[] = [
-    { type: "section", label: "DIRECTION" },
-    ...directors.map((m) => ({ type: "member" as const, member: m, index: 0 })),
-    { type: "section", label: `AGENTS (${agents.length})` },
-    ...agents.map((m, i) => ({ type: "member" as const, member: m, index: i })),
-  ];
-
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* ── Header ── */}
+  const renderHeader = () => (
+    <>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
@@ -321,7 +400,6 @@ export default function StaffScreen() {
         <View style={{ width: 38 }} />
       </View>
 
-      {/* ── Banner pending ── */}
       {isPending && (
         <View style={styles.pendingBanner}>
           <Ionicons name="time-outline" size={15} color={colors.amber} />
@@ -330,7 +408,43 @@ export default function StaffScreen() {
           </Text>
         </View>
       )}
+    </>
+  );
 
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if (isLoading && !staff) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <StaffSkeleton colors={colors} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !staff) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {renderHeader()}
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal ─────────────────────────────────────────
+  type ListItem =
+    | { type: "section"; label: string }
+    | { type: "member"; member: StaffMember; index: number };
+
+  const listData: ListItem[] = [
+    { type: "section", label: "DIRECTION" },
+    ...directors.map((m) => ({ type: "member" as const, member: m, index: 0 })),
+    { type: "section", label: `AGENTS (${agents.length})` },
+    ...agents.map((m, i) => ({ type: "member" as const, member: m, index: i })),
+  ];
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <FlatList
         data={listData}
         keyExtractor={(item, i) =>
@@ -341,6 +455,7 @@ export default function StaffScreen() {
           { paddingBottom: tabBarHeight + 80 },
         ]}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={renderHeader}
         renderItem={({ item }) => {
           if (item.type === "section") {
             return <Text style={styles.sectionLabel}>{item.label}</Text>;
@@ -355,17 +470,31 @@ export default function StaffScreen() {
           );
         }}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons
-              name="people-outline"
-              size={40}
-              color={colors.textSubtle}
-            />
-            <Text style={styles.emptyTitle}>Aucun agent enregistré</Text>
-            <Text style={styles.emptySub}>
-              Ajoutez des infirmiers ou agents pour gérer les alertes.
-            </Text>
-          </View>
+          isError ? (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={40}
+                color={colors.textSubtle}
+              />
+              <Text style={styles.emptyTitle}>Erreur de chargement</Text>
+              <Text style={styles.emptySub}>
+                Impossible de récupérer la liste du personnel.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="people-outline"
+                size={40}
+                color={colors.textSubtle}
+              />
+              <Text style={styles.emptyTitle}>Aucun agent enregistré</Text>
+              <Text style={styles.emptySub}>
+                Ajoutez des infirmiers ou agents pour gérer les alertes.
+              </Text>
+            </View>
+          )
         }
       />
 

@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from "react-native";
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useThemedStyles, useColors } from "@/src/theme/useTheme";
+import { useThemedStyles } from "@/src/theme/useTheme";
 
 interface NetworkErrorScreenProps {
   onRetry?: () => void;
@@ -13,7 +13,6 @@ export const NetworkErrorScreen = ({
   message = "Vérifiez votre connexion internet et réessayez.",
 }: NetworkErrorScreenProps) => {
   const queryClient = useQueryClient();
-  const colors = useColors();
   const [isRetrying, setIsRetrying] = useState(false);
 
   const styles = useThemedStyles((c) => ({

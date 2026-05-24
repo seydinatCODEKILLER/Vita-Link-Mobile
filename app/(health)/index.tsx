@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Animated,
   Alert,
 } from "react-native";
@@ -22,6 +21,10 @@ import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+
 // ─── Config Niveaux de Stock (Dynamique) ──────────────────────
 const getLevelConfig = (
   colors: AppColors,
@@ -29,7 +32,7 @@ const getLevelConfig = (
   CRITICAL: { label: "Critique", color: colors.red },
   LOW: { label: "Bas", color: colors.amber },
   ADEQUATE: { label: "Ok", color: colors.success },
-  SURPLUS: { label: "Surplus", color: "#60A5FA" }, // Le bleu n'est pas dans ton AppColors de base, je le laisse en dur
+  SURPLUS: { label: "Surplus", color: "#60A5FA" },
 });
 
 // ─── StatCard ─────────────────────────────────────────────────
@@ -159,6 +162,47 @@ function BloodStockRow({
   );
 }
 
+// ─── NOUVEAU : Skeleton Dashboard ─────────────────────────────
+function DashboardSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 14,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+    },
+    line: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, gap: 22, opacity: 0.6 }}>
+      {/* Fake Stats */}
+      <View style={{ flexDirection: "row", gap: 8 }}>
+        {[1, 2, 3].map((i) => (
+          <View
+            key={i}
+            style={[styles.cardBg, { flex: 1, height: 80, padding: 12 }]}
+          />
+        ))}
+      </View>
+      {/* Fake Stocks */}
+      <View style={{ gap: 10 }}>
+        <View style={[styles.line, { width: "30%" }]} />
+        <View style={[styles.cardBg, { height: 120 }]} />
+      </View>
+      {/* Fake Alerts */}
+      <View style={{ gap: 10 }}>
+        <View style={[styles.line, { width: "40%" }]} />
+        <View style={[styles.cardBg, { height: 90 }]} />
+      </View>
+    </View>
+  );
+}
+
 // ─── Écran Principal ───────────────────────────────────────────
 export default function HealthHomeScreen() {
   const router = useRouter();
@@ -168,8 +212,22 @@ export default function HealthHomeScreen() {
 
   const tabBarHeight = useBottomTabBarHeight();
 
-  const { data: stats, isLoading: statsLoading } = useStructureStats();
-  const { data: alertsData, isLoading: alertsLoading } = useMyStructureAlerts({
+  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: isStatsError,
+    error: statsError,
+    refetch: refetchStats,
+  } = useStructureStats();
+
+  const {
+    data: alertsData,
+    isLoading: alertsLoading,
+    isError: isAlertsError,
+    error: alertsError,
+    refetch: refetchAlerts,
+  } = useMyStructureAlerts({
     status: "ACTIVE",
   });
 
@@ -194,6 +252,16 @@ export default function HealthHomeScreen() {
 
   const activeAlerts = alertsData?.alerts ?? [];
   const activeAlertsCount = stats?.alerts?.ACTIVE ?? 0;
+
+  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
+  const hasNetworkError =
+    (isStatsError && isNetworkError(statsError)) ||
+    (isAlertsError && isNetworkError(alertsError));
+
+  const handleRetryNetwork = () => {
+    refetchStats();
+    refetchAlerts();
+  };
 
   const handleCreateAlert = () => {
     if (isPending) {
@@ -367,14 +435,41 @@ export default function HealthHomeScreen() {
     },
   }));
 
-  if (statsLoading || alertsLoading) {
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if ((statsLoading || alertsLoading) && !stats && !alertsData) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Bonjour {user?.firstName} 👋</Text>
+            <Text style={styles.headerTitle}>
+              Tableau <Text style={{ color: colors.red }}>de bord</Text>
+            </Text>
+          </View>
+        </View>
+        <DashboardSkeleton colors={colors} />
+      </SafeAreaView>
     );
   }
 
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !stats && !alertsData) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.greeting}>Bonjour {user?.firstName} 👋</Text>
+            <Text style={styles.headerTitle}>
+              Tableau <Text style={{ color: colors.red }}>de bord</Text>
+            </Text>
+          </View>
+        </View>
+        <NetworkErrorScreen onRetry={handleRetryNetwork} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal ─────────────────────────────────────────
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
