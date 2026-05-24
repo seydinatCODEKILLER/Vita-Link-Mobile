@@ -736,7 +736,7 @@ export default function DonorHomeScreen() {
                 thumbColor={colors.cardBg}
                 value={isEligible && (user?.isAvailable ?? true)}
                 onValueChange={(val) => toggleAvailability(val)}
-                disabled={isTogglingAvail || !isEligible}
+                disabled={!isEligible}
               />
             </TouchableOpacity>
 

@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
-  ActivityIndicator,
   Platform,
   Image,
 } from "react-native";
@@ -18,6 +17,10 @@ import { useMyBadges } from "@/src/hooks/useJambaar";
 import { Badge } from "@/src/types/domain.types";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
+
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 
 // ─── Émoji par défaut selon le type de badge ──────────────────
 function getDefaultEmoji(badge: Badge): string {
@@ -99,9 +102,57 @@ function parseCriteria(criteriaJson: string): string {
 // ─── Détermine si un badge est "nouveau" (débloqué < 24h) ────
 function isNewBadge(badge: Badge): boolean {
   if (!badge.isUnlocked || !badge.earnedAt) return false;
-  const earned = dayjs(badge.earnedAt);
-  const now = dayjs();
-  return now.diff(earned, "hour") < 24;
+  return dayjs().diff(dayjs(badge.earnedAt), "hour") < 24;
+}
+
+// ─── Skeleton Badges ──────────────────────────────────────────
+function BadgesSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    line: { height: 10, borderRadius: 5, backgroundColor: c.cardBorder },
+    gridItem: {
+      width: "31%",
+      aspectRatio: 0.78,
+      borderRadius: 18,
+      borderWidth: 1.5,
+      borderColor: c.cardBorder,
+      backgroundColor: c.cardBg,
+    },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, opacity: 0.6, gap: 28 }}>
+      {/* Fake Progress Card */}
+      <View style={[styles.cardBg, { padding: 18, gap: 12 }]}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View style={[styles.line, { width: "40%" }]} />
+          <View style={[styles.line, { width: "15%" }]} />
+        </View>
+        <View
+          style={{
+            height: 7,
+            borderRadius: 4,
+            backgroundColor: colors.cardBorder,
+          }}
+        />
+        <View style={[styles.line, { width: "60%", height: 8 }]} />
+      </View>
+      {/* Fake Grid */}
+      <View style={{ gap: 14 }}>
+        <View style={[styles.line, { width: "30%", height: 8 }]} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <View key={i} style={styles.gridItem} />
+          ))}
+        </View>
+      </View>
+    </View>
+  );
 }
 
 // ─── Particule d'étincelle ────────────────────────────────────
@@ -210,7 +261,7 @@ function BadgeCard({
   badge: Badge;
   index: number;
   colors: AppColors;
-  styles: any; // StyleSheet pas typable dynamiquement facilement ici
+  styles: any;
 }) {
   const scaleAnim = useRef(new Animated.Value(0.85)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -296,7 +347,6 @@ function BadgeCard({
         { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
       ]}
     >
-      {/* Particules d'étincelles pour les nouveaux badges */}
       {isNew && (
         <>
           {Array.from({ length: 8 }).map((_, i) => (
@@ -309,8 +359,6 @@ function BadgeCard({
           ))}
         </>
       )}
-
-      {/* Glow pulsé pour les nouveaux badges */}
       {isNew && (
         <Animated.View
           style={[
@@ -329,11 +377,7 @@ function BadgeCard({
           ]}
         />
       )}
-
-      {/* Halo décoratif coin supérieur droit */}
       {isUnlocked && <View style={styles.unlockedHalo} />}
-
-      {/* Bande top accent */}
       {isUnlocked && (
         <View
           style={[
@@ -343,7 +387,6 @@ function BadgeCard({
         />
       )}
 
-      {/* Bandeau "NOUVEAU !" */}
       {isNew && (
         <Animated.View
           style={[
@@ -364,7 +407,6 @@ function BadgeCard({
         </Animated.View>
       )}
 
-      {/* Icône */}
       <View
         style={[
           styles.badgeIconWrap,
@@ -400,7 +442,6 @@ function BadgeCard({
         )}
       </View>
 
-      {/* Nom */}
       <Text
         style={[
           styles.badgeName,
@@ -412,7 +453,6 @@ function BadgeCard({
         {badge.name}
       </Text>
 
-      {/* Date ou critère */}
       {isUnlocked ? (
         <View style={[styles.earnedPill, isNew && styles.earnedPillNew]}>
           <Text
@@ -485,8 +525,11 @@ function SectionHeader({
 // ─── Écran principal ───────────────────────────────────────────
 export default function BadgesScreen() {
   const router = useRouter();
-  const { data, isLoading } = useMyBadges();
   const colors = useColors();
+
+  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
+  const { data, isLoading, isError, error, refetch } = useMyBadges();
+  const hasNetworkError = isError && isNetworkError(error);
 
   const headerAnim = useRef(new Animated.Value(0)).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -495,8 +538,6 @@ export default function BadgesScreen() {
     container: { flex: 1, backgroundColor: c.bg },
     centered: { alignItems: "center", justifyContent: "center" },
     scrollContent: { paddingHorizontal: 20 },
-
-    // ── Halo ──
     topHalo: {
       position: "absolute",
       top: -60,
@@ -505,10 +546,8 @@ export default function BadgesScreen() {
       width: 200,
       height: 200,
       borderRadius: 100,
-      backgroundColor: c.redGlow, // Utilisation du halo du thème
+      backgroundColor: c.redGlow,
     },
-
-    // ── Header ──
     header: {
       flexDirection: "row",
       alignItems: "center",
@@ -541,13 +580,7 @@ export default function BadgesScreen() {
       borderWidth: 1,
       borderColor: c.amber + "28",
     },
-    headerBadgeText: {
-      color: c.amber,
-      fontSize: 13,
-      fontWeight: "800",
-    },
-
-    // ── Progress Card ──
+    headerBadgeText: { color: c.amber, fontSize: 13, fontWeight: "800" },
     progressCard: {
       backgroundColor: c.cardBg,
       borderRadius: 20,
@@ -562,37 +595,17 @@ export default function BadgesScreen() {
       justifyContent: "space-between",
       alignItems: "center",
     },
-    progressLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    progressLabel: {
-      color: c.white,
-      fontSize: 13,
-      fontWeight: "700",
-    },
-    progressPercent: {
-      color: c.amber,
-      fontSize: 14,
-      fontWeight: "800",
-    },
+    progressLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+    progressLabel: { color: c.white, fontSize: 13, fontWeight: "700" },
+    progressPercent: { color: c.amber, fontSize: 14, fontWeight: "800" },
     progressBarBg: {
       height: 7,
       borderRadius: 4,
       backgroundColor: c.cardBorder,
       overflow: "hidden",
     },
-    progressBarFill: {
-      height: "100%",
-      borderRadius: 4,
-    },
-    progressHint: {
-      color: c.textMuted,
-      fontSize: 12,
-    },
-
-    // ── Section ──
+    progressBarFill: { height: "100%", borderRadius: 4 },
+    progressHint: { color: c.textMuted, fontSize: 12 },
     section: { marginBottom: 28 },
     sectionHeader: {
       flexDirection: "row",
@@ -600,11 +613,7 @@ export default function BadgesScreen() {
       gap: 8,
       marginBottom: 14,
     },
-    sectionDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
+    sectionDot: { width: 6, height: 6, borderRadius: 3 },
     sectionTitle: {
       color: c.white,
       fontSize: 13,
@@ -620,28 +629,15 @@ export default function BadgesScreen() {
       alignItems: "center",
       justifyContent: "center",
     },
-    sectionNewBadgeText: {
-      fontSize: 12,
-    },
+    sectionNewBadgeText: { fontSize: 12 },
     sectionCount: {
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 8,
       borderWidth: 1,
     },
-    sectionCountText: {
-      fontSize: 12,
-      fontWeight: "800",
-    },
-
-    // ── Grid ──
-    grid: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 10,
-    },
-
-    // ── Badge Card ──
+    sectionCountText: { fontSize: 12, fontWeight: "800" },
+    grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
     badgeCard: {
       width: "31%",
       aspectRatio: 0.78,
@@ -658,10 +654,7 @@ export default function BadgesScreen() {
       backgroundColor: c.amber + "06",
       borderColor: c.amber + "28",
     },
-    badgeLocked: {
-      backgroundColor: c.cardBg, // Adaptatif au thème
-      borderColor: c.cardBorder, // Adaptatif au thème
-    },
+    badgeLocked: { backgroundColor: c.cardBg, borderColor: c.cardBorder },
     unlockedHalo: {
       position: "absolute",
       top: -16,
@@ -680,8 +673,6 @@ export default function BadgesScreen() {
       backgroundColor: c.amber,
       opacity: 0.7,
     },
-
-    // ── Icône badge ──
     badgeIconWrap: {
       width: 48,
       height: 48,
@@ -704,21 +695,9 @@ export default function BadgesScreen() {
       borderWidth: 1,
       borderColor: c.cardBorder,
     },
-
-    // ── Image badge ──
-    badgeImage: {
-      width: 36,
-      height: 36,
-    },
-    badgeImageNew: {
-      width: 40,
-      height: 40,
-    },
-    badgeImageLocked: {
-      opacity: 0.25,
-    },
-
-    // ── Badge verrouillé avec image ──
+    badgeImage: { width: 36, height: 36 },
+    badgeImageNew: { width: 40, height: 40 },
+    badgeImageLocked: { opacity: 0.25 },
     lockedImageContainer: {
       position: "relative",
       alignItems: "center",
@@ -733,16 +712,8 @@ export default function BadgesScreen() {
       alignItems: "center",
       justifyContent: "center",
     },
-
-    // ── Émoji badge ──
-    badgeEmoji: {
-      fontSize: 24,
-    },
-    badgeEmojiNew: {
-      fontSize: 28,
-    },
-
-    // ── Nom badge ──
+    badgeEmoji: { fontSize: 24 },
+    badgeEmojiNew: { fontSize: 28 },
     badgeName: {
       color: c.white,
       fontSize: 11,
@@ -751,16 +722,8 @@ export default function BadgesScreen() {
       letterSpacing: -0.2,
       lineHeight: 15,
     },
-    badgeNameLocked: {
-      color: c.textSubtle,
-      fontWeight: "600",
-    },
-    badgeNameNew: {
-      color: c.amber,
-      fontWeight: "900",
-    },
-
-    // ── Pill date ──
+    badgeNameLocked: { color: c.textSubtle, fontWeight: "600" },
+    badgeNameNew: { color: c.amber, fontWeight: "900" },
     earnedPill: {
       backgroundColor: c.amber + "15",
       borderRadius: 6,
@@ -779,20 +742,13 @@ export default function BadgesScreen() {
       fontWeight: "700",
       letterSpacing: 0.3,
     },
-    earnedPillTextNew: {
-      color: c.amber,
-      fontWeight: "800",
-    },
-
-    // ── Critères badge verrouillé ──
+    earnedPillTextNew: { color: c.amber, fontWeight: "800" },
     badgeCriteria: {
       color: c.textMuted,
       fontSize: 9,
       textAlign: "center",
       lineHeight: 13,
     },
-
-    // ── Nouveau badge : Glow ──
     newBadgeGlow: {
       position: "absolute",
       top: -20,
@@ -803,8 +759,6 @@ export default function BadgesScreen() {
       backgroundColor: c.amber + "12",
       zIndex: -1,
     },
-
-    // ── Nouveau badge : Bannière ──
     newBadgeBanner: {
       position: "absolute",
       top: 6,
@@ -846,13 +800,70 @@ export default function BadgesScreen() {
     }).start();
   }, [data]);
 
-  if (isLoading || !data) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
+  const renderHeader = () => (
+    <Animated.View
+      style={[
+        styles.header,
+        {
+          opacity: headerAnim,
+          transform: [
+            {
+              translateY: headerAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [12, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={styles.backBtn}
+        activeOpacity={0.75}
+      >
+        <Ionicons name="arrow-back" size={19} color={colors.white} />
+      </TouchableOpacity>
+      <View style={styles.headerCenter}>
+        <Text style={styles.headerTitle}>
+          Mes <Text style={{ color: colors.amber }}>Badges</Text>
+        </Text>
       </View>
+      {data && (
+        <View style={styles.headerBadge}>
+          <Text style={styles.headerBadgeText}>
+            {data.earned}/{data.total}
+          </Text>
+        </View>
+      )}
+      {!data && <View style={{ width: 40 }} />}
+    </Animated.View>
+  );
+
+  // ── 1. Chargement initial (Skeleton) ───────────────────────
+  if (isLoading && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.topHalo} />
+        {renderHeader()}
+        <BadgesSkeleton colors={colors} />
+      </SafeAreaView>
     );
   }
+
+  // ── 2. Erreur réseau sans cache ────────────────────────────
+  if (hasNetworkError && !data) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.topHalo} />
+        {renderHeader()}
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal ─────────────────────────────────────────
+  if (!data) return null;
 
   const unlockedBadges = data.badges.filter((b) => b.isUnlocked);
   const lockedBadges = data.badges.filter((b) => !b.isUnlocked);
@@ -871,43 +882,7 @@ export default function BadgesScreen() {
           { paddingBottom: Platform.OS === "ios" ? 120 : 90 },
         ]}
       >
-        {/* ── Header ── */}
-        <Animated.View
-          style={[
-            styles.header,
-            {
-              opacity: headerAnim,
-              transform: [
-                {
-                  translateY: headerAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [12, 0],
-                  }),
-                },
-              ],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="arrow-back" size={19} color={colors.white} />
-          </TouchableOpacity>
-
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>
-              Mes <Text style={{ color: colors.amber }}>Badges</Text>
-            </Text>
-          </View>
-
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>
-              {data.earned}/{data.total}
-            </Text>
-          </View>
-        </Animated.View>
+        {renderHeader()}
 
         {/* ── Carte progression ── */}
         <Animated.View style={[styles.progressCard, { opacity: headerAnim }]}>
@@ -920,7 +895,6 @@ export default function BadgesScreen() {
               {Math.round(progressPct)}%
             </Text>
           </View>
-
           <View style={styles.progressBarBg}>
             <Animated.View
               style={[
@@ -935,7 +909,6 @@ export default function BadgesScreen() {
               ]}
             />
           </View>
-
           <Text style={styles.progressHint}>
             {isComplete
               ? "🏆 Tous les badges débloqués !"

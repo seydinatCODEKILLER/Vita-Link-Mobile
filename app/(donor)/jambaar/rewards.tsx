@@ -19,9 +19,104 @@ import { useMyCoupons, useRedeemReward } from "@/src/hooks/useCoupons";
 import { Coupon, Reward } from "@/src/types/domain.types";
 import { useRewards } from "@/src/hooks/useRewards";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { AppColors } from "@/src/theme/colors";
+
+// ─── Imports pour l'erreur réseau ─────────────────────────────
+import { isNetworkError } from "@/src/utils/error.utils";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 
 type TabType = "catalogue" | "coupons";
 type CouponFilter = "ACTIVE" | "USED" | "EXPIRED";
+
+// ─── Skeleton Rewards ─────────────────────────────────────────
+function RewardsSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    line: { height: 10, borderRadius: 5, backgroundColor: c.cardBorder },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, gap: 12, opacity: 0.6 }}>
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={[styles.cardBg, { padding: 16, gap: 10 }]}>
+          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+            <View
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 6,
+                backgroundColor: colors.cardBorder,
+              }}
+            />
+            <View style={[styles.line, { width: "30%", height: 8 }]} />
+          </View>
+          <View style={[styles.line, { width: "70%" }]} />
+          <View style={[styles.line, { width: "50%", height: 8 }]} />
+          <View
+            style={{
+              height: 4,
+              borderRadius: 2,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+          <View
+            style={{
+              height: 40,
+              borderRadius: 12,
+              backgroundColor: colors.cardBorder,
+              marginTop: 4,
+            }}
+          />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ─── Skeleton Coupons ─────────────────────────────────────────
+function CouponsSkeleton({ colors }: { colors: AppColors }) {
+  const styles = useThemedStyles((c) => ({
+    cardBg: {
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    line: { height: 10, borderRadius: 5, backgroundColor: c.cardBorder },
+  }));
+
+  return (
+    <View style={{ paddingHorizontal: 20, gap: 10, opacity: 0.6 }}>
+      {[1, 2, 3].map((i) => (
+        <View
+          key={i}
+          style={[
+            styles.cardBg,
+            { flexDirection: "row", padding: 14, gap: 12 },
+          ]}
+        >
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 10,
+              backgroundColor: colors.cardBorder,
+            }}
+          />
+          <View style={{ flex: 1, gap: 6, justifyContent: "center" }}>
+            <View style={[styles.line, { width: "60%" }]} />
+            <View style={[styles.line, { width: "40%", height: 8 }]} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 // ─── Composant Reward Card ────────────────────────────────────
 function RewardCard({
@@ -103,11 +198,7 @@ function RewardCard({
       borderColor: c.cardBorder,
     },
     redeemText: { color: c.white, fontSize: 13, fontWeight: "700" },
-    redeemTextLocked: {
-      color: c.textSubtle,
-      fontSize: 12,
-      fontWeight: "600",
-    },
+    redeemTextLocked: { color: c.textSubtle, fontSize: 12, fontWeight: "600" },
   }));
 
   return (
@@ -124,14 +215,12 @@ function RewardCard({
           {reward.partner.name}
         </Text>
       </View>
-
       <Text style={styles.rewardTitle} numberOfLines={2}>
         {reward.title}
       </Text>
       <Text style={styles.rewardDesc} numberOfLines={2}>
         {reward.description}
       </Text>
-
       <View style={styles.costBlock}>
         <View style={styles.costRow}>
           <Text
@@ -158,7 +247,6 @@ function RewardCard({
           />
         </View>
       </View>
-
       <TouchableOpacity
         style={[
           styles.redeemBtn,
@@ -263,7 +351,6 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
           {isActive ? "🎫" : isUsed ? "✅" : "⏳"}
         </Text>
       </View>
-
       <View style={styles.couponContent}>
         <Text style={styles.couponTitle} numberOfLines={1}>
           {coupon.reward.title}
@@ -290,7 +377,6 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
           )}
         </View>
       </View>
-
       {isActive && (
         <View style={styles.couponCodeBlock}>
           <Text style={styles.couponCodeLabel}>CODE</Text>
@@ -307,10 +393,27 @@ export default function RewardsScreen() {
   const colors = useColors();
   const user = useAuthStore((s) => s.user);
   const { data: profileData } = useJambaarProfile();
-  const { data: rewards, isLoading: rewardsLoading } = useRewards();
-  const { data: couponsData, isLoading: couponsLoading } = useMyCoupons();
+
+  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
+  const {
+    data: rewards,
+    isLoading: rewardsLoading,
+    isError: isRewardsError,
+    error: rewardsError,
+    refetch: refetchRewards,
+  } = useRewards();
+  const {
+    data: couponsData,
+    isLoading: couponsLoading,
+    isError: isCouponsError,
+    error: couponsError,
+    refetch: refetchCoupons,
+  } = useMyCoupons();
   const { mutateAsync: redeemReward, isPending: isRedeeming } =
     useRedeemReward();
+
+  const hasRewardsNetworkError = isRewardsError && isNetworkError(rewardsError);
+  const hasCouponsNetworkError = isCouponsError && isNetworkError(couponsError);
 
   const [activeTab, setActiveTab] = useState<TabType>("catalogue");
   const [couponFilter, setCouponFilter] = useState<CouponFilter>("ACTIVE");
@@ -350,7 +453,6 @@ export default function RewardsScreen() {
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
-    loader: { flex: 1, justifyContent: "center", alignItems: "center" },
     listContent: {
       paddingHorizontal: 20,
       paddingBottom: Platform.OS === "ios" ? 120 : 90,
@@ -476,6 +578,98 @@ export default function RewardsScreen() {
     emptyTitle: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
   }));
 
+  // ── Logique de rendu des onglets ──────────────────────────────
+
+  const renderCatalogueContent = () => {
+    if (rewardsLoading && !rewards) return <RewardsSkeleton colors={colors} />;
+    if (hasRewardsNetworkError && !rewards)
+      return <NetworkErrorScreen onRetry={refetchRewards} />;
+
+    return (
+      <FlatList
+        data={rewards}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <RewardCard
+            reward={item}
+            userPoints={totalPoints}
+            onRedeem={handleRedeem}
+            isRedeeming={isRedeeming}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+        refreshing={rewardsLoading && !!rewards}
+        onRefresh={refetchRewards}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Ionicons name="gift-outline" size={40} color={colors.textSubtle} />
+            <Text style={styles.emptyTitle}>Aucune récompense disponible</Text>
+          </View>
+        }
+      />
+    );
+  };
+
+  const renderCouponsContent = () => {
+    if (couponsLoading && !couponsData)
+      return <CouponsSkeleton colors={colors} />;
+    if (hasCouponsNetworkError && !couponsData)
+      return <NetworkErrorScreen onRetry={refetchCoupons} />;
+
+    return (
+      <View style={styles.couponsContainer}>
+        <View style={styles.filterRow}>
+          {(["ACTIVE", "USED", "EXPIRED"] as CouponFilter[]).map((filter) => (
+            <TouchableOpacity
+              key={filter}
+              style={[
+                styles.filterPill,
+                couponFilter === filter && styles.filterActive,
+              ]}
+              onPress={() => setCouponFilter(filter)}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  couponFilter === filter && styles.filterTextActive,
+                ]}
+              >
+                {filter === "ACTIVE"
+                  ? "Actifs"
+                  : filter === "USED"
+                    ? "Utilisés"
+                    : "Expirés"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <FlatList
+          data={filteredCoupons}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => <CouponCard coupon={item} />}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          refreshing={couponsLoading && !!couponsData}
+          onRefresh={refetchCoupons}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons
+                name="ticket-outline"
+                size={40}
+                color={colors.textSubtle}
+              />
+              <Text style={styles.emptyTitle}>
+                Aucun coupon dans cette catégorie
+              </Text>
+            </View>
+          }
+        />
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topHalo} />
@@ -531,7 +725,6 @@ export default function RewardsScreen() {
             Catalogue
           </Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.tab, activeTab === "coupons" && styles.tabActive]}
           onPress={() => setActiveTab("coupons")}
@@ -554,96 +747,9 @@ export default function RewardsScreen() {
       </View>
 
       {/* Content */}
-      {activeTab === "catalogue" ? (
-        rewardsLoading ? (
-          <View style={styles.loader}>
-            <ActivityIndicator color={colors.amber} size="large" />
-          </View>
-        ) : (
-          <FlatList
-            data={rewards}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <RewardCard
-                reward={item}
-                userPoints={totalPoints}
-                onRedeem={handleRedeem}
-                isRedeeming={isRedeeming}
-              />
-            )}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Ionicons
-                  name="gift-outline"
-                  size={40}
-                  color={colors.textSubtle}
-                />
-                <Text style={styles.emptyTitle}>
-                  Aucune récompense disponible
-                </Text>
-              </View>
-            }
-          />
-        )
-      ) : (
-        <View style={styles.couponsContainer}>
-          <View style={styles.filterRow}>
-            {(["ACTIVE", "USED", "EXPIRED"] as CouponFilter[]).map((filter) => (
-              <TouchableOpacity
-                key={filter}
-                style={[
-                  styles.filterPill,
-                  couponFilter === filter && styles.filterActive,
-                ]}
-                onPress={() => setCouponFilter(filter)}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    couponFilter === filter && styles.filterTextActive,
-                  ]}
-                >
-                  {filter === "ACTIVE"
-                    ? "Actifs"
-                    : filter === "USED"
-                      ? "Utilisés"
-                      : "Expirés"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {couponsLoading ? (
-            <ActivityIndicator
-              color={colors.amber}
-              size="large"
-              style={{ marginTop: 40 }}
-            />
-          ) : (
-            <FlatList
-              data={filteredCoupons}
-              keyExtractor={(item) => item.id}
-              renderItem={({ item }) => <CouponCard coupon={item} />}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Ionicons
-                    name="ticket-outline"
-                    size={40}
-                    color={colors.textSubtle}
-                  />
-                  <Text style={styles.emptyTitle}>
-                    Aucun coupon dans cette catégorie
-                  </Text>
-                </View>
-              }
-            />
-          )}
-        </View>
-      )}
+      {activeTab === "catalogue"
+        ? renderCatalogueContent()
+        : renderCouponsContent()}
     </SafeAreaView>
   );
 }

@@ -713,7 +713,7 @@ export default function ProfileScreen() {
                 thumbColor={colors.white}
                 value={isEligible && (user?.isAvailable ?? true)}
                 onValueChange={(val) => toggleAvailability(val)}
-                disabled={isTogglingAvail || !isEligible}
+                disabled={!isEligible}
                 ios_backgroundColor={colors.cardBorder}
               />
             </View>
