@@ -16,6 +16,18 @@ export const QUERY_KEYS = {
   structureDonations: ["donations", "structure"],
   donation: (id: string) => ["donations", id],
 
+  // 🆕 Donation Days (Journées de don)
+  donationDays: ["donation-days"],
+  myStructureDays: (filters?: object) => [
+    "donation-days",
+    "my-structure",
+    filters,
+  ],
+  publishedDays: (filters?: object) => ["donation-days", "published", filters],
+  donationDay: (id: string) => ["donation-days", id],
+  dayRegistrations: (id: string) => ["donation-days", id, "registrations"],
+  myDayRegistrations: ["donation-days", "my-registrations"],
+
   // Jambaar
   jambaarsProfile: ["jambaar", "me"],
   jambaarssBadges: ["jambaar", "me", "badges"],

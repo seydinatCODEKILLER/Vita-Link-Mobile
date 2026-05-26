@@ -19,6 +19,7 @@ import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { BloodStockLevel, BloodType } from "@/src/types/shared.types";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { ThemeToggle } from "@/src/components/ui/ThemeToggle";
 import { AppColors } from "@/src/theme/colors";
 
 // ─── Imports pour l'erreur réseau ─────────────────────────────
@@ -487,15 +488,28 @@ export default function HealthHomeScreen() {
               Tableau <Text style={{ color: colors.red }}>de bord</Text>
             </Text>
           </View>
-          <View style={styles.notifWrap}>
-            <TouchableOpacity style={styles.notifBtn} activeOpacity={0.7}>
-              <Ionicons
-                name="notifications-outline"
-                size={20}
-                color={colors.white}
-              />
-            </TouchableOpacity>
-            {activeAlertsCount > 0 && <View style={styles.notifDot} />}
+
+          {/* ✅ MODIFICATION : ThemeToggle + bouton notif côte à côte */}
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              marginTop: 4,
+            }}
+          >
+            <ThemeToggle size={40} />
+
+            <View style={styles.notifWrap}>
+              <TouchableOpacity style={styles.notifBtn} activeOpacity={0.7}>
+                <Ionicons
+                  name="notifications-outline"
+                  size={20}
+                  color={colors.white}
+                />
+              </TouchableOpacity>
+              {activeAlertsCount > 0 && <View style={styles.notifDot} />}
+            </View>
           </View>
         </Animated.View>
 
