@@ -16,8 +16,6 @@ export const useSocket = () => {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
 
-  // ✅ AJOUT : On récupère les actions de données (addAlert, removeAlert)
-  // en plus des actions d'UI
   const {
     setInAppAlert,
     setJambaarCelebration,
@@ -268,6 +266,91 @@ export const useSocket = () => {
         // Resync complète en arrière-plan
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructure });
+      },
+    );
+
+    // ── 10. JOURNÉE DE DON ANNULÉE (Pour le Donneur) ──────────
+    socket.on(
+      "donation-day:cancelled",
+      (data: { dayId: string; title: string; cancelReason: string }) => {
+        logger.info("📅 Journée de don annulée via Socket :", data.dayId);
+
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+
+        setInAppAlert({
+          id: data.dayId,
+          title: "📅 Collecte annulée",
+          body: `"${data.title}" a été annulée. Raison : ${data.cancelReason}`,
+          data: { dayId: data.dayId, type: "day_cancelled" },
+          receivedAt: new Date(),
+        });
+
+        // Invalider les listes de journées du donneur
+        queryClient.invalidateQueries({
+          queryKey: ["donation-days", "published"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ["donation-days", "my-registrations"],
+        });
+        // Invalider le détail si le donneur est dessus
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.donationDay(data.dayId),
+        });
+      },
+    );
+
+    // ── 11. JOURNÉE DE DON MODIFIÉE (Pour le Donneur) ────────
+    socket.on("donation-day:updated", (data: { dayId: string }) => {
+      logger.info("✏️ Journée de don modifiée via Socket :", data.dayId);
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setInAppAlert({
+        id: `update-${data.dayId}`,
+        title: "📅 Modification de collecte",
+        body: "Les détails d'une journée à laquelle vous êtes inscrit ont changé.",
+        data: { dayId: data.dayId, type: "day_updated" },
+        receivedAt: new Date(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["donation-days", "published"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["donation-days", "my-registrations"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.donationDay(data.dayId),
+      });
+    });
+
+    // ── 12. STATUT INSCRIPTION MIS À JOUR (Présent/Absent) ───
+    socket.on(
+      "registration:status-updated",
+      (data: { dayId: string; status: string }) => {
+        logger.info(
+          "✅ Statut inscription mis à jour via Socket :",
+          data.status,
+        );
+
+        // On ne notifie que si c'est une validation de présence
+        if (data.status === "ATTENDED") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          setInAppAlert({
+            id: `reg-${data.dayId}`,
+            title: "✅ Présence confirmée",
+            body: "Votre présence à la collecte a été validée par l'équipe médicale.",
+            data: { dayId: data.dayId, type: "registration_updated" },
+            receivedAt: new Date(),
+          });
+        }
+
+        // Rafraîchir la liste des inscriptions du donneur
+        queryClient.invalidateQueries({
+          queryKey: ["donation-days", "my-registrations"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.donationDay(data.dayId),
+        });
       },
     );
 

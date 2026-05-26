@@ -26,7 +26,11 @@ export const QUERY_KEYS = {
   publishedDays: (filters?: object) => ["donation-days", "published", filters],
   donationDay: (id: string) => ["donation-days", id],
   dayRegistrations: (id: string) => ["donation-days", id, "registrations"],
-  myDayRegistrations: ["donation-days", "my-registrations"],
+  myRegistrations: (filters?: object) => [ // ✅ Mis à jour pour accepter les filtres
+    "donation-days",
+    "my-registrations",
+    filters,
+  ],
 
   // Jambaar
   jambaarsProfile: ["jambaar", "me"],

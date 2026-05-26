@@ -142,4 +142,50 @@ export const donationDaysApi = {
 
     return data.registration;
   },
+
+  // ── GET /donation-days (Donneur) ─────────────────────────
+  getPublishedDays: async (
+    filters?: ListDaysFilters,
+  ): Promise<DayListResponse> => {
+    const { data } = await api.get<{
+      success: boolean;
+      data: DonationDay[];
+      pagination: DayListResponse["pagination"];
+    }>("/donation-days", { params: filters });
+
+    return { data: data.data, pagination: data.pagination };
+  },
+
+  // ── GET /donation-days/my-registrations (Donneur) ────────
+  getMyRegistrations: async (
+    filters?: ListDaysFilters,
+  ): Promise<DayListResponse> => {
+    const { data } = await api.get<{
+      success: boolean;
+      data: any[]; // Le type exact est DayRegistration avec DonationDay inclus
+      pagination: DayListResponse["pagination"];
+    }>("/donation-days/my-registrations", { params: filters });
+
+    return { data: data.data, pagination: data.pagination };
+  },
+
+  // ── POST /donation-days/:id/register (Donneur) ───────────
+  registerDonor: async (dayId: string): Promise<any> => {
+    const { data } = await api.post<{
+      success: boolean;
+      registration: any;
+    }>(`/donation-days/${dayId}/register`);
+
+    return data.registration;
+  },
+
+  // ── DELETE /donation-days/:id/register (Donneur) ─────────
+  cancelDonorRegistration: async (dayId: string): Promise<any> => {
+    const { data } = await api.delete<{
+      success: boolean;
+      message: string;
+    }>(`/donation-days/${dayId}/register`);
+
+    return data;
+  },
 };

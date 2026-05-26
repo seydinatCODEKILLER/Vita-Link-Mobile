@@ -20,6 +20,12 @@ const TABS = [
     iconOutline: "heart-outline" as const,
   },
   {
+    name: "donation-days/index", // ✅ Nouvel onglet
+    label: "Collectes",
+    icon: "calendar" as const,
+    iconOutline: "calendar-outline" as const,
+  },
+  {
     name: "jambaar/index",
     label: "Jambaar",
     icon: "trophy" as const,
@@ -155,6 +161,7 @@ export default function DonorLayout() {
           />
         ))}
 
+        {/* Routes cachées */}
         <Tabs.Screen name="alerts/[id]" options={{ href: null }} />
         <Tabs.Screen name="qrcode" options={{ href: null }} />
         <Tabs.Screen name="jambaar/badges" options={{ href: null }} />
@@ -162,6 +169,7 @@ export default function DonorLayout() {
         <Tabs.Screen name="jambaar/rewards" options={{ href: null }} />
         <Tabs.Screen name="profile/edit" options={{ href: null }} />
         <Tabs.Screen name="profile/settings" options={{ href: null }} />
+        <Tabs.Screen name="donation-days/[id]" options={{ href: null }} />
       </Tabs>
     </View>
   );
