@@ -21,6 +21,8 @@ import {
   useCancelDonorRegistration,
 } from "@/src/hooks/useDonationDays";
 import { useIsEligible } from "@/src/hooks/useAuthStore";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen"; // ✅ Ajouté
+import { isNetworkError } from "@/src/utils/error.utils"; // ✅ Ajouté
 
 dayjs.locale("fr");
 
@@ -31,7 +33,8 @@ export default function DonorDayDetailScreen() {
   const colors = useColors();
   const tabBarHeight = useBottomTabBarHeight();
 
-  const { data: day, isLoading } = useDayDetail(id);
+  // ✅ Ajout de isError et error
+  const { data: day, isLoading, isError, error, refetch } = useDayDetail(id);
   const { mutateAsync: register, isPending: isRegistering } =
     useRegisterDonor();
   const { mutateAsync: cancelReg, isPending: isCancelling } =
@@ -224,7 +227,8 @@ export default function DonorDayDetailScreen() {
     );
   };
 
-  if (isLoading || !day) {
+  // ── 1. Loading initial ─────────────────────────────────────────
+  if (isLoading && !day) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={[styles.header, { justifyContent: "center" }]}>
@@ -234,6 +238,73 @@ export default function DonorDayDetailScreen() {
     );
   }
 
+  // ── 2. Erreur réseau sans cache (Comportement hors-ligne) ──────
+  if (isError && !day && isNetworkError(error)) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={18} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Détail de la collecte
+          </Text>
+        </View>
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Sécurité si données manquantes (autre erreur) ───────────
+  if (!day) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={18} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Introuvable
+          </Text>
+        </View>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <Ionicons
+            name="calendar-outline"
+            size={48}
+            color={colors.textMuted}
+          />
+          <Text
+            style={{
+              color: colors.white,
+              fontSize: 18,
+              fontWeight: "700",
+              marginTop: 16,
+              textAlign: "center",
+            }}
+          >
+            Cette collecte n&apos;existe pas ou a été supprimée.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── 4. Rendu normal (ou avec cache périmé si offline) ──────────
   const registrationsCount = day._count?.registrations ?? 0;
   const remainingSpots = Math.max(0, day.targetDonors - registrationsCount);
   const isFull = remainingSpots === 0;

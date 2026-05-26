@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,6 +10,8 @@ import "dayjs/locale/fr";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { usePublishedDays } from "@/src/hooks/useDonationDays";
 import { DonationDay } from "@/src/types/donation-day.types";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen"; // ✅ Import ajouté
+import { isNetworkError } from "@/src/utils/error.utils"; // ✅ Import ajouté
 
 dayjs.locale("fr");
 
@@ -104,8 +101,6 @@ function DonorDayCard({
       marginBottom: 14,
       overflow: "hidden",
     },
-
-    // ── Cover ──
     cover: {
       height: 130,
       backgroundColor: c.cardBorder + "30",
@@ -113,8 +108,6 @@ function DonorDayCard({
       justifyContent: "center",
     },
     coverImage: { width: "100%", height: "100%" },
-
-    // Top badges row (absolute over cover)
     coverTop: {
       position: "absolute",
       top: 10,
@@ -124,8 +117,6 @@ function DonorDayCard({
       justifyContent: "space-between",
       alignItems: "center",
     },
-
-    // Date badge
     dateBadge: {
       flexDirection: "row",
       alignItems: "center",
@@ -143,11 +134,7 @@ function DonorDayCard({
       fontWeight: "500",
       lineHeight: 22,
     },
-    dateSep: {
-      width: 0.5,
-      height: 16,
-      backgroundColor: c.cardBorder,
-    },
+    dateSep: { width: 0.5, height: 16, backgroundColor: c.cardBorder },
     dateMonth: {
       color: c.textMuted,
       fontSize: 11,
@@ -155,34 +142,21 @@ function DonorDayCard({
       textTransform: "uppercase",
       letterSpacing: 0.5,
     },
-
-    // Status badge
     statusBadge: {
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 10,
       borderWidth: 0.5,
     },
-    statusOpen: {
-      backgroundColor: c.red + "18",
-      borderColor: c.red + "40",
-    },
+    statusOpen: { backgroundColor: c.red + "18", borderColor: c.red + "40" },
     statusFull: {
       backgroundColor: c.success + "18",
       borderColor: c.success + "40",
     },
-    statusText: {
-      fontSize: 11,
-      fontWeight: "500",
-    },
+    statusText: { fontSize: 11, fontWeight: "500" },
     statusTextOpen: { color: c.red },
     statusTextFull: { color: c.success },
-
-    // ── Body ──
-    body: {
-      padding: 16,
-      gap: 10,
-    },
+    body: { padding: 16, gap: 10 },
     structure: {
       color: c.textMuted,
       fontSize: 11,
@@ -190,31 +164,11 @@ function DonorDayCard({
       textTransform: "uppercase",
       letterSpacing: 0.8,
     },
-    title: {
-      color: c.white,
-      fontSize: 16,
-      fontWeight: "500",
-      lineHeight: 22,
-    },
-    divider: {
-      height: 0.5,
-      backgroundColor: c.cardBorder,
-    },
-
-    // Meta
+    title: { color: c.white, fontSize: 16, fontWeight: "500", lineHeight: 22 },
+    divider: { height: 0.5, backgroundColor: c.cardBorder },
     metaRow: { gap: 6 },
-    metaItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    metaText: {
-      color: c.textMuted,
-      fontSize: 13,
-      flex: 1,
-    },
-
-    // Blood type pills
+    metaItem: { flexDirection: "row", alignItems: "center", gap: 8 },
+    metaText: { color: c.textMuted, fontSize: 13, flex: 1 },
     bloodRow: { flexDirection: "row", gap: 5, flexWrap: "wrap" },
     pill: {
       paddingHorizontal: 9,
@@ -234,8 +188,6 @@ function DonorDayCard({
       borderColor: c.cardBorder,
     },
     pillAllText: { color: c.textMuted, fontSize: 11, fontWeight: "500" },
-
-    // Progress
     progressSection: { gap: 6 },
     progressLabelRow: {
       flexDirection: "row",
@@ -251,8 +203,6 @@ function DonorDayCard({
       backgroundColor: c.cardBorder,
       overflow: "hidden",
     },
-
-    // CTA
     cta: {
       flexDirection: "row",
       alignItems: "center",
@@ -262,10 +212,7 @@ function DonorDayCard({
       borderRadius: 10,
       borderWidth: 0.5,
     },
-    ctaOpen: {
-      backgroundColor: c.red + "15",
-      borderColor: c.red + "40",
-    },
+    ctaOpen: { backgroundColor: c.red + "15", borderColor: c.red + "40" },
     ctaFull: {
       backgroundColor: c.cardBorder + "20",
       borderColor: c.cardBorder,
@@ -297,8 +244,6 @@ function DonorDayCard({
             color={colors.cardBorder}
           />
         )}
-
-        {/* Top badges */}
         <View style={styles.coverTop}>
           <View style={styles.dateBadge}>
             <Text style={styles.dateDay}>
@@ -309,7 +254,6 @@ function DonorDayCard({
               {dayjs(item.scheduledDate).format("MMM")}
             </Text>
           </View>
-
           <View
             style={[
               styles.statusBadge,
@@ -330,17 +274,13 @@ function DonorDayCard({
 
       {/* Body */}
       <View style={styles.body}>
-        {/* Structure + titre */}
         {item.healthStructure?.name ? (
           <Text style={styles.structure}>{item.healthStructure.name}</Text>
         ) : null}
         <Text style={styles.title} numberOfLines={2}>
           {item.title}
         </Text>
-
         <View style={styles.divider} />
-
-        {/* Méta */}
         <View style={styles.metaRow}>
           <View style={styles.metaItem}>
             <Ionicons name="time-outline" size={15} color={colors.textMuted} />
@@ -359,8 +299,6 @@ function DonorDayCard({
             </Text>
           </View>
         </View>
-
-        {/* Groupes sanguins */}
         <View style={styles.bloodRow}>
           {item.bloodTypesNeeded.length === 0 ? (
             <View style={styles.pillAll}>
@@ -376,8 +314,6 @@ function DonorDayCard({
             ))
           )}
         </View>
-
-        {/* Progression */}
         <View style={styles.progressSection}>
           <View style={styles.progressLabelRow}>
             <Text style={styles.progressLabel}>Inscrits</Text>
@@ -397,8 +333,6 @@ function DonorDayCard({
             />
           </View>
         </View>
-
-        {/* CTA */}
         <View style={[styles.cta, isFull ? styles.ctaFull : styles.ctaOpen]}>
           <Text
             style={[
@@ -425,7 +359,7 @@ export default function DonorDonationDaysScreen() {
   const colors = useColors();
   const tabBarHeight = useBottomTabBarHeight();
 
-  const { data, isLoading, isRefetching, refetch, isError } =
+  const { data, isLoading, isRefetching, refetch, isError, error } =
     usePublishedDays();
   const days = data?.data ?? [];
 
@@ -480,6 +414,41 @@ export default function DonorDonationDaysScreen() {
     },
   }));
 
+  // ── 1. Loading skeleton ───────────────────────────────────────
+  if (isLoading && !days.length) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <Text style={styles.headerEyebrow}>Collectes planifiées</Text>
+          <Text style={styles.headerTitle}>
+            Journées <Text style={{ color: colors.red }}>de don</Text>
+          </Text>
+        </View>
+        <View style={{ paddingHorizontal: 20 }}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} colors={colors} />
+          ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── 2. Erreur réseau SANS cache (Comportement hors-ligne) ─────
+  if (isError && !days.length && isNetworkError(error)) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <Text style={styles.headerEyebrow}>Collectes planifiées</Text>
+          <Text style={styles.headerTitle}>
+            Journées <Text style={{ color: colors.red }}>de don</Text>
+          </Text>
+        </View>
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal (ou avec cache périmé si offline) ─────────
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
@@ -491,54 +460,46 @@ export default function DonorDonationDaysScreen() {
       </View>
 
       {/* Liste */}
-      {isLoading ? (
-        <View style={{ paddingHorizontal: 20 }}>
-          {[1, 2, 3].map((i) => (
-            <SkeletonCard key={i} colors={colors} />
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          data={days}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 4,
-            paddingBottom: tabBarHeight + 40,
-          }}
-          showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isRefetching}
-          renderItem={({ item }) => (
-            <DonorDayCard
-              item={item}
-              colors={colors}
-              onPress={() =>
-                router.push(`/(donor)/donation-days/${item.id}` as any)
-              }
-            />
-          )}
-          ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <View style={styles.emptyIconBg}>
-                <Ionicons
-                  name={isError ? "cloud-offline-outline" : "calendar-outline"}
-                  size={36}
-                  color={colors.red + "60"}
-                />
-              </View>
-              <Text style={styles.emptyTitle}>
-                {isError ? "Erreur de chargement" : "Aucune collecte prévue"}
-              </Text>
-              <Text style={styles.emptySub}>
-                {isError
-                  ? "Tirez vers le bas pour réessayer."
-                  : "Les nouvelles journées de don compatibles avec votre groupe sanguin apparaîtront ici."}
-              </Text>
+      <FlatList
+        data={days}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 4,
+          paddingBottom: tabBarHeight + 40,
+        }}
+        showsVerticalScrollIndicator={false}
+        onRefresh={refetch}
+        refreshing={isRefetching}
+        renderItem={({ item }) => (
+          <DonorDayCard
+            item={item}
+            colors={colors}
+            onPress={() =>
+              router.push(`/(donor)/donation-days/${item.id}` as any)
+            }
+          />
+        )}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <View style={styles.emptyIconBg}>
+              <Ionicons
+                name={isError ? "cloud-offline-outline" : "calendar-outline"}
+                size={36}
+                color={colors.red + "60"}
+              />
             </View>
-          }
-        />
-      )}
+            <Text style={styles.emptyTitle}>
+              {isError ? "Erreur de chargement" : "Aucune collecte prévue"}
+            </Text>
+            <Text style={styles.emptySub}>
+              {isError
+                ? "Tirez vers le bas pour réessayer."
+                : "Les nouvelles journées de don compatibles avec votre groupe sanguin apparaîtront ici."}
+            </Text>
+          </View>
+        }
+      />
     </SafeAreaView>
   );
 }

@@ -30,6 +30,8 @@ import {
   RegistrationSummary,
 } from "@/src/types/donation-day.types";
 import { FormInput } from "@/src/components/ui/FormInput";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { isNetworkError } from "@/src/utils/error.utils";
 
 dayjs.locale("fr");
 
@@ -229,9 +231,22 @@ export default function DayDetailScreen() {
   const colors = useColors();
   const tabBarHeight = useBottomTabBarHeight();
 
-  const { data: day, isLoading: isLoadingDay } = useDayDetail(id);
-  const { data: registrationsData, isLoading: isLoadingReg } =
-    useDayRegistrations(id);
+  const {
+    data: day,
+    isLoading: isLoadingDay,
+    isError: isDayError,
+    error: dayError,
+    refetch: refetchDay,
+  } = useDayDetail(id);
+
+  const {
+    data: registrationsData,
+    isLoading: isLoadingReg,
+    isError: isRegError,
+    error: regError,
+    refetch: refetchReg,
+  } = useDayRegistrations(id);
+
   const { mutateAsync: markAttendance } = useMarkAttendance();
   const { mutateAsync: cancelDay, isPending: isCancelling } = useCancelDay();
 
@@ -549,6 +564,31 @@ export default function DayDetailScreen() {
     }
   };
 
+  // ── 1. Erreur réseau sans cache (Journée introuvable hors-ligne) ──
+  if (isDayError && !day && isNetworkError(dayError)) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={18} color={colors.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            Détail de l&apos;événement
+          </Text>
+        </View>
+        <NetworkErrorScreen
+          onRetry={refetchDay}
+          message="Impossible de charger les détails de cette journée."
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 2. Loading classique ───────────────────────────────────────
   if (isLoadingDay || !day) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -788,16 +828,55 @@ export default function DayDetailScreen() {
         }
         ListEmptyComponent={
           !isLoadingReg ? (
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Ionicons
-                  name="people-outline"
-                  size={24}
-                  color={colors.textMuted}
-                />
+            isRegError && isNetworkError(regError) ? (
+              // Erreur réseau pour les inscriptions
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons
+                    name="cloud-offline-outline"
+                    size={24}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text style={styles.emptyText}>
+                  Impossible de charger les inscriptions.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => refetchReg()}
+                  style={{
+                    marginTop: 12,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    backgroundColor: colors.red + "15",
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: colors.red,
+                      fontWeight: "600",
+                      fontSize: 13,
+                    }}
+                  >
+                    Réessayer
+                  </Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.emptyText}>Aucun inscrit pour ce filtre</Text>
-            </View>
+            ) : (
+              // Vraiment aucun inscrit
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Ionicons
+                    name="people-outline"
+                    size={24}
+                    color={colors.textMuted}
+                  />
+                </View>
+                <Text style={styles.emptyText}>
+                  Aucun inscrit pour ce filtre
+                </Text>
+              </View>
+            )
           ) : null
         }
       />

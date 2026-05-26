@@ -14,6 +14,8 @@ import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useMyStructureDays } from "@/src/hooks/useDonationDays";
 import { DonationDay } from "@/src/types/donation-day.types";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen"; // ✅ Ajouté
+import { isNetworkError } from "@/src/utils/error.utils"; // ✅ Ajouté
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 dayjs.locale("fr");
@@ -75,10 +77,30 @@ function SkeletonCard({ colors }: { colors: any }) {
     },
     imagePlaceholder: { height: 110, backgroundColor: c.cardBorder },
     content: { padding: 12, gap: 8 },
-    line1: { height: 13, width: "70%", borderRadius: 7, backgroundColor: c.cardBorder },
-    line2: { height: 9, width: "35%", borderRadius: 5, backgroundColor: c.cardBorder },
-    line3: { height: 9, width: "40%", borderRadius: 5, backgroundColor: c.cardBorder },
-    line4: { height: 3, borderRadius: 2, backgroundColor: c.cardBorder, marginTop: 2 },
+    line1: {
+      height: 13,
+      width: "70%",
+      borderRadius: 7,
+      backgroundColor: c.cardBorder,
+    },
+    line2: {
+      height: 9,
+      width: "35%",
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+    line3: {
+      height: 9,
+      width: "40%",
+      borderRadius: 5,
+      backgroundColor: c.cardBorder,
+    },
+    line4: {
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: c.cardBorder,
+      marginTop: 2,
+    },
   }));
 
   return (
@@ -200,7 +222,11 @@ function DayCard({
   }));
 
   return (
-    <TouchableOpacity activeOpacity={0.82} onPress={onPress} style={styles.card}>
+    <TouchableOpacity
+      activeOpacity={0.82}
+      onPress={onPress}
+      style={styles.card}
+    >
       {/* ── Cover ── */}
       <View style={{ height: 110, backgroundColor: statusConf.coverBg }}>
         {item.photoUrl && item.photoUrl.startsWith("http") ? (
@@ -211,8 +237,14 @@ function DayCard({
             transition={200}
           />
         ) : (
-          <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-            <Ionicons name={statusConf.iconName} size={36} color={colors.red + "25"} />
+          <View
+            style={{ flex: 1, alignItems: "center", justifyContent: "center" }}
+          >
+            <Ionicons
+              name={statusConf.iconName}
+              size={36}
+              color={colors.red + "25"}
+            />
           </View>
         )}
 
@@ -236,10 +268,18 @@ function DayCard({
         >
           {/* Badge date */}
           <View style={styles.dateBadgeBg}>
-            <Ionicons name="calendar-outline" size={11} color={colors.textMuted} />
+            <Ionicons
+              name="calendar-outline"
+              size={11}
+              color={colors.textMuted}
+            />
             <View>
-              <Text style={styles.dateDay}>{dayjs(item.scheduledDate).format("DD")}</Text>
-              <Text style={styles.dateMonth}>{dayjs(item.scheduledDate).format("MMM YYYY")}</Text>
+              <Text style={styles.dateDay}>
+                {dayjs(item.scheduledDate).format("DD")}
+              </Text>
+              <Text style={styles.dateMonth}>
+                {dayjs(item.scheduledDate).format("MMM YYYY")}
+              </Text>
             </View>
           </View>
 
@@ -271,32 +311,76 @@ function DayCard({
 
       {/* ── Corps ── */}
       <View style={{ padding: 12 }}>
-        <Text numberOfLines={1} style={styles.title}>{item.title}</Text>
+        <Text numberOfLines={1} style={styles.title}>
+          {item.title}
+        </Text>
 
         {/* Meta */}
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 8,
+          }}
+        >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
             <Ionicons name="time-outline" size={11} style={styles.metaIcon} />
-            <Text style={styles.metaText}>{item.startTime} – {item.endTime}</Text>
+            <Text style={styles.metaText}>
+              {item.startTime} – {item.endTime}
+            </Text>
           </View>
           {item.address ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4, flex: 1 }}>
-              <Ionicons name="location-outline" size={11} style={styles.metaIcon} />
-              <Text numberOfLines={1} style={[styles.metaText, { flex: 1 }]}>{item.address}</Text>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+                flex: 1,
+              }}
+            >
+              <Ionicons
+                name="location-outline"
+                size={11}
+                style={styles.metaIcon}
+              />
+              <Text numberOfLines={1} style={[styles.metaText, { flex: 1 }]}>
+                {item.address}
+              </Text>
             </View>
           ) : null}
         </View>
 
         {/* Groupes sanguins */}
-        <View style={{ flexDirection: "row", gap: 4, flexWrap: "wrap", marginBottom: 10 }}>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 4,
+            flexWrap: "wrap",
+            marginBottom: 10,
+          }}
+        >
           {item.bloodTypesNeeded.length === 0 ? (
-            <View style={[{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }, styles.emptyPillBg]}>
+            <View
+              style={[
+                { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
+                styles.emptyPillBg,
+              ]}
+            >
               <Text style={styles.emptyPillText}>Tous les groupes</Text>
             </View>
           ) : (
             item.bloodTypesNeeded.map((bt) => (
-              <View key={bt} style={[{ paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 }, styles.bloodPillBg]}>
-                <Text style={styles.bloodPillText}>{bt.replace("_POS", "+").replace("_NEG", "−")}</Text>
+              <View
+                key={bt}
+                style={[
+                  { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 5 },
+                  styles.bloodPillBg,
+                ]}
+              >
+                <Text style={styles.bloodPillText}>
+                  {bt.replace("_POS", "+").replace("_NEG", "−")}
+                </Text>
               </View>
             ))
           )}
@@ -304,7 +388,14 @@ function DayCard({
 
         {/* Barre de progression */}
         <View>
-          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 5,
+            }}
+          >
             <Text style={styles.progressLabel}>Inscrits</Text>
             <Text style={styles.progressValue}>
               {registrationsCount}
@@ -334,19 +425,39 @@ function DayCard({
             ...styles.footerBorder,
           }}
         >
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 4, flexShrink: 1 }}>
-            <Text style={{ color: isFull ? colors.success : colors.white, fontSize: 12, fontWeight: "700" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 4,
+              flexShrink: 1,
+            }}
+          >
+            <Text
+              style={{
+                color: isFull ? colors.success : colors.white,
+                fontSize: 12,
+                fontWeight: "700",
+              }}
+            >
               {isFull ? "Complet" : remainingSpots}
             </Text>
-            {!isFull && <Text style={styles.footerText}> places restantes</Text>}
+            {!isFull && (
+              <Text style={styles.footerText}> places restantes</Text>
+            )}
             <View style={styles.divider} />
-            <Text style={[styles.footerText, { fontWeight: "600" }]} numberOfLines={1}>
+            <Text
+              style={[styles.footerText, { fontWeight: "600" }]}
+              numberOfLines={1}
+            >
               {Math.round(pct)}% rempli
             </Text>
           </View>
 
           <View style={styles.ctaBg}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+            >
               <Text style={styles.ctaText}>Voir</Text>
               <Ionicons name="arrow-forward" size={11} color={colors.red} />
             </View>
@@ -364,7 +475,8 @@ export default function JourneesScreen() {
   const [activeFilter, setActiveFilter] = useState<string>("PUBLISHED");
   const tabBarHeight = useBottomTabBarHeight();
 
-  const { data, isLoading, isRefetching, refetch, isError } =
+  // ✅ Ajout de error
+  const { data, isLoading, isRefetching, refetch, isError, error } =
     useMyStructureDays({ status: activeFilter as any });
   const days = data?.data ?? [];
 
@@ -408,6 +520,93 @@ export default function JourneesScreen() {
     },
   }));
 
+  // ── 1. Loading initial ─────────────────────────────────────────
+  if (isLoading && !days.length) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {/* Header */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            paddingHorizontal: 20,
+            paddingTop: 10,
+            paddingBottom: 14,
+          }}
+        >
+          <View style={{ gap: 3 }}>
+            <Text style={styles.headerEyebrow}>Collectes planifiées</Text>
+            <Text style={styles.headerTitle}>
+              Nos <Text style={{ color: colors.red }}>Journées</Text>
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+              backgroundColor: colors.red,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              borderRadius: 14,
+              opacity: 0.5,
+            }}
+          >
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 7,
+                backgroundColor: "rgba(255,255,255,0.18)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons name="add" size={14} color="#fff" />
+            </View>
+            <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+              Créer
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ paddingHorizontal: 20 }}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} colors={colors} />
+          ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── 2. Erreur réseau sans cache (Comportement hors-ligne) ──────
+  if (isError && !days.length && isNetworkError(error)) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            paddingHorizontal: 20,
+            paddingTop: 10,
+            paddingBottom: 14,
+          }}
+        >
+          <View style={{ gap: 3 }}>
+            <Text style={styles.headerEyebrow}>Collectes planifiées</Text>
+            <Text style={styles.headerTitle}>
+              Nos <Text style={{ color: colors.red }}>Journées</Text>
+            </Text>
+          </View>
+        </View>
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
+
+  // ── 3. Rendu normal (ou avec cache périmé si offline) ──────────
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* ── Header ── */}
@@ -453,7 +652,9 @@ export default function JourneesScreen() {
           >
             <Ionicons name="add" size={14} color="#fff" />
           </View>
-          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>Créer</Text>
+          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+            Créer
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -486,20 +687,26 @@ export default function JourneesScreen() {
                   borderRadius: 20,
                   borderWidth: 1,
                 },
-                isActive ? styles.filterActiveBorder : styles.filterInactiveBorder,
+                isActive
+                  ? styles.filterActiveBorder
+                  : styles.filterInactiveBorder,
                 isActive ? styles.filterActiveBg : styles.filterInactiveBg,
               ]}
             >
               <View
                 style={[
                   { width: 6, height: 6, borderRadius: 3 },
-                  isActive ? { backgroundColor: colors.red } : styles.filterDotInactive,
+                  isActive
+                    ? { backgroundColor: colors.red }
+                    : styles.filterDotInactive,
                 ]}
               />
               <Text
                 style={[
                   { fontSize: 12, fontWeight: "600" },
-                  isActive ? { color: colors.white } : styles.filterTextInactive,
+                  isActive
+                    ? { color: colors.white }
+                    : styles.filterTextInactive,
                 ]}
               >
                 {f.label}
@@ -510,76 +717,85 @@ export default function JourneesScreen() {
       </ScrollView>
 
       {/* ── Contenu ── */}
-      {isLoading ? (
-        <View style={{ paddingHorizontal: 20 }}>
-          {[1, 2, 3].map((i) => (
-            <SkeletonCard key={i} colors={colors} />
-          ))}
-        </View>
-      ) : (
-        <FlatList
-          data={days}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{
-            paddingHorizontal: 20,
-            paddingTop: 2,
-            paddingBottom: tabBarHeight + 40,
-          }}
-          showsVerticalScrollIndicator={false}
-          onRefresh={refetch}
-          refreshing={isRefetching}
-          ListEmptyComponent={
-            <View style={{ alignItems: "center", paddingTop: 60, paddingHorizontal: 32, gap: 16 }}>
-              <View
-                style={[
-                  { width: 84, height: 84, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-                  styles.emptyStateIconBg,
-                ]}
-              >
-                <Ionicons
-                  name={isError ? "cloud-offline-outline" : "calendar-outline"}
-                  size={40}
-                  color={colors.red + "50"}
-                />
-              </View>
-              <Text style={styles.emptyStateTitle}>
-                {isError ? "Erreur de chargement" : "Aucune journée planifiée"}
-              </Text>
-              <Text style={styles.emptyStateSub}>
-                {isError
-                  ? "Tirez vers le bas pour réessayer."
-                  : "Créez votre première journée de don pour recruter des donneurs à l'avance."}
-              </Text>
-              {!isError && (
-                <TouchableOpacity
-                  style={{
-                    marginTop: 8,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 8,
-                    backgroundColor: colors.red,
-                    paddingVertical: 14,
-                    paddingHorizontal: 28,
-                    borderRadius: 14,
-                  }}
-                  onPress={() => router.push("/(health)/journees/create" as any)}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="add" size={18} color="#fff" />
-                  <Text style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}>Créer une journée</Text>
-                </TouchableOpacity>
-              )}
+      <FlatList
+        data={days}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: 2,
+          paddingBottom: tabBarHeight + 40,
+        }}
+        showsVerticalScrollIndicator={false}
+        onRefresh={refetch}
+        refreshing={isRefetching}
+        ListEmptyComponent={
+          <View
+            style={{
+              alignItems: "center",
+              paddingTop: 60,
+              paddingHorizontal: 32,
+              gap: 16,
+            }}
+          >
+            <View
+              style={[
+                {
+                  width: 84,
+                  height: 84,
+                  borderRadius: 26,
+                  alignItems: "center",
+                  justifyContent: "center",
+                },
+                styles.emptyStateIconBg,
+              ]}
+            >
+              <Ionicons
+                name={isError ? "cloud-offline-outline" : "calendar-outline"}
+                size={40}
+                color={colors.red + "50"}
+              />
             </View>
-          }
-          renderItem={({ item }) => (
-            <DayCard
-              item={item}
-              colors={colors}
-              onPress={() => router.push(`/(health)/journees/${item.id}` as any)}
-            />
-          )}
-        />
-      )}
+            <Text style={styles.emptyStateTitle}>
+              {isError ? "Erreur de chargement" : "Aucune journée planifiée"}
+            </Text>
+            <Text style={styles.emptyStateSub}>
+              {isError
+                ? "Tirez vers le bas pour réessayer."
+                : "Créez votre première journée de don pour recruter des donneurs à l'avance."}
+            </Text>
+            {!isError && (
+              <TouchableOpacity
+                style={{
+                  marginTop: 8,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  backgroundColor: colors.red,
+                  paddingVertical: 14,
+                  paddingHorizontal: 28,
+                  borderRadius: 14,
+                }}
+                onPress={() => router.push("/(health)/journees/create" as any)}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="add" size={18} color="#fff" />
+                <Text
+                  style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}
+                >
+                  Créer une journée
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        }
+        renderItem={({ item }) => (
+          <DayCard
+            item={item}
+            colors={colors}
+            onPress={() => router.push(`/(health)/journees/${item.id}` as any)}
+          />
+        )}
+      />
     </SafeAreaView>
   );
 }
