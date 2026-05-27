@@ -28,16 +28,16 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://ton-api-render.onrender.com/api",
-        "EXPO_PUBLIC_SOCKET_URL": "https://ton-api-render.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://vita-link-api.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://vita-link-api.onrender.com"
       },
       "channel": "preview"
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://ton-api-render.onrender.com/api",
-        "EXPO_PUBLIC_SOCKET_URL": "https://ton-api-render.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://vita-link-api.onrender.com/api",
+        "EXPO_PUBLIC_SOCKET_URL": "https://vita-link-api.onrender.com"
       },
       "channel": "production"
     }
