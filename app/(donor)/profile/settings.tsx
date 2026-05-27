@@ -11,6 +11,7 @@ import {
   Animated,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -283,6 +284,13 @@ export default function SettingsScreen() {
     },
   }));
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(donor)/profile",
+    routeMap: {
+      profile: "/(donor)/profile",
+    },
+  });
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -416,7 +424,7 @@ export default function SettingsScreen() {
       {/* ── Header ── */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backBtn}
           activeOpacity={0.75}
         >

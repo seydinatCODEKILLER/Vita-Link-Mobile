@@ -15,14 +15,15 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import {
   useDayDetail,
   useRegisterDonor,
   useCancelDonorRegistration,
 } from "@/src/hooks/useDonationDays";
 import { useIsEligible } from "@/src/hooks/useAuthStore";
-import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen"; // ✅ Ajouté
-import { isNetworkError } from "@/src/utils/error.utils"; // ✅ Ajouté
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { isNetworkError } from "@/src/utils/error.utils";
 
 dayjs.locale("fr");
 
@@ -203,6 +204,16 @@ export default function DonorDayDetailScreen() {
     }
   };
 
+    const goBack = useSmartBack({
+    defaultRoute: "/(donor)/donation-days", // Par défaut, retour au Home des alertes
+    routeMap: {
+      home: "/(donor)",               // Si on vient du Home
+      jambaar: "/(donor)/jambaar",    // Si on vient de l'onglet Jambaar
+      registrations: "/(donor)/donation-days/my-registrations", // Si on vient de la liste de ses inscriptions
+      donationDays: "/(donor)/donation-days",
+    },
+  });
+
   const handleCancel = async () => {
     Alert.alert(
       "Annuler mon inscription",
@@ -318,7 +329,7 @@ export default function DonorDayDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backBtn}
             activeOpacity={0.7}
           >

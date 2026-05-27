@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { useAlertResponses, useCloseAlert } from "@/src/hooks/useAlerts";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { AlertResponseStatus } from "@/src/types/shared.types";
@@ -297,7 +298,15 @@ export default function AlertDashboardScreen() {
   const { socketRef } = useSocket();
   const colors = useColors();
   const responseConfig = getResponseConfig(colors);
-  
+
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/alerts", // Par défaut, retour à la liste des alertes de l'hôpital
+    routeMap: {
+      alerts: "/(health)/alerts",
+      detail: `/(health)/alerts/${alertId}`, // Retour au détail de l'alerte si on vient de là
+      dashboard: "/(health)",
+    },
+  });
 
   const { data, isLoading, isError, error, refetch } =
     useAlertResponses(alertId);
@@ -431,7 +440,7 @@ export default function AlertDashboardScreen() {
           onPress: async () => {
             try {
               await closeAlert(alertId);
-              router.back();
+              goBack();
             } catch {
               Alert.alert("Erreur", "Impossible de fermer l'alerte.");
             }
@@ -466,7 +475,7 @@ export default function AlertDashboardScreen() {
         <Ionicons name="alert-circle-outline" size={40} color={colors.red} />
         <Text style={styles.errorText}>Données indisponibles</Text>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.errorBack}
         >
           <Text style={styles.errorBackText}>Retour</Text>

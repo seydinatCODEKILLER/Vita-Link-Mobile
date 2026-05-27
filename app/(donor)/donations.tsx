@@ -16,6 +16,7 @@ import "dayjs/locale/fr";
 import { useMyDonations } from "@/src/hooks/useDonations";
 import { Donation } from "@/src/types/domain.types";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
@@ -330,10 +331,17 @@ export default function DonationsScreen() {
     loaderMore: { paddingVertical: 20, alignItems: "center" },
   }));
 
+    const goBack = useSmartBack({
+    defaultRoute: "/(donor)/profile", // Par défaut, retour au profil
+    routeMap: {
+      profile: "/(donor)/profile",
+    },
+  });
+
   const renderHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={goBack}
         style={styles.backBtn}
         activeOpacity={0.75}
       >

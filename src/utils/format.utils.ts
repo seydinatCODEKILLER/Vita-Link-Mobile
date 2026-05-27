@@ -64,3 +64,7 @@ export const SERVICE_LABELS: Record<string, string> = {
 export const formatServiceUnit = (unit: string): string => {
   return SERVICE_LABELS[unit] ?? unit;
 };
+
+export function isEventToday(scheduledDate: string): boolean {
+  return dayjs(scheduledDate).isSame(dayjs(), "day");
+}

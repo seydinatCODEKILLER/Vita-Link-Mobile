@@ -20,12 +20,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
 import * as ImagePicker from "expo-image-picker";
 import { FormInput } from "@/src/components/ui/FormInput";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useDayDetail, useUpdateDay } from "@/src/hooks/useDonationDays";
 import { Image } from "expo-image";
 import {
   dayStep1Schema,
   dayStep2Schema,
-  dayStep3Schema, // On utilise le schéma SANS transform pour RHF
   type DayStep1Values,
   type DayStep2Values,
   DayStep3FormValues,
@@ -166,6 +166,13 @@ export default function EditJourneeScreen() {
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
   const tabBarHeight = useBottomTabBarHeight();
+  const goBack = useSmartBack({
+    defaultRoute: `/(health)/journees/${id}`, // Retour au Détail de la journée
+    routeMap: {
+      detail: `/(health)/journees/${id}`,
+      journees: "/(health)/journees",
+    },
+  });
 
   // ── Requêtes & Mutations ──
   const { data: day, isLoading: isLoadingDay } = useDayDetail(id);
@@ -457,7 +464,7 @@ export default function EditJourneeScreen() {
             },
           });
 
-          router.back();
+          goBack();
         } catch (err: any) {
           console.warn("Update day failed", err);
         }
@@ -728,7 +735,7 @@ export default function EditJourneeScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() =>
-              currentStep > 1 ? setCurrentStep((s) => s - 1) : router.back()
+              currentStep > 1 ? setCurrentStep((s) => s - 1) : goBack()
             }
             style={styles.backBtn}
             activeOpacity={0.75}

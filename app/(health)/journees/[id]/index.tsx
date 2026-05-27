@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { Image } from "expo-image";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import dayjs from "dayjs";
@@ -32,6 +33,7 @@ import {
 import { FormInput } from "@/src/components/ui/FormInput";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
+import { isEventToday } from "@/src/utils/format.utils";
 
 dayjs.locale("fr");
 
@@ -62,81 +64,90 @@ const REGISTRATION_STATUS_CONFIG = {
 // ─── Carte d'inscription ──────────────────────────────────────
 function RegistrationCard({
   item,
+  scheduledDate,
   onMark,
   colors,
 }: {
   item: DayRegistration;
+  scheduledDate: string;
   onMark: (registrationId: string, status: "ATTENDED" | "NO_SHOW") => void;
   colors: any;
 }) {
   const statusConf =
-    REGISTRATION_STATUS_CONFIG[item.status] ||
+    REGISTRATION_STATUS_CONFIG[item.status] ??
     REGISTRATION_STATUS_CONFIG.REGISTERED;
   const initials = `${item.donor.firstName[0]}${item.donor.lastName[0]}`;
+  const canAct = isEventToday(scheduledDate);
+  const eventDateFormatted = dayjs(scheduledDate).format("DD MMMM YYYY");
 
   const styles = useThemedStyles((c) => ({
     card: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
       backgroundColor: c.cardBg,
       borderRadius: 14,
       padding: 14,
-      marginHorizontal: 20,
+      marginHorizontal: 16,
       marginBottom: 8,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder + "20",
+    },
+    cardTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
     },
     avatar: {
-      width: 42,
-      height: 42,
+      width: 40,
+      height: 40,
       borderRadius: 12,
       backgroundColor: statusConf.color + "15",
       alignItems: "center",
       justifyContent: "center",
+      flexShrink: 0,
     },
     avatarText: {
       color: statusConf.color,
-      fontSize: 15,
-      fontWeight: "700",
+      fontSize: 13,
+      fontWeight: "500",
     },
     info: {
       flex: 1,
-      gap: 3,
+      gap: 4,
+      minWidth: 0,
     },
     name: {
       color: c.white,
-      fontSize: 14,
-      fontWeight: "600",
-      letterSpacing: -0.2,
+      fontSize: 13,
+      fontWeight: "500",
     },
     meta: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 8,
+      gap: 6,
     },
     bloodType: {
       color: statusConf.color,
       fontSize: 11,
-      fontWeight: "700",
+      fontWeight: "600",
     },
     phone: {
       color: c.textMuted,
-      fontSize: 12,
-      fontWeight: "400",
+      fontSize: 11,
     },
     metaDivider: {
       width: 3,
       height: 3,
       borderRadius: 1.5,
-      backgroundColor: c.textMuted + "40",
+      backgroundColor: c.textMuted + "30",
     },
     statusBadge: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
+      gap: 5,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
       borderRadius: 8,
       backgroundColor: statusConf.color + "12",
+      flexShrink: 0,
     },
     statusDot: {
       width: 5,
@@ -149,77 +160,138 @@ function RegistrationCard({
       fontSize: 10,
       fontWeight: "600",
     },
-    actions: {
+    divider: {
+      height: 0.5,
+      backgroundColor: c.cardBorder + "25",
+      marginVertical: 12,
+    },
+    actionsRow: {
       flexDirection: "row",
-      gap: 6,
-      marginTop: 8,
+      alignItems: "center",
+      gap: 8,
     },
     actionBtn: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 4,
-      paddingVertical: 6,
-      paddingHorizontal: 10,
-      borderRadius: 8,
+      gap: 5,
+      paddingVertical: 7,
+      paddingHorizontal: 12,
+      borderRadius: 9,
     },
     actionBtnText: {
       fontSize: 11,
       fontWeight: "600",
     },
+    lockedHint: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    lockedText: {
+      color: c.textMuted + "80",
+      fontSize: 11,
+    },
+    lockedDate: {
+      color: c.textMuted,
+      fontWeight: "600",
+      fontSize: 11,
+    },
+    todayBadge: {
+      marginLeft: "auto",
+      paddingHorizontal: 8,
+      paddingVertical: 5,
+      borderRadius: 7,
+      backgroundColor: "#10B981" + "10",
+      borderWidth: 0.5,
+      borderColor: "#10B981" + "25",
+    },
+    todayBadgeText: {
+      color: "#10B981",
+      fontSize: 10,
+      fontWeight: "600",
+    },
   }));
+
+  const showActions = item.status === "REGISTERED";
 
   return (
     <View style={styles.card}>
-      {/* Avatar */}
-      <View style={styles.avatar}>
-        <Text style={styles.avatarText}>{initials}</Text>
-      </View>
-
-      {/* Infos */}
-      <View style={styles.info}>
-        <Text style={styles.name}>
-          {item.donor.firstName} {item.donor.lastName}
-        </Text>
-        <View style={styles.meta}>
-          <Text style={styles.bloodType}>
-            {item.donor.bloodType?.replace("_POS", "+").replace("_NEG", "-")}
-          </Text>
-          <View style={styles.metaDivider} />
-          <Text style={styles.phone}>{item.donor.phone}</Text>
+      {/* Ligne principale */}
+      <View style={styles.cardTop}>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
         </View>
-
-        {/* Actions */}
-        {item.status === "REGISTERED" && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#10B981" + "12" }]}
-              onPress={() => onMark(item.id, "ATTENDED")}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="checkmark" size={14} color="#10B981" />
-              <Text style={[styles.actionBtnText, { color: "#10B981" }]}>
-                Présent
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: "#EF4444" + "12" }]}
-              onPress={() => onMark(item.id, "NO_SHOW")}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={14} color="#EF4444" />
-              <Text style={[styles.actionBtnText, { color: "#EF4444" }]}>
-                Absent
-              </Text>
-            </TouchableOpacity>
+        <View style={styles.info}>
+          <Text style={styles.name} numberOfLines={1}>
+            {item.donor.firstName} {item.donor.lastName}
+          </Text>
+          <View style={styles.meta}>
+            <Text style={styles.bloodType}>
+              {item.donor.bloodType?.replace("_POS", "+").replace("_NEG", "-")}
+            </Text>
+            <View style={styles.metaDivider} />
+            <Text style={styles.phone}>{item.donor.phone}</Text>
           </View>
-        )}
+        </View>
+        <View style={styles.statusBadge}>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>{statusConf.label}</Text>
+        </View>
       </View>
 
-      {/* Badge statut */}
-      <View style={styles.statusBadge}>
-        <View style={styles.statusDot} />
-        <Text style={styles.statusText}>{statusConf.label}</Text>
-      </View>
+      {/* Séparateur + Zone d'actions (seulement pour REGISTERED) */}
+      {showActions && (
+        <>
+          <View style={styles.divider} />
+          <View style={styles.actionsRow}>
+            {canAct ? (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: "#10B981" + "12" },
+                  ]}
+                  onPress={() => onMark(item.id, "ATTENDED")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="checkmark" size={14} color="#10B981" />
+                  <Text style={[styles.actionBtnText, { color: "#10B981" }]}>
+                    Présent
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.actionBtn,
+                    { backgroundColor: "#EF4444" + "12" },
+                  ]}
+                  onPress={() => onMark(item.id, "NO_SHOW")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="close" size={14} color="#EF4444" />
+                  <Text style={[styles.actionBtnText, { color: "#EF4444" }]}>
+                    Absent
+                  </Text>
+                </TouchableOpacity>
+                <View style={styles.todayBadge}>
+                  <Text style={styles.todayBadgeText}>Aujourd&apos;hui</Text>
+                </View>
+              </>
+            ) : (
+              <View style={styles.lockedHint}>
+                <Ionicons
+                  name="lock-closed-outline"
+                  size={13}
+                  color={colors.textMuted + "60"}
+                />
+                <Text style={styles.lockedText}>
+                  Actions disponibles le{" "}
+                  <Text style={styles.lockedDate}>{eventDateFormatted}</Text>
+                </Text>
+              </View>
+            )}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -230,6 +302,13 @@ export default function DayDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const tabBarHeight = useBottomTabBarHeight();
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/journees", // Retour à la liste
+    routeMap: {
+      journees: "/(health)/journees",
+      edit: `/(health)/journees/${id}/edit`, // Si on revient de l'édition
+    },
+  });
 
   const {
     data: day,
@@ -570,7 +649,7 @@ export default function DayDetailScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backBtn}
             activeOpacity={0.7}
           >
@@ -641,7 +720,7 @@ export default function DayDetailScreen() {
             {/* Header */}
             <View style={styles.header}>
               <TouchableOpacity
-                onPress={() => router.back()}
+                onPress={goBack}
                 style={styles.backBtn}
                 activeOpacity={0.7}
               >
@@ -656,7 +735,9 @@ export default function DayDetailScreen() {
                 <TouchableOpacity
                   style={styles.editBtn}
                   onPress={() =>
-                    router.push(`/(health)/journees/${id}/edit` as any)
+                    router.push(
+                      `/(health)/journees/${id}/edit?from=detail` as any,
+                    )
                   }
                   activeOpacity={0.7}
                 >
@@ -799,6 +880,7 @@ export default function DayDetailScreen() {
         renderItem={({ item }) => (
           <RegistrationCard
             item={item}
+            scheduledDate={day.scheduledDate}
             onMark={handleMarkAttendance}
             colors={colors}
           />

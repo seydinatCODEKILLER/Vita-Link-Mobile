@@ -13,6 +13,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { StatusBar } from "expo-status-bar";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -369,6 +370,14 @@ export default function CreateAlertScreen() {
     ctaBtnTextDisabled: { color: "rgba(255,255,255,0.5)" },
   }));
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/alerts", // Par défaut, retour à la liste des alertes de l'hôpital
+    routeMap: {
+      alerts: "/(health)/alerts",
+      dashboard: "/(health)", // Au cas où on accède à la création depuis le dashboard principal
+    },
+  });
+
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -432,7 +441,7 @@ export default function CreateAlertScreen() {
         {/* ── Header ── */}
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backBtn}
             activeOpacity={0.75}
           >

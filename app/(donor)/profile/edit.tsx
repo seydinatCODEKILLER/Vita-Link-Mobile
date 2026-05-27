@@ -10,6 +10,7 @@ import {
   Alert,
   Animated,
 } from "react-native";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -322,6 +323,13 @@ export default function EditProfileScreen() {
     iosPickerDoneText: { color: c.red, fontWeight: "700", fontSize: 15 },
   }));
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(donor)/profile", // Par défaut, retour au profil
+    routeMap: {
+      profile: "/(donor)/profile",
+    },
+  });
+
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -436,7 +444,7 @@ export default function EditProfileScreen() {
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.back();
+      goBack();
     } catch (error: any) {
       Alert.alert(
         "Mise à jour échouée",
@@ -456,7 +464,7 @@ export default function EditProfileScreen() {
         {/* ── Header ── */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backBtn}
             activeOpacity={0.75}
           >

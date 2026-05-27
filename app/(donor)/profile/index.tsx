@@ -12,7 +12,7 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { Href, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
@@ -465,7 +465,7 @@ export default function ProfileScreen() {
           </Text>
           <TouchableOpacity
             style={styles.editBtn}
-            onPress={() => router.push("/(donor)/profile/edit" as any)}
+            onPress={() => router.push("/(donor)/profile/edit?from=profile" as any)}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -728,7 +728,7 @@ export default function ProfileScreen() {
               icon="call-outline"
               label="Téléphone"
               value={user?.phone}
-              onPress={() => router.push("/(donor)/profile/edit" as any)}
+              onPress={() => router.push("/(donor)/profile/edit?from=profile" as Href)}
               colors={colors}
             />
             <View style={styles.sep} />
@@ -736,7 +736,7 @@ export default function ProfileScreen() {
               icon="mail-outline"
               label="Email"
               value={user?.email ?? "Non renseigné"}
-              onPress={() => router.push("/(donor)/profile/edit" as any)}
+              onPress={() => router.push("/(donor)/profile/edit?from=profile" as Href)}
               colors={colors}
             />
             <View style={styles.sep} />
@@ -745,7 +745,7 @@ export default function ProfileScreen() {
               label="Groupe sanguin"
               value={bloodLabel}
               valueColor={colors.red}
-              onPress={() => router.push("/(donor)/profile/edit" as any)}
+              onPress={() => router.push("/(donor)/profile/edit?from=profile" as Href)}
               colors={colors}
             />
           </View>
@@ -758,14 +758,14 @@ export default function ProfileScreen() {
             <ProfileRow
               icon="time-outline"
               label="Historique des dons"
-              onPress={() => router.push("/(donor)/donations" as any)}
+              onPress={() => router.push("/(donor)/donations?from=profile" as Href)}
               colors={colors}
             />
             <View style={styles.sep} />
             <ProfileRow
               icon="settings-outline"
               label="Paramètres"
-              onPress={() => router.push("/(donor)/profile/settings" as any)}
+              onPress={() => router.push("/(donor)/profile/settings?from=profile" as Href)}
               colors={colors}
             />
             <View style={styles.sep} />

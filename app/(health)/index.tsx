@@ -275,7 +275,7 @@ export default function HealthHomeScreen() {
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/(health)/alerts/create" as any);
+    router.push("/(health)/alerts/create?from=dashboard" as any);
   };
 
   const styles = useThemedStyles((c) => ({

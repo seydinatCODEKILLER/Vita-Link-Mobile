@@ -476,7 +476,7 @@ export default function DonorDonationDaysScreen() {
             item={item}
             colors={colors}
             onPress={() =>
-              router.push(`/(donor)/donation-days/${item.id}` as any)
+              router.push(`/(donor)/donation-days/${item.id}?from=donationDays` as any)
             }
           />
         )}

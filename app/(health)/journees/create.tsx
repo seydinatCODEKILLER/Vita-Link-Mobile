@@ -15,6 +15,7 @@ import { StatusBar } from "expo-status-bar";
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import dayjs from "dayjs";
@@ -173,6 +174,13 @@ export default function CreateJourneeScreen() {
   const { mutateAsync: createDay, isPending } = useCreateDay();
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/journees", // Retour à la liste des journées
+    routeMap: {
+      journees: "/(health)/journees",
+      dashboard: "/(health)",
+    },
+  });
 
   const [currentStep, setCurrentStep] = useState(1);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -448,7 +456,7 @@ export default function CreateJourneeScreen() {
           setCurrentStep(1);
           setFormData({});
 
-          router.back();
+          goBack();
         } catch (err: any) {
           console.warn("Create day failed", err);
         }
@@ -717,7 +725,7 @@ export default function CreateJourneeScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             onPress={() =>
-              currentStep > 1 ? setCurrentStep((s) => s - 1) : router.back()
+              currentStep > 1 ? setCurrentStep((s) => s - 1) : goBack()
             }
             style={styles.backBtn}
             activeOpacity={0.75}

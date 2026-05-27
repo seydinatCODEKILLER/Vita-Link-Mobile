@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import { CameraView, Camera } from "expo-camera"; // ✅ CORRECTION : StyleSheet retiré d'ici
 import { useScanDonation } from "@/src/hooks/useDonations";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
+import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -31,6 +32,14 @@ export default function ScanScreen() {
   const [scanned, setScanned] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
   const [flashOn, setFlashOn] = useState(false);
+
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)", // Par défaut, retour au Dashboard de la structure
+    routeMap: {
+      profile: "/(health)/profile", // Si on a accédé au scanner depuis le profil
+      alerts: "/(health)/alerts", // Si on y accède depuis la liste des alertes
+    },
+  });
 
   const { mutateAsync: scanDonation, isPending: isScanning } =
     useScanDonation();
@@ -286,7 +295,7 @@ export default function ScanScreen() {
           {/* ── Header ── */}
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={goBack}
               style={styles.headerBtn}
               activeOpacity={0.7}
             >

@@ -15,6 +15,7 @@ import { useAuthStore } from "@/src/store/auth.store";
 import { useLeaderboard } from "@/src/hooks/useJambaar";
 import { LeaderboardEntry } from "@/src/types/domain.types";
 import { DonorGrade } from "@/src/types/shared.types";
+import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
@@ -603,11 +604,20 @@ export default function LeaderboardScreen() {
     },
   }));
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(donor)/jambaar", // Par défaut, retour au hub Jambaar
+    routeMap: {
+      jambaar: "/(donor)/jambaar",
+      profile: "/(donor)/profile",
+      home: "/(donor)", // Au cas où on accède au classement depuis le Home
+    },
+  });
+
   const renderHeader = () => (
     <View>
       <View style={styles.navHeader}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backBtn}
           activeOpacity={0.75}
         >
@@ -687,7 +697,7 @@ export default function LeaderboardScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.navHeader}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backBtn}
             activeOpacity={0.75}
           >

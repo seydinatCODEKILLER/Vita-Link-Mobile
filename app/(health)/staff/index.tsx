@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +9,7 @@ import { useAuthStore } from "@/src/store/auth.store";
 import { useMyStaff, useRemoveStaff } from "@/src/hooks/useStaff";
 import { StaffMember } from "@/src/types/healthStructure.type";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
@@ -242,6 +236,14 @@ export default function StaffScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/profile",
+    routeMap: {
+      profile: "/(health)/profile",
+      dashboard: "/(health)",
+    },
+  });
+
   // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
   const { data: staff, isLoading, isError, error, refetch } = useMyStaff();
 
@@ -294,7 +296,7 @@ export default function StaffScreen() {
       );
       return;
     }
-    router.push("/(health)/staff/add" as any);
+    router.push("/(health)/staff/add?from=staff" as any);
   };
 
   const styles = useThemedStyles((c) => ({
@@ -387,7 +389,7 @@ export default function StaffScreen() {
     <>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backBtn}
           activeOpacity={0.7}
         >

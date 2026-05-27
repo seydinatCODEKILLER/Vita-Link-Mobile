@@ -658,7 +658,7 @@ export default function JambaarProfileScreen() {
             colors={colors}
             onPress={() => {
               tap();
-              router.push("/(donor)/jambaar/badges" as any);
+              router.push("/(donor)/jambaar/badges?from=jambaar" as any);
             }}
           />
           <View style={styles.actionSeparator} />
@@ -669,7 +669,7 @@ export default function JambaarProfileScreen() {
             colors={colors}
             onPress={() => {
               tap();
-              router.push("/(donor)/jambaar/leaderboard" as any);
+              router.push("/(donor)/jambaar/leaderboard?from=jambaar" as any);
             }}
           />
           <View style={styles.actionSeparator} />
@@ -680,7 +680,7 @@ export default function JambaarProfileScreen() {
             colors={colors}
             onPress={() => {
               tap();
-              router.push("/(donor)/jambaar/rewards" as any);
+              router.push("/(donor)/jambaar/rewards?from=jambaar" as any);
             }}
           />
         </View>

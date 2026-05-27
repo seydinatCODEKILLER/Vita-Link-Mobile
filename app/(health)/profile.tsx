@@ -429,7 +429,7 @@ export default function HealthProfileScreen() {
               label="Alertes actives"
               value="Gérer"
               valueColor={colors.red}
-              onPress={() => router.push("/(health)/alerts" as any)}
+              onPress={() => router.push("/(health)/alerts?from=profile" as any)}
               colors={colors}
             />
             <View style={styles.sep} />
@@ -438,7 +438,7 @@ export default function HealthProfileScreen() {
               label="Scanner un donneur"
               value="Valider un don"
               valueColor={colors.success}
-              onPress={() => router.push("/(health)/scan" as any)}
+              onPress={() => router.push("/(health)/scan?from=profile" as any)}
               colors={colors}
             />
             <View style={styles.sep} />
@@ -447,7 +447,7 @@ export default function HealthProfileScreen() {
               label="Stock de sang"
               value="Monitoring"
               valueColor={colors.amber}
-              onPress={() => router.push("/(health)/stock" as any)}
+              onPress={() => router.push("/(health)/stock?from=profile" as any)}
               colors={colors}
             />
           </View>
@@ -462,13 +462,13 @@ export default function HealthProfileScreen() {
               label="Gérer le personnel"
               value="Équipe"
               valueColor="#60A5FA" // Bleu hors palette
-              onPress={() => router.push("/(health)/staff" as any)}
+              onPress={() => router.push("/(health)/staff?from=profile" as any)}
               colors={colors}
             />
             <View style={styles.sep} />
             <ProfileRow
               icon="document-text-outline"
-              label="N° d'enregistrement"
+              label="N° Enregistrement"
               value={structure?.registrationNumber ?? "—"}
               valueColor={colors.textMuted}
               colors={colors}

@@ -2,7 +2,7 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "Vita-Link-Mobile",
+  name: "VitaLink",
   slug: "Vita-Link-Mobile",
   version: "1.0.0",
   orientation: "portrait",
@@ -10,6 +10,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: "vitalinkmobile",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  updates: {
+    url: "https://u.expo.dev/d7a0faeb-fe87-4418-b24c-394df580ca71",
+  },
+  runtimeVersion: {
+    policy: "appVersion",
+  },
 
   ios: {
     supportsTablet: true,
@@ -37,7 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-splash-screen",
       {
-        image: "./assets/images/splash-icon.png",
+        image: "./assets/images/icon.png",
         imageWidth: 200,
         resizeMode: "contain",
         backgroundColor: "#ffffff",

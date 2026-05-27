@@ -18,6 +18,7 @@ import { useJambaarProfile } from "@/src/hooks/useJambaar";
 import { useMyCoupons, useRedeemReward } from "@/src/hooks/useCoupons";
 import { Coupon, Reward } from "@/src/types/domain.types";
 import { useRewards } from "@/src/hooks/useRewards";
+import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 
@@ -578,6 +579,15 @@ export default function RewardsScreen() {
     emptyTitle: { color: c.textMuted, fontSize: 14, fontWeight: "600" },
   }));
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(donor)/jambaar", // Par défaut, retour au hub Jambaar
+    routeMap: {
+      jambaar: "/(donor)/jambaar",
+      profile: "/(donor)/profile",
+      settings: "/(donor)/profile/settings",
+    },
+  });
+
   // ── Logique de rendu des onglets ──────────────────────────────
 
   const renderCatalogueContent = () => {
@@ -677,7 +687,7 @@ export default function RewardsScreen() {
       {/* Header Nav */}
       <View style={styles.navHeader}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backBtn}
           activeOpacity={0.75}
         >

@@ -37,6 +37,7 @@ import {
 import { savePendingQr } from "@/src/utils/qr.utils";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
+import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { AppColors } from "@/src/theme/colors";
 // ✅ AJOUT : Imports pour la gestion d'erreur réseau
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
@@ -612,6 +613,14 @@ export default function AlertDetailScreen() {
     errorBackText: { color: "#FFFFFF", fontWeight: "700" },
   }));
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(donor)", // Par défaut, retour au Home des alertes
+    routeMap: {
+      home: "/(donor)",
+      notifications: "/(donor)", // Si on vient du centre de notifs
+    },
+  });
+
   // ── Confirmer ──
   const handleConfirm = useCallback(
     async (etaMinutes?: number) => {
@@ -740,7 +749,7 @@ export default function AlertDetailScreen() {
         {/* ── Header ── */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backBtn}
             activeOpacity={0.75}
           >

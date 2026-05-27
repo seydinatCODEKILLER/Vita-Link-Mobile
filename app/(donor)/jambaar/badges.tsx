@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useMyBadges } from "@/src/hooks/useJambaar";
 import { Badge } from "@/src/types/domain.types";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
@@ -781,6 +782,15 @@ export default function BadgesScreen() {
     },
   }));
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(donor)/jambaar", // Par défaut, retour au hub Jambaar
+    routeMap: {
+      jambaar: "/(donor)/jambaar",
+      profile: "/(donor)/profile",
+      settings: "/(donor)/profile/settings",
+    },
+  });
+
   useEffect(() => {
     Animated.timing(headerAnim, {
       toValue: 1,
@@ -818,7 +828,7 @@ export default function BadgesScreen() {
       ]}
     >
       <TouchableOpacity
-        onPress={() => router.back()}
+        onPress={goBack}
         style={styles.backBtn}
         activeOpacity={0.75}
       >

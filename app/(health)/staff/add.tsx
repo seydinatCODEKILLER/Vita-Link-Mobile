@@ -13,7 +13,7 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -53,12 +53,19 @@ const getPasswordStrength = (password: string, colors: AppColors) => {
 };
 
 export default function AddStaffScreen() {
-  const router = useRouter();
   const colors = useColors();
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const [isPending, setIsPending] = useState(false);
+
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/staff",
+    routeMap: {
+      staff: "/(health)/staff",
+      profile: "/(health)/profile",
+    },
+  });
 
   const { control, handleSubmit, watch } = useForm<AddStaffValues>({
     resolver: zodResolver(addStaffSchema),
@@ -83,7 +90,7 @@ export default function AddStaffScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStaff });
       Alert.alert("Succès", "L'agent a été ajouté à votre structure.", [
-        { text: "OK", onPress: () => router.back() },
+        { text: "OK", onPress: () => goBack() },
       ]);
     } catch (error: any) {
       Alert.alert(
@@ -187,7 +194,7 @@ export default function AddStaffScreen() {
           {/* ── Header ── */}
           <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={goBack}
               style={styles.backBtn}
               activeOpacity={0.7}
             >

@@ -792,7 +792,7 @@ export default function JourneesScreen() {
           <DayCard
             item={item}
             colors={colors}
-            onPress={() => router.push(`/(health)/journees/${item.id}` as any)}
+            onPress={() => router.push(`/(health)/journees/${item.id}?from=journees` as any)}
           />
         )}
       />

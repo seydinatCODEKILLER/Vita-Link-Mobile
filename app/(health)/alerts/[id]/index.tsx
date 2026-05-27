@@ -380,7 +380,7 @@ export default function AlertDetailScreen() {
 
   const handleGoToDashboard = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push(`/(health)/alerts/${alertId}/dashboard`);
+    router.push(`/(health)/alerts/${alertId}/dashboard?from=detail` as any);
   };
 
   const statusColor = isActive
