@@ -7,26 +7,23 @@ import {
   Alert,
   Modal,
   Dimensions,
-  Platform,
   StyleSheet,
 } from "react-native";
 import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { CameraView, Camera } from "expo-camera"; // ✅ CORRECTION : StyleSheet retiré d'ici
+import { CameraView, Camera } from "expo-camera";
 import { useScanDonation } from "@/src/hooks/useDonations";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
-import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SCAN_SIZE = SCREEN_WIDTH * 0.7;
-const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 85 : 65;
 
 export default function ScanScreen() {
   const insets = useSafeAreaInsets();
@@ -39,10 +36,10 @@ export default function ScanScreen() {
   const [flashOn, setFlashOn] = useState(false);
 
   const goBack = useSmartBack({
-    defaultRoute: "/(health)", // Par défaut, retour au Dashboard de la structure
+    defaultRoute: "/(health)",
     routeMap: {
-      profile: "/(health)/profile", // Si on a accédé au scanner depuis le profil
-      alerts: "/(health)/alerts", // Si on y accède depuis la liste des alertes
+      profile: "/(health)/profile",
+      alerts: "/(health)/alerts",
     },
   });
 
@@ -295,7 +292,10 @@ export default function ScanScreen() {
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         enableTorch={flashOn}
       >
-        <SafeAreaView style={[styles.overlay, { paddingBottom: tabBarHeight }]} edges={["top"]}>
+        <SafeAreaView
+          style={[styles.overlay, { paddingBottom: tabBarHeight }]}
+          edges={["top"]}
+        >
           {/* ── Header ── */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -342,7 +342,7 @@ export default function ScanScreen() {
       {/* ── Modal succès ── */}
       <Modal visible={!!successData} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={styles.successCard}>
+          <View style={[styles.successCard, { paddingBottom: 24 + tabBarHeight }]}>
             <View style={styles.successIconWrap}>
               <Ionicons
                 name="checkmark-circle"
