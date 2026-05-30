@@ -435,7 +435,7 @@ export default function HealthProfileScreen() {
             <View style={styles.sep} />
             <ProfileRow
               icon="scan-outline"
-              label="Scanner un donneur"
+              label="Scanner un don"
               value="Valider un don"
               valueColor={colors.success}
               onPress={() => router.push("/(health)/scan?from=profile" as any)}

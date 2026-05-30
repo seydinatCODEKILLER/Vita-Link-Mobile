@@ -1,5 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, TouchableOpacity, Animated } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  Animated,
+  ScrollView,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -52,7 +58,7 @@ export default function PendingReviewScreen() {
       backgroundColor: "rgba(250,199,117,0.08)",
     },
     body: {
-      flex: 1,
+      paddingVertical: 24, 
       alignItems: "center",
       justifyContent: "center",
       gap: 28,
@@ -265,7 +271,10 @@ export default function PendingReviewScreen() {
       <View style={styles.haloCenter} />
 
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.body}>
+        <ScrollView
+          contentContainerStyle={[styles.body, { flexGrow: 1 }]}
+          showsVerticalScrollIndicator={false}
+        >
           {/* ── Icône centrale ── */}
           <Animated.View
             style={[
@@ -377,7 +386,7 @@ export default function PendingReviewScreen() {
               de votre compte.
             </Text>
           </Animated.View>
-        </View>
+        </ScrollView>
 
         {/* ── Footer ── */}
         <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>

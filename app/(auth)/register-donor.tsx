@@ -6,6 +6,7 @@ import {
   ScrollView,
   Platform,
   Animated,
+  KeyboardAvoidingView,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -32,6 +33,7 @@ import {
 import { registrationManager } from "@/src/utils/registration.utils";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
+
 import { AppColors } from "@/src/theme/colors";
 
 // ─── Données statiques ─────────────────────────────────────────
@@ -814,7 +816,9 @@ export default function RegisterDonorScreen() {
     <View style={styles.stepContent}>
       {/* Section groupe sanguin */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.fieldLabel}>Groupe sanguin <Text style={styles.optionalText}>(optionnel)</Text></Text>
+        <Text style={styles.fieldLabel}>
+          Groupe sanguin <Text style={styles.optionalText}>(optionnel)</Text>
+        </Text>
         <View style={styles.rareLegend}>
           <View style={styles.rareBadge}>
             <Text style={styles.rareText}>Rare</Text>
@@ -941,107 +945,113 @@ export default function RegisterDonorScreen() {
       {/* Halos décoratifs */}
       <View style={styles.haloTop} />
       <View style={styles.haloBottom} />
-
-      <SafeAreaView style={styles.safeArea}>
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() =>
-              currentStep > 1 ? setCurrentStep((s) => s - 1) : router.back()
-            }
-            style={styles.backBtn}
-            activeOpacity={0.75}
-          >
-            <Ionicons name="arrow-back" size={19} color={colors.white} />
-          </TouchableOpacity>
-
-          <View style={styles.headerCenter}>
-            <StepProgress
-              current={currentStep}
-              total={STEPS.length}
-              colors={colors}
-            />
-            <Text style={styles.stepCounter}>
-              {currentStep} / {STEPS.length}
-            </Text>
-          </View>
-
-          {/* Badge step */}
-          <View style={styles.stepIconBadge}>
-            <Ionicons name={stepInfo.icon} size={16} color={colors.red} />
-          </View>
-        </View>
-
-        {/* ── Titre du step ── */}
-        <Animated.View
-          style={[
-            styles.titleBlock,
-            {
-              opacity: opacityAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          <Text style={styles.stepTitle}>{stepInfo.title}</Text>
-          <Text style={styles.stepSubtitle}>{stepInfo.subtitle}</Text>
-        </Animated.View>
-
-        {/* ── Contenu scrollable ── */}
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Animated.View
-            style={{
-              opacity: opacityAnim,
-              transform: [{ translateY: slideAnim }],
-            }}
-          >
-            {currentStep === 1 && renderStep1()}
-            {currentStep === 2 && renderStep2()}
-            {currentStep === 3 && renderStep3()}
-          </Animated.View>
-        </ScrollView>
-
-        {/* ── Footer ── */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            onPress={currentStep < 3 ? handleNext : handleSubmit}
-            activeOpacity={0.85}
-            style={[styles.ctaBtn, isPending && styles.ctaBtnDisabled]}
-            disabled={isPending}
-          >
-            {isPending ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <>
-                <Text style={styles.ctaBtnText}>
-                  {currentStep < 3 ? "Continuer" : "Recevoir mon code OTP"}
-                </Text>
-                <View style={styles.ctaBtnIcon}>
-                  <Ionicons
-                    name={currentStep < 3 ? "arrow-forward" : "mail-outline"}
-                    size={17}
-                    color={colors.white}
-                  />
-                </View>
-              </>
-            )}
-          </TouchableOpacity>
-
-          <View style={styles.loginRow}>
-            <Text style={styles.loginText}>Déjà inscrit ? </Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <SafeAreaView style={styles.safeArea}>
+          {/* ── Header ── */}
+          <View style={styles.header}>
             <TouchableOpacity
-              onPress={() => router.push("/(auth)/login")}
-              activeOpacity={0.7}
+              onPress={() =>
+                currentStep > 1 ? setCurrentStep((s) => s - 1) : router.back()
+              }
+              style={styles.backBtn}
+              activeOpacity={0.75}
             >
-              <Text style={styles.loginLink}>Se connecter</Text>
+              <Ionicons name="arrow-back" size={19} color={colors.white} />
             </TouchableOpacity>
+
+            <View style={styles.headerCenter}>
+              <StepProgress
+                current={currentStep}
+                total={STEPS.length}
+                colors={colors}
+              />
+              <Text style={styles.stepCounter}>
+                {currentStep} / {STEPS.length}
+              </Text>
+            </View>
+
+            {/* Badge step */}
+            <View style={styles.stepIconBadge}>
+              <Ionicons name={stepInfo.icon} size={16} color={colors.red} />
+            </View>
           </View>
-        </View>
-      </SafeAreaView>
+
+          {/* ── Titre du step ── */}
+          <Animated.View
+            style={[
+              styles.titleBlock,
+              {
+                opacity: opacityAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <Text style={styles.stepTitle}>{stepInfo.title}</Text>
+            <Text style={styles.stepSubtitle}>{stepInfo.subtitle}</Text>
+          </Animated.View>
+
+          {/* ── Contenu scrollable ── */}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Animated.View
+              style={{
+                opacity: opacityAnim,
+                transform: [{ translateY: slideAnim }],
+              }}
+            >
+              {currentStep === 1 && renderStep1()}
+              {currentStep === 2 && renderStep2()}
+              {currentStep === 3 && renderStep3()}
+            </Animated.View>
+
+            {/* Footer déplacé ici ↓ */}
+            <View style={[styles.footer, { marginTop: 16 }]}>
+              <TouchableOpacity
+                onPress={currentStep < 3 ? handleNext : handleSubmit}
+                activeOpacity={0.85}
+                style={[styles.ctaBtn, isPending && styles.ctaBtnDisabled]}
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <>
+                    <Text style={styles.ctaBtnText}>
+                      {currentStep < 3 ? "Continuer" : "Recevoir mon code OTP"}
+                    </Text>
+                    <View style={styles.ctaBtnIcon}>
+                      <Ionicons
+                        name={
+                          currentStep < 3 ? "arrow-forward" : "mail-outline"
+                        }
+                        size={17}
+                        color={colors.white}
+                      />
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.loginRow}>
+                <Text style={styles.loginText}>Déjà inscrit ? </Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/(auth)/login")}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.loginLink}>Se connecter</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </View>
   );
 }

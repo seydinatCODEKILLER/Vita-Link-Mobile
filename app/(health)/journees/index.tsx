@@ -5,6 +5,7 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -16,6 +17,8 @@ import { DonationDay } from "@/src/types/donation-day.types";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen"; // ✅ Ajouté
 import { isNetworkError } from "@/src/utils/error.utils"; // ✅ Ajouté
+import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
+import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
 dayjs.locale("fr");
@@ -475,6 +478,8 @@ export default function JourneesScreen() {
   const [activeFilter, setActiveFilter] = useState<string>("PUBLISHED");
   const tabBarHeight = useBottomTabBarHeight();
 
+  const isPending = useIsStructurePending();
+
   // ✅ Ajout de error
   const { data, isLoading, isRefetching, refetch, isError, error } =
     useMyStructureDays({ status: activeFilter as any });
@@ -606,6 +611,20 @@ export default function JourneesScreen() {
     );
   }
 
+  const handleCreate = () => {
+    if (isPending) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      Alert.alert(
+        "Structure en attente de validation",
+        "Votre structure n'est pas encore approuvée par nos équipes. Vous pourrez créer des journées dès que votre dossier sera validé.",
+        [{ text: "Compris", style: "default" }],
+      );
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/(health)/journees/create" as any);
+  };
+
   // ── 3. Rendu normal (ou avec cache périmé si offline) ──────────
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -632,13 +651,13 @@ export default function JourneesScreen() {
             flexDirection: "row",
             alignItems: "center",
             gap: 8,
-            backgroundColor: colors.red,
+            backgroundColor: isPending ? colors.cardBg : colors.red,
             paddingVertical: 10,
             paddingHorizontal: 14,
             borderRadius: 14,
           }}
-          onPress={() => router.push("/(health)/journees/create" as any)}
-          activeOpacity={0.8}
+          onPress={handleCreate}
+          activeOpacity={isPending ? 0.6 : 0.8}
         >
           <View
             style={{
@@ -650,9 +669,19 @@ export default function JourneesScreen() {
               justifyContent: "center",
             }}
           >
-            <Ionicons name="add" size={14} color="#fff" />
+            <Ionicons
+              name="add"
+              size={14}
+              color={isPending ? colors.textSubtle : "#fff"}
+            />
           </View>
-          <Text style={{ color: "#fff", fontSize: 13, fontWeight: "700" }}>
+          <Text
+            style={{
+              color: isPending ? colors.textSubtle : "#fff",
+              fontSize: 13,
+              fontWeight: "700",
+            }}
+          >
             Créer
           </Text>
         </TouchableOpacity>
@@ -770,17 +799,26 @@ export default function JourneesScreen() {
                   flexDirection: "row",
                   alignItems: "center",
                   gap: 8,
-                  backgroundColor: colors.red,
+                  backgroundColor: isPending ? colors.cardBg : colors.red,
                   paddingVertical: 14,
                   paddingHorizontal: 28,
                   borderRadius: 14,
+                  opacity: isPending ? 0.6 : 1,
                 }}
-                onPress={() => router.push("/(health)/journees/create" as any)}
-                activeOpacity={0.85}
+                onPress={handleCreate}
+                activeOpacity={isPending ? 0.6 : 0.85}
               >
-                <Ionicons name="add" size={18} color="#fff" />
+                <Ionicons
+                  name="add"
+                  size={18}
+                  color={isPending ? colors.textSubtle : "#fff"}
+                />
                 <Text
-                  style={{ color: "#fff", fontSize: 15, fontWeight: "700" }}
+                  style={{
+                    color: isPending ? colors.textSubtle : "#fff",
+                    fontSize: 15,
+                    fontWeight: "700",
+                  }}
                 >
                   Créer une journée
                 </Text>
@@ -792,7 +830,9 @@ export default function JourneesScreen() {
           <DayCard
             item={item}
             colors={colors}
-            onPress={() => router.push(`/(health)/journees/${item.id}?from=journees` as any)}
+            onPress={() =>
+              router.push(`/(health)/journees/${item.id}?from=journees` as any)
+            }
           />
         )}
       />

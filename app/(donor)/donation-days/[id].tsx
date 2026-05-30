@@ -20,6 +20,7 @@ import {
   useDayDetail,
   useRegisterDonor,
   useCancelDonorRegistration,
+  useMyRegistrations,
 } from "@/src/hooks/useDonationDays";
 import { useIsEligible } from "@/src/hooks/useAuthStore";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
@@ -33,6 +34,11 @@ export default function DonorDayDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const tabBarHeight = useBottomTabBarHeight();
+  const { data: myRegistrationsData } = useMyRegistrations();
+
+  const hasActiveRegistration = (myRegistrationsData?.data ?? []).some(
+    (reg: any) => reg.donationDay?.id !== id, // inscrit sur une AUTRE journée
+  );
 
   // ✅ Ajout de isError et error
   const { data: day, isLoading, isError, error, refetch } = useDayDetail(id);
@@ -204,11 +210,11 @@ export default function DonorDayDetailScreen() {
     }
   };
 
-    const goBack = useSmartBack({
+  const goBack = useSmartBack({
     defaultRoute: "/(donor)/donation-days", // Par défaut, retour au Home des alertes
     routeMap: {
-      home: "/(donor)",               // Si on vient du Home
-      jambaar: "/(donor)/jambaar",    // Si on vient de l'onglet Jambaar
+      home: "/(donor)", // Si on vient du Home
+      jambaar: "/(donor)/jambaar", // Si on vient de l'onglet Jambaar
       registrations: "/(donor)/donation-days/my-registrations", // Si on vient de la liste de ses inscriptions
       donationDays: "/(donor)/donation-days",
     },
@@ -459,6 +465,20 @@ export default function DonorDayDetailScreen() {
               </Text>
             </View>
           )}
+
+          {hasActiveRegistration && (
+            <View style={styles.eligibilityBanner}>
+              <Ionicons
+                name="information-circle-outline"
+                size={22}
+                color={colors.amber}
+              />
+              <Text style={styles.eligibilityText}>
+                Vous avez déjà une inscription active sur une autre collecte.
+                Annulez-la d&apos;abord pour pouvoir vous inscrire ici.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -490,38 +510,30 @@ export default function DonorDayDetailScreen() {
           <TouchableOpacity
             style={[
               styles.ctaBtn,
-              (isFull || !isEligible || isRegistering) && styles.ctaBtnDisabled,
+              (isFull ||
+                !isEligible ||
+                isRegistering ||
+                hasActiveRegistration) &&
+                styles.ctaBtnDisabled,
             ]}
             onPress={handleRegister}
-            disabled={isFull || !isEligible || isRegistering}
+            disabled={
+              isFull || !isEligible || isRegistering || hasActiveRegistration
+            }
             activeOpacity={0.85}
           >
             {isRegistering ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <>
-                <Text style={styles.ctaBtnText}>
-                  {isFull
-                    ? "Liste d'attente complète"
-                    : !isEligible
-                      ? "Non éligible pour le moment"
+              <Text style={styles.ctaBtnText}>
+                {isFull
+                  ? "Liste d'attente complète"
+                  : !isEligible
+                    ? "Non éligible pour le moment"
+                    : hasActiveRegistration
+                      ? "Déjà inscrit à une autre collecte"
                       : "S'inscrire à cette collecte"}
-                </Text>
-                {isFull || !isEligible ? null : (
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
-                      backgroundColor: "rgba(255,255,255,0.18)",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <Ionicons name="checkmark-outline" size={17} color="#fff" />
-                  </View>
-                )}
-              </>
+              </Text>
             )}
           </TouchableOpacity>
         )}
