@@ -8,9 +8,12 @@ import {
   Modal,
   Dimensions,
   Platform,
-  StyleSheet, // ✅ CORRECTION : Importé depuis react-native
+  StyleSheet,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -19,13 +22,15 @@ import { useScanDonation } from "@/src/hooks/useDonations";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SCAN_SIZE = SCREEN_WIDTH * 0.7;
 const TAB_BAR_HEIGHT = Platform.OS === "ios" ? 85 : 65;
 
 export default function ScanScreen() {
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
   const colors = useColors();
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -69,7 +74,6 @@ export default function ScanScreen() {
     overlay: {
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.6)",
-      paddingBottom: TAB_BAR_HEIGHT,
     },
     header: {
       flexDirection: "row",
@@ -285,13 +289,13 @@ export default function ScanScreen() {
   return (
     <View style={styles.container}>
       <CameraView
-        style={StyleSheet.absoluteFillObject} // ✅ CORRECTION : Utilise bien le StyleSheet de react-native
+        style={StyleSheet.absoluteFillObject}
         facing="back"
         onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         enableTorch={flashOn}
       >
-        <SafeAreaView style={styles.overlay} edges={["top"]}>
+        <SafeAreaView style={[styles.overlay, { paddingBottom: tabBarHeight }]} edges={["top"]}>
           {/* ── Header ── */}
           <View style={styles.header}>
             <TouchableOpacity

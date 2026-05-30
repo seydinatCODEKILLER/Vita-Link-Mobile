@@ -8,7 +8,10 @@ import {
   Animated,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -18,6 +21,7 @@ import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { AlertResponseStatus } from "@/src/types/shared.types";
 import { useSocket } from "@/src/hooks/useSocket";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { AppColors } from "@/src/theme/colors";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
@@ -293,7 +297,8 @@ function DonorResponseRow({
 
 // ─── Écran Principal ───────────────────────────────────────────
 export default function AlertDashboardScreen() {
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
   const { socketRef } = useSocket();
   const colors = useColors();
@@ -376,7 +381,7 @@ export default function AlertDashboardScreen() {
     footer: {
       paddingHorizontal: 24,
       paddingTop: 12,
-      paddingBottom: 12,
+      paddingBottom: 12 + tabBarHeight, // ← correction
       backgroundColor: c.bg,
       borderTopWidth: 0.5,
       borderTopColor: c.cardBorder,
@@ -453,7 +458,7 @@ export default function AlertDashboardScreen() {
   // ── 1. Chargement initial (Skeleton) ───────────────────────
   if (isLoading && !data) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <DashboardSkeleton colors={colors} />
       </SafeAreaView>
     );
@@ -462,7 +467,7 @@ export default function AlertDashboardScreen() {
   // ── 2. Erreur réseau sans cache ────────────────────────────
   if (hasNetworkError && !data) {
     return (
-      <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+      <SafeAreaView style={styles.container} edges={["top"]}>
         <NetworkErrorScreen onRetry={refetch} />
       </SafeAreaView>
     );
@@ -474,10 +479,7 @@ export default function AlertDashboardScreen() {
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="alert-circle-outline" size={40} color={colors.red} />
         <Text style={styles.errorText}>Données indisponibles</Text>
-        <TouchableOpacity
-          onPress={goBack}
-          style={styles.errorBack}
-        >
+        <TouchableOpacity onPress={goBack} style={styles.errorBack}>
           <Text style={styles.errorBackText}>Retour</Text>
         </TouchableOpacity>
       </View>
@@ -492,7 +494,7 @@ export default function AlertDashboardScreen() {
     alert.status === "EXPIRED" ? colors.amber : colors.success;
 
   return (
-    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}

@@ -9,7 +9,10 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -185,6 +188,7 @@ export default function StockScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
   const STOCK_LEVEL_CONFIG = getStockLevelConfig(colors);
+  const insets = useSafeAreaInsets();
 
   // ✅ AJOUT : Extraction de `isError`, `error` et `refetch`
   const { data: stocks, isLoading, isError, error, refetch } = useMyStocks();
@@ -312,6 +316,7 @@ export default function StockScreen() {
       borderColor: c.cardBorder,
       padding: 24,
       paddingTop: 16,
+      paddingBottom: Math.max(24, tabBarHeight + insets.bottom), // ← correction
       gap: 14,
       alignItems: "center",
     },

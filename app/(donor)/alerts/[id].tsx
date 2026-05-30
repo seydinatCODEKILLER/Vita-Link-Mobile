@@ -16,7 +16,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import MapView, { Marker, Circle } from "react-native-maps";
+// import MapView, { Marker, Circle } from "react-native-maps";
 import * as Haptics from "expo-haptics";
 import { useIsEligible } from "@/src/hooks/useAuthStore";
 import {
@@ -39,7 +39,6 @@ import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
 import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
 import { AppColors } from "@/src/theme/colors";
-// ✅ AJOUT : Imports pour la gestion d'erreur réseau
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
 
@@ -736,9 +735,11 @@ export default function AlertDetailScreen() {
     (alert.quantityConfirmed / alert.quantityNeeded) * 100,
     100,
   );
-  const hasCoords =
-    alert.healthStructure.latitude != null &&
-    alert.healthStructure.longitude != null;
+  // const hasCoords =
+  //   alert.healthStructure.latitude != null &&
+  //   alert.healthStructure.longitude != null;
+
+  const hasCoords = false; 
 
   return (
     <View style={styles.container}>
@@ -837,7 +838,7 @@ export default function AlertDetailScreen() {
           </View>
 
           {/* ── Carte ── */}
-          {hasCoords && (
+          {/* {hasCoords && (
             <View style={styles.mapContainer}>
               <MapView
                 style={styles.map}
@@ -881,7 +882,7 @@ export default function AlertDetailScreen() {
                 </Text>
               </View>
             </View>
-          )}
+          )} */}
 
           {/* ── Infos ── */}
           <View style={styles.section}>
