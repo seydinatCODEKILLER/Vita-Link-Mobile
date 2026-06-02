@@ -1,4 +1,6 @@
 import {
+  AffiliatedHospital,
+  AvailableCnts,
   HealthStructure,
   StaffMember,
   StructureStats,
@@ -64,5 +66,23 @@ export const healthStructuresApi = {
       structure: HealthStructure;
     }>("/health-structures/me", data);
     return responseData.structure;
+  },
+
+  // ── GET /health-structures/me/affiliated-hospitals ────────
+  getAffiliatedHospitals: async (filters?: {
+    status?: string;
+  }): Promise<AffiliatedHospital[]> => {
+    const { data } = await api.get<{
+      success: boolean;
+      hospitals: AffiliatedHospital[];
+    }>("/health-structures/me/affiliated-hospitals", { params: filters });
+    return data.hospitals;
+  },
+
+  getAvailableCnts: async (): Promise<AvailableCnts[]> => {
+    const { data } = await api.get<{ success: boolean; data: AvailableCnts[] }>(
+      "/auth/cnts/available",
+    );
+    return data.data;
   },
 };

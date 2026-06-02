@@ -26,7 +26,7 @@ export const QUERY_KEYS = {
   publishedDays: (filters?: object) => ["donation-days", "published", filters],
   donationDay: (id: string) => ["donation-days", id],
   dayRegistrations: (id: string) => ["donation-days", id, "registrations"],
-  myRegistrations: (filters?: object) => [ // ✅ Mis à jour pour accepter les filtres
+  myRegistrations: (filters?: object) => [
     "donation-days",
     "my-registrations",
     filters,
@@ -48,7 +48,7 @@ export const QUERY_KEYS = {
   rewards: ["rewards"],
   myCoupons: ["coupons", "me"],
 
-  // ✅ Blood Stocks
+  // Blood Stocks
   bloodStocks: ["blood-stocks", "me"],
 
   // Health Structures
@@ -56,6 +56,14 @@ export const QUERY_KEYS = {
   myStructureStaff: ["health-structures", "me", "staff"],
   myStructureStats: ["health-structures", "me", "stats"],
   structureStats: ["structure", "stats"],
+
+  // 🆕 Dashboards (CNTS & Hôpital)
+  cntsDashboard: (limit?: number) => ["dashboard", "cnts", limit],
+  hospitalDashboard: (limit?: number) => ["dashboard", "hospital", limit],
+
+  // 🆕 Blood Requests (Demandes de sang hôpitaux)
+  bloodRequests: (filters?: object) => ["blood-requests", filters],
+  bloodRequest: (id: string) => ["blood-requests", id],
 
   // Notifications
   myNotifications: ["notifications", "me"],

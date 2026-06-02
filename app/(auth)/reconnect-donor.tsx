@@ -70,15 +70,7 @@ export default function ReconnectDonorScreen() {
 
       router.push({
         pathname: "/(auth)/otp-verify",
-        params: {
-          email: values.email,
-          phone: "",
-          firstName: "",
-          lastName: "",
-          bloodType: "",
-          gender: "",
-          dateOfBirth: "",
-        },
+        params: { email: values.email },
       });
     } catch {
       // L'erreur est déjà gérée par le Toast dans le hook useResendOtp

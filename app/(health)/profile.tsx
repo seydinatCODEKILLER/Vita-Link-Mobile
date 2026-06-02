@@ -126,7 +126,7 @@ function ProfileRow({
 export default function HealthProfileScreen() {
   const router = useRouter();
   const colors = useColors();
-  const theme = useThemeStore((s) => s.theme); // Récupération du thème actuel
+  const theme = useThemeStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
   const { data: structure, isLoading: isStructureLoading } = useMyStructure();
   useUpdateAvailability();
@@ -244,7 +244,6 @@ export default function HealthProfileScreen() {
       opacity: 0.5,
       marginTop: 4,
     },
-    // ─── Styles pour la section Apparence ───
     themeRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -316,7 +315,7 @@ export default function HealthProfileScreen() {
           ]}
         >
           <Text style={styles.headerTitle}>
-            Notre <Text style={{ color: colors.red }}>Structure</Text>
+            Notre <Text style={{ color: colors.red }}>CNTS</Text>
           </Text>
           <ThemeToggle size={40} />
         </Animated.View>
@@ -349,11 +348,15 @@ export default function HealthProfileScreen() {
                     borderColor: colors.red + "30",
                   }}
                 >
-                  <Ionicons name="business" size={28} color={colors.red} />
+                  <Ionicons
+                    name="medkit-outline"
+                    size={28}
+                    color={colors.red}
+                  />
                 </View>
                 <View style={styles.heroInfo}>
                   <Text style={styles.structureName} numberOfLines={2}>
-                    {structure?.name ?? "Structure de Santé"}
+                    {structure?.name ?? "Centre National de Transfusion"}
                   </Text>
                   {structure?.address && (
                     <Text style={styles.structureAddress} numberOfLines={1}>
@@ -429,14 +432,16 @@ export default function HealthProfileScreen() {
               label="Alertes actives"
               value="Gérer"
               valueColor={colors.red}
-              onPress={() => router.push("/(health)/alerts?from=profile" as any)}
+              onPress={() =>
+                router.push("/(health)/alerts?from=profile" as any)
+              }
               colors={colors}
             />
             <View style={styles.sep} />
             <ProfileRow
               icon="scan-outline"
               label="Scanner un don"
-              value="Valider un don"
+              value="Valider"
               valueColor={colors.success}
               onPress={() => router.push("/(health)/scan?from=profile" as any)}
               colors={colors}
@@ -461,7 +466,7 @@ export default function HealthProfileScreen() {
               icon="people-outline"
               label="Gérer le personnel"
               value="Équipe"
-              valueColor="#60A5FA" // Bleu hors palette
+              valueColor="#60A5FA"
               onPress={() => router.push("/(health)/staff?from=profile" as any)}
               colors={colors}
             />
@@ -507,7 +512,7 @@ export default function HealthProfileScreen() {
               </>
             )}
           </TouchableOpacity>
-          <Text style={styles.versionText}>Vita-Link Health v1.0.0</Text>
+          <Text style={styles.versionText}>Vita-Link CNTS v2.0.0</Text>
         </Animated.View>
       </ScrollView>
     </SafeAreaView>

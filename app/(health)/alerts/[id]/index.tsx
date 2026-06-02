@@ -13,7 +13,6 @@ import * as Haptics from "expo-haptics";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useAlert } from "@/src/hooks/useAlerts";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
-import { useAuthStore } from "@/src/store/auth.store";
 import dayjs from "dayjs";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
@@ -21,6 +20,7 @@ import { AppColors } from "@/src/theme/colors";
 // ─── Imports pour l'erreur réseau ─────────────────────────────
 import { isNetworkError } from "@/src/utils/error.utils";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { useIsCnts } from "@/src/hooks/useAuthStore";
 
 // ─── Skeleton Détail Alerte ────────────────────────────────────
 function AlertDetailSkeleton({ colors }: { colors: AppColors }) {
@@ -83,10 +83,10 @@ function AlertDetailSkeleton({ colors }: { colors: AppColors }) {
 export default function AlertDetailScreen() {
   const router = useRouter();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
-  const user = useAuthStore((s) => s.user);
   const tabBarHeight = useBottomTabBarHeight();
   const colors = useColors();
 
+  const isCnts = useIsCnts();
   // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
   const { data: alert, isLoading, isError, error, refetch } = useAlert(alertId);
 
@@ -490,6 +490,54 @@ export default function AlertDetailScreen() {
             </View>
           </View>
 
+          {/* ── Bannière d'Origine (Escalade Hôpital) ── */}
+          {alert.origin === "CNTS_ESCALATION" && (
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 10,
+                backgroundColor: colors.amber + "12",
+                borderWidth: 0.5,
+                borderColor: colors.amber + "30",
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  backgroundColor: colors.amber + "1F",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons
+                  name="business-outline"
+                  size={16}
+                  color={colors.amber}
+                />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text
+                  style={{
+                    color: colors.amber,
+                    fontSize: 12,
+                    fontWeight: "700",
+                  }}
+                >
+                  Escalade Hôpital
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                  Alerte créée suite à une demande de sang critique d&apos;un
+                  hôpital affilié.
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Info Grid ── */}
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
@@ -555,7 +603,7 @@ export default function AlertDetailScreen() {
           </View>
 
           {/* ── Dashboard ── */}
-          {isActive && user?.isStructureAdmin && (
+          {isActive && isCnts && (
             <TouchableOpacity
               style={styles.dashboardBtn}
               onPress={handleGoToDashboard}

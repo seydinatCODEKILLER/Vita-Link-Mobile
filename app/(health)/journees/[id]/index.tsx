@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { Image } from "expo-image";
@@ -303,10 +303,10 @@ export default function DayDetailScreen() {
   const colors = useColors();
   const tabBarHeight = useBottomTabBarHeight();
   const goBack = useSmartBack({
-    defaultRoute: "/(health)/journees", // Retour à la liste
+    defaultRoute: "/(health)/journees",
     routeMap: {
       journees: "/(health)/journees",
-      edit: `/(health)/journees/${id}/edit`, // Si on revient de l'édition
+      edit: `/(health)/journees/${id}/edit`,
     },
   });
 
@@ -334,6 +334,17 @@ export default function DayDetailScreen() {
   >("ALL");
   const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    if (isCancelModalVisible) {
+      const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+        e.preventDefault();
+      });
+      return unsubscribe;
+    }
+  }, [isCancelModalVisible, navigation]);
 
   const styles = useThemedStyles((c) => ({
     container: {

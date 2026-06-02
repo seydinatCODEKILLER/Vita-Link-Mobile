@@ -55,6 +55,7 @@ export default function RootLayout() {
             <Stack.Screen name="(auth)" />
             <Stack.Screen name="(donor)" />
             <Stack.Screen name="(health)" />
+            <Stack.Screen name="(hospital)" />
             <Stack.Screen name="+not-found" />
           </Stack>
           <Toast config={toastConfig} />

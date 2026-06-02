@@ -93,7 +93,14 @@ function DonationsSkeleton({ colors }: { colors: AppColors }) {
 // ─── Donation Card ─────────────────────────────────────────────
 function DonationCard({ item, colors }: { item: Donation; colors: AppColors }) {
   const alertData = item.alertResponse?.alert;
-  const hospitalName = alertData?.healthStructure.name ?? "Hôpital";
+
+  // 🆕 Structure où le don a été validé (Le CNTS)
+  const validationStructureName =
+    item.healthStructure?.name ?? "Centre de collecte";
+
+  // Structure qui avait lancé l'alerte (L'hôpital)
+  const alertOriginName = alertData?.healthStructure.name;
+
   const bloodLabel = alertData?.bloodType
     ? (BLOOD_TYPE_LABELS[alertData.bloodType] ?? alertData.bloodType)
     : "?";
@@ -115,7 +122,7 @@ function DonationCard({ item, colors }: { item: Donation; colors: AppColors }) {
         gap: 12,
       }}
     >
-      {/* Top Row */}
+      {/* Top Row : Lieu de validation (CNTS) */}
       <View
         style={{
           flexDirection: "row",
@@ -136,15 +143,15 @@ function DonationCard({ item, colors }: { item: Donation; colors: AppColors }) {
               width: 26,
               height: 26,
               borderRadius: 8,
-              backgroundColor: colors.cardBorder,
+              backgroundColor: "rgba(220,30,30,0.12)",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             <Ionicons
-              name="business-outline"
+              name="water-outline" // 🆕 Icône CNTS
               size={14}
-              color={colors.textMuted}
+              color={colors.red}
             />
           </View>
           <Text
@@ -156,7 +163,7 @@ function DonationCard({ item, colors }: { item: Donation; colors: AppColors }) {
             }}
             numberOfLines={1}
           >
-            {hospitalName}
+            {validationStructureName}
           </Text>
         </View>
         <Text
@@ -166,7 +173,7 @@ function DonationCard({ item, colors }: { item: Donation; colors: AppColors }) {
         </Text>
       </View>
 
-      {/* Middle Row */}
+      {/* Middle Row : Groupe sanguin + Points */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <View
           style={{
@@ -244,10 +251,28 @@ function DonationCard({ item, colors }: { item: Donation; colors: AppColors }) {
         )}
       </View>
 
-      {/* Time ago */}
-      <Text style={{ color: colors.textSubtle, fontSize: 11, marginTop: -4 }}>
-        {donatedTimeAgo}
-      </Text>
+      {/* 🆕 Bottom Row : Alerte d'origine (Pourquoi le don ?) */}
+      {alertOriginName && (
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            marginTop: -4,
+          }}
+        >
+          <Ionicons name="medkit-outline" size={12} color={colors.textSubtle} />
+          <Text
+            style={{ color: colors.textSubtle, fontSize: 11, flex: 1 }}
+            numberOfLines={1}
+          >
+            Alleur pour {alertOriginName}
+          </Text>
+          <Text style={{ color: colors.textSubtle, fontSize: 11 }}>
+            {donatedTimeAgo}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -331,7 +356,7 @@ export default function DonationsScreen() {
     loaderMore: { paddingVertical: 20, alignItems: "center" },
   }));
 
-    const goBack = useSmartBack({
+  const goBack = useSmartBack({
     defaultRoute: "/(donor)/profile", // Par défaut, retour au profil
     routeMap: {
       profile: "/(donor)/profile",

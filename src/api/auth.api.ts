@@ -2,7 +2,9 @@ import {
   AuthResponse,
   LoginPayload,
   RefreshResponse,
+  RegisterCntsPayload,
   RegisterDonorPayload,
+  RegisterHospitalPayload,
   RegisterStructurePayload,
   RegisterStructureResponse,
   VerifyOtpPayload,
@@ -29,6 +31,26 @@ export const authApi = {
     const { data } = await api.post<
       { success: boolean } & RegisterStructureResponse
     >("/auth/register/health-structure", payload);
+    return data;
+  },
+
+  // ── POST /auth/register/cnts ──────────────────────────────
+  registerCnts: async (
+    payload: RegisterCntsPayload,
+  ): Promise<RegisterStructureResponse> => {
+    const { data } = await api.post<
+      { success: boolean } & RegisterStructureResponse
+    >("/auth/register/cnts", payload);
+    return data;
+  },
+
+  // ── POST /auth/register/hospital ──────────────────────────
+  registerHospital: async (
+    payload: RegisterHospitalPayload,
+  ): Promise<RegisterStructureResponse> => {
+    const { data } = await api.post<
+      { success: boolean } & RegisterStructureResponse
+    >("/auth/register/hospital", payload);
     return data;
   },
 

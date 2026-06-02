@@ -1,4 +1,8 @@
-import { BloodStockLevel, BloodType, HealthStructureStatus } from "./shared.types";
+import {
+  BloodStockLevel,
+  BloodType,
+  HealthStructureStatus,
+} from "./shared.types";
 
 export interface StructureStats {
   totalDonations: number;
@@ -31,14 +35,47 @@ export interface HealthStructure {
   createdAt: string;
 }
 
+export type StaffRole = "CNTS_ADMIN" | "CNTS_AGENT" | "HOSPITAL_AGENT";
+
 export interface StaffMember {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
-  avatarUrl: string | null;
+  role: StaffRole;
   isStructureAdmin: boolean;
   isActive: boolean;
   createdAt: string;
+}
+
+export interface AffiliatedHospital {
+  id: string;
+  name: string;
+  structureType: "HOSPITAL" | "HEALTH_CENTER";
+  status: HealthStructureStatus;
+  address: string;
+  region: string;
+  phone: string | null;
+  email: string | null;
+  _count: {
+    staffMembers: number;
+  };
+}
+
+export interface HospitalDetail extends AffiliatedHospital {
+  bloodRequests: {
+    id: string;
+    bloodType: string;
+    quantityNeeded: number;
+    status: string;
+    createdAt: string;
+  }[];
+}
+
+export interface AvailableCnts {
+  id: string;
+  name: string;
+  region: string;
+  address: string;
 }

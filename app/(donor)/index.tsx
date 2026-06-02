@@ -564,10 +564,20 @@ export default function DonorHomeScreen() {
     alerts?.filter((a) => a.urgencyLevel === "VITAL").length ?? 0;
 
   const handleOpenQrCode = useCallback(
-    (qrCode: string, alertId: string, isExpired: boolean) =>
+    (
+      qrCode: string,
+      alertId: string,
+      isExpired: boolean,
+      origin: string, // 🆕 Ajout de origin
+    ) =>
       router.push({
         pathname: "/(donor)/qrcode" as any,
-        params: { qrCode, alertId, isExpired: isExpired ? "true" : "false" },
+        params: {
+          qrCode,
+          alertId,
+          isExpired: isExpired ? "true" : "false",
+          origin, // 🆕 On passe l'origine au QR Code Screen
+        },
       }),
     [router],
   );
@@ -755,15 +765,24 @@ export default function DonorHomeScreen() {
                 isExpired={displayedEngagement.type === "expired"}
                 colors={colors}
                 onPress={() => {
-                  const alertId =
-                    displayedEngagement.type === "active"
-                      ? (displayedEngagement.data as ActiveEngagement).alert.id
-                      : (displayedEngagement.data as PendingQr).alertId;
-                  handleOpenQrCode(
-                    displayedEngagement.data.qrCode,
-                    alertId,
-                    displayedEngagement.type === "expired",
-                  );
+                  if (displayedEngagement.type === "active") {
+                    const activeData =
+                      displayedEngagement.data as ActiveEngagement;
+                    handleOpenQrCode(
+                      activeData.qrCode,
+                      activeData.alert.id,
+                      false,
+                      activeData.alert.origin, // 🆕 On récupère l'origine depuis les données de l'API
+                    );
+                  } else {
+                    const localData = displayedEngagement.data as PendingQr;
+                    handleOpenQrCode(
+                      localData.qrCode,
+                      localData.alertId,
+                      true,
+                      "HOSPITAL_DIRECT", // 🆕 Fallback par défaut si c'est un QR local expiré
+                    );
+                  }
                 }}
               />
             )}

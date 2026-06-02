@@ -659,17 +659,7 @@ export default function RegisterDonorScreen() {
 
       router.push({
         pathname: "/otp-verify",
-        params: {
-          email: finalData.email,
-          phone: finalData.phone,
-          firstName: finalData.firstName,
-          lastName: finalData.lastName,
-          bloodType: finalData.bloodType,
-          gender: finalData.gender,
-          dateOfBirth: finalData.dateOfBirth
-            ? new Date(finalData.dateOfBirth).toISOString()
-            : "",
-        },
+        params: { email: finalData.email },
       });
     } catch (err: any) {
       console.warn("Register donor failed", err);

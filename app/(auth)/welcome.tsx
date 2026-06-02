@@ -395,11 +395,20 @@ export default function WelcomeScreen() {
             variant="primary"
             colors={colors}
           />
+          {/* 🆕 Séparation CNTS / Hôpital */}
           <ActionButton
-            icon="business"
+            icon="business" // ou "medkit-outline"
             label="Je suis un hôpital"
-            sublabel="Enregistrement de structure"
-            onPress={() => router.push("/register-structure")}
+            sublabel="Inscription structure de soin"
+            onPress={() => router.push("/register-hospital")}
+            variant="secondary"
+            colors={colors}
+          />
+          <ActionButton
+            icon="water-outline" // ou "flask-outline"
+            label="Je suis la CNTS"
+            sublabel="Centre National de Transfusion"
+            onPress={() => router.push("/register-cnts")}
             variant="secondary"
             colors={colors}
           />

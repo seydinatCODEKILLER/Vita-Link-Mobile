@@ -9,7 +9,6 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
@@ -119,7 +118,7 @@ function CouponsSkeleton({ colors }: { colors: AppColors }) {
   );
 }
 
-// ─── Composant Reward Card ────────────────────────────────────
+// ─── Reward Card ──────────────────────────────────────────────
 function RewardCard({
   reward,
   userPoints,
@@ -136,22 +135,55 @@ function RewardCard({
   const pointsNeeded = reward.pointsCost - userPoints;
   const progressPct = Math.min((userPoints / reward.pointsCost) * 100, 100);
 
+  const accentColor = canAfford ? colors.success : colors.amber;
+
   const styles = useThemedStyles((c) => ({
-    rewardCard: {
+    // Outer card
+    card: {
       backgroundColor: c.cardBg,
-      borderRadius: 18,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: c.cardBorder,
-      padding: 16,
+      overflow: "hidden",
       marginBottom: 12,
-      gap: 10,
     },
-    partnerRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-    partnerIcon: {
-      width: 24,
-      height: 24,
-      borderRadius: 6,
-      backgroundColor: c.cardBorder,
+
+    // Top color accent bar
+    accentBar: {
+      height: 3,
+      width: "100%",
+    },
+
+    // Body padding
+    body: {
+      padding: 16,
+      paddingBottom: 14,
+      gap: 0,
+    },
+
+    // Partner chip
+    partnerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: 11,
+    },
+    partnerChip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingVertical: 4,
+      paddingLeft: 5,
+      paddingRight: 8,
+      borderRadius: 8,
+      backgroundColor: c.cardBorder + "30",
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+    },
+    partnerIconBox: {
+      width: 18,
+      height: 18,
+      borderRadius: 5,
+      backgroundColor: c.cardBorder + "50",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -159,110 +191,152 @@ function RewardCard({
       color: c.textMuted,
       fontSize: 11,
       fontWeight: "600",
-      flex: 1,
     },
-    rewardTitle: {
+
+    // Title / desc
+    title: {
       color: c.white,
       fontSize: 16,
       fontWeight: "800",
       letterSpacing: -0.3,
+      lineHeight: 21,
+      marginBottom: 5,
     },
-    rewardDesc: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
-    costBlock: { gap: 6 },
-    costRow: {
+    desc: {
+      color: c.textSubtle,
+      fontSize: 12,
+      lineHeight: 19,
+      marginBottom: 14,
+    },
+
+    // Cost
+    costTop: {
       flexDirection: "row",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: "baseline",
+      marginBottom: 7,
     },
-    costValue: { fontSize: 14, fontWeight: "800" },
-    missingText: { color: c.textSubtle, fontSize: 11, fontWeight: "600" },
-    costBarBg: {
-      height: 4,
-      borderRadius: 2,
+    costPts: {
+      fontSize: 19,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
+    costRight: {
+      fontSize: 11,
+      fontWeight: "600",
+    },
+    progressTrack: {
+      height: 5,
+      borderRadius: 3,
       backgroundColor: c.cardBorder,
       overflow: "hidden",
     },
-    costBarFill: { height: "100%", borderRadius: 2 },
-    redeemBtn: {
+    progressFill: {
+      height: "100%",
+      borderRadius: 3,
+    },
+
+    // Redeem button zone (bottom of card)
+    redeemZone: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
       gap: 8,
-      paddingVertical: 12,
-      borderRadius: 12,
-      marginTop: 4,
+      paddingVertical: 13,
     },
-    redeemActive: { backgroundColor: c.success },
+    redeemActive: {
+      backgroundColor: c.success + "18",
+      borderTopWidth: 1,
+      borderTopColor: c.success + "22",
+    },
     redeemLocked: {
       backgroundColor: c.cardBg,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
+      borderTopWidth: 1,
+      borderTopColor: c.cardBorder,
     },
-    redeemText: { color: c.white, fontSize: 13, fontWeight: "700" },
-    redeemTextLocked: { color: c.textSubtle, fontSize: 12, fontWeight: "600" },
+    redeemText: {
+      fontSize: 13,
+      fontWeight: "700",
+    },
   }));
 
   return (
-    <View style={styles.rewardCard}>
-      <View style={styles.partnerRow}>
-        <View style={styles.partnerIcon}>
-          <Ionicons
-            name="business-outline"
-            size={14}
-            color={colors.textMuted}
-          />
+    <View style={styles.card}>
+      {/* Accent bar */}
+      <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
+
+      {/* Body */}
+      <View style={styles.body}>
+        {/* Partner chip */}
+        <View style={styles.partnerRow}>
+          <View style={styles.partnerChip}>
+            <View style={styles.partnerIconBox}>
+              <Ionicons
+                name="business-outline"
+                size={11}
+                color={colors.textMuted}
+              />
+            </View>
+            <Text style={styles.partnerName} numberOfLines={1}>
+              {reward.partner.name}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.partnerName} numberOfLines={1}>
-          {reward.partner.name}
+
+        {/* Title & desc */}
+        <Text style={styles.title} numberOfLines={2}>
+          {reward.title}
         </Text>
-      </View>
-      <Text style={styles.rewardTitle} numberOfLines={2}>
-        {reward.title}
-      </Text>
-      <Text style={styles.rewardDesc} numberOfLines={2}>
-        {reward.description}
-      </Text>
-      <View style={styles.costBlock}>
-        <View style={styles.costRow}>
-          <Text
-            style={[
-              styles.costValue,
-              { color: canAfford ? colors.success : colors.amber },
-            ]}
-          >
-            {reward.pointsCost} pts
+        <Text style={styles.desc} numberOfLines={2}>
+          {reward.description}
+        </Text>
+
+        {/* Cost + progress */}
+        <View style={styles.costTop}>
+          <Text style={[styles.costPts, { color: accentColor }]}>
+            {reward.pointsCost.toLocaleString()} pts
           </Text>
-          {!canAfford && (
-            <Text style={styles.missingText}>-{pointsNeeded} pts</Text>
+          {canAfford ? (
+            <Text style={[styles.costRight, { color: colors.success }]}>
+              ✓ Solde suffisant
+            </Text>
+          ) : (
+            <Text style={[styles.costRight, { color: colors.textSubtle }]}>
+              − {pointsNeeded.toLocaleString()} pts manquants
+            </Text>
           )}
         </View>
-        <View style={styles.costBarBg}>
+        <View style={styles.progressTrack}>
           <View
             style={[
-              styles.costBarFill,
+              styles.progressFill,
               {
                 width: `${progressPct}%`,
-                backgroundColor: canAfford ? colors.success : colors.amber,
+                backgroundColor: accentColor,
               },
             ]}
           />
         </View>
       </View>
+
+      {/* Redeem zone */}
       <TouchableOpacity
         style={[
-          styles.redeemBtn,
+          styles.redeemZone,
           canAfford ? styles.redeemActive : styles.redeemLocked,
         ]}
         onPress={() => canAfford && onRedeem(reward.id)}
-        activeOpacity={canAfford ? 0.8 : 1}
+        activeOpacity={canAfford ? 0.75 : 1}
         disabled={!canAfford || isRedeeming}
       >
         {isRedeeming ? (
-          <ActivityIndicator color={colors.white} size="small" />
+          <ActivityIndicator color={colors.success} size="small" />
         ) : canAfford ? (
           <>
-            <Ionicons name="gift-outline" size={16} color={colors.white} />
-            <Text style={styles.redeemText}>Échanger</Text>
+            <Ionicons name="gift-outline" size={16} color={colors.success} />
+            <Text style={[styles.redeemText, { color: colors.success }]}>
+              Échanger maintenant
+            </Text>
           </>
         ) : (
           <>
@@ -271,7 +345,14 @@ function RewardCard({
               size={14}
               color={colors.textSubtle}
             />
-            <Text style={styles.redeemTextLocked}>Points insuffisants</Text>
+            <Text
+              style={[
+                styles.redeemText,
+                { color: colors.textSubtle, fontWeight: "600", fontSize: 12 },
+              ]}
+            >
+              Points insuffisants
+            </Text>
           </>
         )}
       </TouchableOpacity>
@@ -279,109 +360,179 @@ function RewardCard({
   );
 }
 
-// ─── Composant Coupon Card ────────────────────────────────────
+// ─── Coupon Card ──────────────────────────────────────────────
 function CouponCard({ coupon }: { coupon: Coupon }) {
   const colors = useColors();
+
   const isActive = coupon.status === "ACTIVE";
   const isUsed = coupon.status === "USED";
+  const isExpired = coupon.status === "EXPIRED";
+
   const statusColor = isActive
     ? colors.success
     : isUsed
-      ? colors.textMuted
+      ? colors.textSubtle
       : colors.amber;
+
   const statusLabel = isActive ? "Actif" : isUsed ? "Utilisé" : "Expiré";
+  const statusEmoji = isActive ? "🎫" : isUsed ? "✅" : "⏳";
 
   const styles = useThemedStyles((c) => ({
-    couponCard: {
+    card: {
       flexDirection: "row",
+      alignItems: "stretch",
       backgroundColor: c.cardBg,
       borderRadius: 16,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      padding: 14,
-      marginBottom: 10,
-      gap: 12,
+      borderWidth: isActive ? 1.5 : 1,
+      borderColor: isActive ? c.success + "38" : c.cardBorder,
       overflow: "hidden",
+      marginBottom: 10,
     },
-    couponActive: { borderWidth: 1.5, borderColor: c.success + "30" },
-    couponStripe: {
-      width: 44,
+
+    // Left stripe
+    stripe: {
+      width: 54,
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: 10,
       flexShrink: 0,
+      backgroundColor: isActive
+        ? c.success + "12"
+        : isUsed
+          ? c.cardBorder + "20"
+          : c.amber + "10",
+      opacity: isUsed ? 0.55 : 1,
     },
-    couponTypeIcon: { fontSize: 20 },
-    couponContent: { flex: 1, gap: 4 },
-    couponTitle: { color: c.white, fontSize: 14, fontWeight: "700" },
-    couponPartner: { color: c.textMuted, fontSize: 11 },
-    couponMeta: {
+    stripeDivider: {
+      position: "absolute",
+      right: 0,
+      top: "15%",
+      bottom: "15%",
+      width: 1,
+      backgroundColor: c.cardBorder,
+    },
+    stripeEmoji: {
+      fontSize: 20,
+    },
+
+    // Body
+    body: {
+      flex: 1,
+      paddingVertical: 13,
+      paddingLeft: 14,
+      paddingRight: 12,
+      opacity: isUsed || isExpired ? 0.55 : 1,
+      gap: 0,
+    },
+    title: {
+      color: c.white,
+      fontSize: 14,
+      fontWeight: "700",
+      marginBottom: 3,
+    },
+    partner: {
+      color: c.textSubtle,
+      fontSize: 11,
+      marginBottom: 9,
+    },
+    metaRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      marginTop: 4,
     },
-    couponStatusPill: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 6,
-      borderWidth: 1,
+
+    // Status pill
+    pill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+      paddingVertical: 3,
+      paddingHorizontal: 9,
+      borderRadius: 20,
     },
-    couponStatusText: { fontSize: 10, fontWeight: "700" },
-    couponExpiry: { color: c.textSubtle, fontSize: 10 },
-    couponCodeBlock: {
+    pillDot: {
+      width: 5,
+      height: 5,
+      borderRadius: 3,
+    },
+    pillText: {
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 0.3,
+    },
+
+    expiry: {
+      color: c.textSubtle,
+      fontSize: 10,
+    },
+
+    // Code block (active only)
+    codeBlock: {
+      paddingVertical: 12,
+      paddingHorizontal: 14,
       alignItems: "flex-end",
       justifyContent: "center",
       flexShrink: 0,
     },
-    couponCodeLabel: {
-      color: c.textSubtle,
-      fontSize: 8,
+    codeLabel: {
+      fontSize: 9,
       fontWeight: "700",
-      letterSpacing: 1,
+      letterSpacing: 1.2,
+      color: c.textSubtle,
+      textTransform: "uppercase",
+      marginBottom: 4,
     },
-    couponCodeValue: { color: c.amber, fontSize: 11, fontWeight: "800" },
+    codeValue: {
+      fontSize: 12,
+      fontWeight: "800",
+      color: c.amber,
+      fontVariant: ["tabular-nums"],
+      backgroundColor: c.amber + "12",
+      paddingVertical: 4,
+      paddingHorizontal: 9,
+      borderRadius: 7,
+      borderWidth: 1,
+      borderColor: c.amber + "25",
+      overflow: "hidden",
+    },
   }));
 
   return (
-    <View style={[styles.couponCard, isActive && styles.couponActive]}>
-      <View
-        style={[styles.couponStripe, { backgroundColor: statusColor + "30" }]}
-      >
-        <Text style={[styles.couponTypeIcon, { color: statusColor }]}>
-          {isActive ? "🎫" : isUsed ? "✅" : "⏳"}
-        </Text>
+    <View style={styles.card}>
+      {/* Left stripe */}
+      <View style={styles.stripe}>
+        <Text style={styles.stripeEmoji}>{statusEmoji}</Text>
+        <View style={styles.stripeDivider} />
       </View>
-      <View style={styles.couponContent}>
-        <Text style={styles.couponTitle} numberOfLines={1}>
+
+      {/* Body */}
+      <View style={styles.body}>
+        <Text style={styles.title} numberOfLines={1}>
           {coupon.reward.title}
         </Text>
-        <Text style={styles.couponPartner}>{coupon.reward.partner.name}</Text>
-        <View style={styles.couponMeta}>
-          <View
-            style={[
-              styles.couponStatusPill,
-              {
-                backgroundColor: statusColor + "15",
-                borderColor: statusColor + "30",
-              },
-            ]}
-          >
-            <Text style={[styles.couponStatusText, { color: statusColor }]}>
+        <Text style={styles.partner}>{coupon.reward.partner.name}</Text>
+
+        <View style={styles.metaRow}>
+          {/* Status pill */}
+          <View style={[styles.pill, { backgroundColor: statusColor + "15" }]}>
+            <View style={[styles.pillDot, { backgroundColor: statusColor }]} />
+            <Text style={[styles.pillText, { color: statusColor }]}>
               {statusLabel}
             </Text>
           </View>
+
           {isActive && coupon.expiresAt && (
-            <Text style={styles.couponExpiry}>
+            <Text style={styles.expiry}>
               Expire {dayjs(coupon.expiresAt).format("DD MMM")}
             </Text>
           )}
         </View>
       </View>
+
+      {/* Code block (active coupons only) */}
       {isActive && (
-        <View style={styles.couponCodeBlock}>
-          <Text style={styles.couponCodeLabel}>CODE</Text>
-          <Text style={styles.couponCodeValue}>{coupon.code}</Text>
+        <View style={styles.codeBlock}>
+          <Text style={styles.codeLabel}>Code</Text>
+          <Text style={styles.codeValue}>{coupon.code}</Text>
         </View>
       )}
     </View>
@@ -390,7 +541,6 @@ function CouponCard({ coupon }: { coupon: Coupon }) {
 
 // ─── Écran principal ───────────────────────────────────────────
 export default function RewardsScreen() {
-  const router = useRouter();
   const colors = useColors();
   const user = useAuthStore((s) => s.user);
   const { data: profileData } = useJambaarProfile();

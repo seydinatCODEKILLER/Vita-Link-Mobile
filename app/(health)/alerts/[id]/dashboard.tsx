@@ -8,14 +8,11 @@ import {
   Animated,
   Alert,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { useSmartBack } from "@/src/hooks/useSmartBack"; // ✅ Ajoute cette ligne
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useAlertResponses, useCloseAlert } from "@/src/hooks/useAlerts";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { AlertResponseStatus } from "@/src/types/shared.types";
@@ -25,6 +22,8 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { AppColors } from "@/src/theme/colors";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
+import { QUERY_KEYS } from "@/src/constants/query_key";
+import { queryClient } from "@/src/config/query-client.config";
 
 const getResponseConfig = (
   colors: AppColors,
@@ -297,7 +296,6 @@ function DonorResponseRow({
 
 // ─── Écran Principal ───────────────────────────────────────────
 export default function AlertDashboardScreen() {
-  const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
   const { socketRef } = useSocket();
@@ -421,12 +419,15 @@ export default function AlertDashboardScreen() {
     }).start();
   }, []);
 
-  useSocket();
-
   useEffect(() => {
-    if (!alertId || !socketRef.current) return;
+    if (!alertId || !socketRef.current?.connected) return;
+
     const socket = socketRef.current;
+
+    // ── Rejoindre la room dédiée à cette alerte ──
     socket.emit("join:alert", { alertId });
+
+    // ── Quitter la room en quittant la page ──
     return () => {
       socket.emit("leave:alert", { alertId });
     };
@@ -634,9 +635,14 @@ export default function AlertDashboardScreen() {
               <Ionicons
                 name={isActive ? "close-circle-outline" : "lock-closed-outline"}
                 size={20}
-                color={colors.red}
+                color={isActive ? colors.red : colors.textMuted}
               />
-              <Text style={styles.closeBtnText}>
+              <Text
+                style={[
+                  styles.closeBtnText,
+                  !isActive && { color: colors.textMuted },
+                ]}
+              >
                 {isActive
                   ? "Fermer l'alerte"
                   : alert.status === "EXPIRED"

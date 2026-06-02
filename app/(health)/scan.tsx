@@ -19,6 +19,7 @@ import { CameraView, Camera } from "expo-camera";
 import { useScanDonation } from "@/src/hooks/useDonations";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useSmartBack } from "@/src/hooks/useSmartBack";
+import { useAuthStore } from "@/src/store/auth.store";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
@@ -30,10 +31,13 @@ export default function ScanScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
   const colors = useColors();
+  const user = useAuthStore((s) => s.user);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
   const [flashOn, setFlashOn] = useState(false);
+
+  const isCntsUser = user?.role === "CNTS_ADMIN" || user?.role === "CNTS_AGENT";
 
   const goBack = useSmartBack({
     defaultRoute: "/(health)",
@@ -67,7 +71,6 @@ export default function ScanScreen() {
       textAlign: "center",
       lineHeight: 20,
     },
-    // ── Camera overlay — toujours sombre, indépendant du thème ──
     overlay: {
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.6)",
@@ -121,7 +124,6 @@ export default function ScanScreen() {
     },
     instructions: { alignItems: "center", paddingBottom: 24, gap: 8 },
     instructionText: { color: "#FFFFFF", fontSize: 14, fontWeight: "500" },
-    // ── Modal succès ──
     modalOverlay: {
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.85)",
@@ -246,6 +248,23 @@ export default function ScanScreen() {
     setScanned(false);
   };
 
+  // ── Si ce n'est pas un agent CNTS (sécurité UI supplémentaire) ──
+  if (!isCntsUser) {
+    return (
+      <View style={[styles.container, styles.centered]}>
+        <Ionicons
+          name="lock-closed-outline"
+          size={64}
+          color={colors.textSubtle}
+        />
+        <Text style={styles.permissionTitle}>Accès restreint</Text>
+        <Text style={styles.permissionSub}>
+          Seuls les agents de la CNTS peuvent valider les dons de sang par scan.
+        </Text>
+      </View>
+    );
+  }
+
   // ── Structure en attente ──
   if (isPending) {
     return (
@@ -253,8 +272,8 @@ export default function ScanScreen() {
         <Ionicons name="time-outline" size={64} color={colors.textSubtle} />
         <Text style={styles.permissionTitle}>Structure en attente</Text>
         <Text style={styles.permissionSub}>
-          Votre structure doit être validée par nos équipes avant de pouvoir
-          scanner les pass donneurs.
+          Votre CNTS doit être validée avant de pouvoir scanner les pass
+          donneurs.
         </Text>
       </View>
     );
@@ -305,7 +324,7 @@ export default function ScanScreen() {
             >
               <Ionicons name="close" size={22} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Scanner le Pass</Text>
+            <Text style={styles.headerTitle}>Validation CNTS 🩸</Text>
             <TouchableOpacity
               onPress={() => setFlashOn(!flashOn)}
               style={styles.headerBtn}
@@ -333,7 +352,7 @@ export default function ScanScreen() {
           <View style={styles.instructions}>
             <Ionicons name="qr-code-outline" size={24} color="#FFFFFF" />
             <Text style={styles.instructionText}>
-              Placez le QR Code du donneur dans le cadre
+              Scannez le Pass du donneur pour valider son don
             </Text>
           </View>
         </SafeAreaView>
@@ -342,7 +361,9 @@ export default function ScanScreen() {
       {/* ── Modal succès ── */}
       <Modal visible={!!successData} transparent animationType="slide">
         <View style={styles.modalOverlay}>
-          <View style={[styles.successCard, { paddingBottom: 24 + tabBarHeight }]}>
+          <View
+            style={[styles.successCard, { paddingBottom: 24 + tabBarHeight }]}
+          >
             <View style={styles.successIconWrap}>
               <Ionicons
                 name="checkmark-circle"
@@ -352,7 +373,8 @@ export default function ScanScreen() {
             </View>
             <Text style={styles.successTitle}>Don validé ! 🩸</Text>
             <Text style={styles.successSub}>
-              Le don a été enregistré et les points ont été crédités au donneur.
+              Le don a été enregistré, le stock de la CNTS a été mis à jour et
+              les points ont été crédités au donneur.
             </Text>
 
             <View style={styles.donorInfoRow}>

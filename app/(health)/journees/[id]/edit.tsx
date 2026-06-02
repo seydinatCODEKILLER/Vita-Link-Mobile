@@ -9,7 +9,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import DateTimePicker, {
@@ -161,7 +162,6 @@ function BloodTypeMultiSelect({
 
 // ─── Écran Principal d'Édition ────────────────────────────────
 export default function EditJourneeScreen() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
@@ -389,6 +389,19 @@ export default function EditJourneeScreen() {
 
   const currentForm =
     currentStep === 1 ? form1 : currentStep === 2 ? form2 : form3;
+
+  const navigation = useNavigation();
+
+  // 3. Ajoute le useEffect (exactement comme sur CreateJourneeScreen)
+  useEffect(() => {
+    if (currentStep > 1) {
+      const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+        e.preventDefault();
+        setCurrentStep((s) => s - 1);
+      });
+      return unsubscribe;
+    }
+  }, [currentStep, navigation]);
 
   const animateTransition = useCallback(() => {
     Animated.parallel([

@@ -15,8 +15,8 @@ import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useMyStructureDays } from "@/src/hooks/useDonationDays";
 import { DonationDay } from "@/src/types/donation-day.types";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen"; // ✅ Ajouté
-import { isNetworkError } from "@/src/utils/error.utils"; // ✅ Ajouté
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { isNetworkError } from "@/src/utils/error.utils";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
@@ -629,6 +629,7 @@ export default function JourneesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* ── Header ── */}
+      {/* ── Header ── */}
       <View
         style={{
           flexDirection: "row",
@@ -646,45 +647,48 @@ export default function JourneesScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 8,
-            backgroundColor: isPending ? colors.cardBg : colors.red,
-            paddingVertical: 10,
-            paddingHorizontal: 14,
-            borderRadius: 14,
-          }}
-          onPress={handleCreate}
-          activeOpacity={isPending ? 0.6 : 0.8}
-        >
-          <View
+        {/* ✅ On n'affiche le bouton Créer QUE si on regarde les journées à venir */}
+        {activeFilter === "PUBLISHED" && (
+          <TouchableOpacity
             style={{
-              width: 22,
-              height: 22,
-              borderRadius: 7,
-              backgroundColor: "rgba(255,255,255,0.18)",
+              flexDirection: "row",
               alignItems: "center",
-              justifyContent: "center",
+              gap: 8,
+              backgroundColor: isPending ? colors.cardBg : colors.red,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              borderRadius: 14,
             }}
+            onPress={handleCreate}
+            activeOpacity={isPending ? 0.6 : 0.8}
           >
-            <Ionicons
-              name="add"
-              size={14}
-              color={isPending ? colors.textSubtle : "#fff"}
-            />
-          </View>
-          <Text
-            style={{
-              color: isPending ? colors.textSubtle : "#fff",
-              fontSize: 13,
-              fontWeight: "700",
-            }}
-          >
-            Créer
-          </Text>
-        </TouchableOpacity>
+            <View
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 7,
+                backgroundColor: "rgba(255,255,255,0.18)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Ionicons
+                name="add"
+                size={14}
+                color={isPending ? colors.textSubtle : "#fff"}
+              />
+            </View>
+            <Text
+              style={{
+                color: isPending ? colors.textSubtle : "#fff",
+                fontSize: 13,
+                fontWeight: "700",
+              }}
+            >
+              Créer
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Filtres ── */}

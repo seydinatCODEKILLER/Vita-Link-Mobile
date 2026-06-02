@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { healthStructuresApi } from "@/src/api/healthStructures.api";
 import { QUERY_KEYS } from "@/src/constants/query_key";
+import { AffiliatedHospital } from "../types/healthStructure.type";
 
 // ── Stats du dashboard structure ───────────────────────────────
 export const useStructureStats = () => {
@@ -32,9 +33,24 @@ export const useUpdateMyStructure = () => {
       longitude?: number;
     }) => healthStructuresApi.updateMyStructure(data),
     onSuccess: () => {
-      // Invalide le cache pour que le profil et l'écran d'accueil se mettent à jour
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructure });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me }); // Pour mettre à jour l'objet léger du store Auth
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
     },
+  });
+};
+
+export function useAffiliatedHospitals(filters?: { status?: string }) {
+  return useQuery<AffiliatedHospital[]>({
+    queryKey: [QUERY_KEYS.myStructure, "affiliated-hospitals", filters],
+    queryFn: () => healthStructuresApi.getAffiliatedHospitals(filters),
+    staleTime: 60_000,
+  });
+}
+
+export const useAvailableCnts = () => {
+  return useQuery({
+    queryKey: ["availableCnts"],
+    queryFn: healthStructuresApi.getAvailableCnts,
+    staleTime: 1000 * 60 * 10,
   });
 };

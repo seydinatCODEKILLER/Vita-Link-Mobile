@@ -7,6 +7,7 @@ export interface BloodStock {
   quantity: number;
   level: BloodStockLevel;
   healthStructureId: string;
+  updatedAt: string;
 }
 
 export const bloodStocksApi = {

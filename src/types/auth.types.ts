@@ -60,17 +60,49 @@ export interface RegisterDonorPayload {
 }
 
 export interface RegisterStructurePayload {
-  // Directeur
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   password: string;
-  // Structure
   structureName: string;
   registrationNumber: string;
   region: string;
   address: string;
+  structurePhone?: string;
+  structureEmail?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface RegisterCntsPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  structureName: string;
+  registrationNumber: string;
+  region: string;
+  address: string;
+  structurePhone?: string;
+  structureEmail?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface RegisterHospitalPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  structureName: string;
+  registrationNumber: string;
+  region: string;
+  address: string;
+  structureType: "HOSPITAL" | "HEALTH_CENTER";
+  affiliatedCntsId: string; // OBLIGATOIRE
   structurePhone?: string;
   structureEmail?: string;
   latitude?: number;
@@ -85,12 +117,6 @@ export interface LoginPayload {
 export interface VerifyOtpPayload {
   email: string;
   code: string;
-  phone: string;
-  firstName: string;
-  lastName: string;
-  bloodType: BloodType;
-  gender: Gender;
-  dateOfBirth?: string;
 }
 
 export interface SendOtpPayload {

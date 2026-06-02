@@ -27,9 +27,6 @@ export const useUserRole = () => useAuthStore((state) => state.user?.role);
 export const useIsDonor = () =>
   useAuthStore((state) => state.user?.role === "DONOR");
 
-export const useIsHealthStructure = () =>
-  useAuthStore((state) => state.user?.role === "HEALTH_STRUCTURE");
-
 export const useIsAdmin = () =>
   useAuthStore((state) => state.user?.role === "ADMIN");
 
@@ -42,6 +39,21 @@ export const useUserBloodType = () =>
 
 export const useUserJambaarProfile = () =>
   useAuthStore((state) => state.user?.jambaarsProfile);
+
+// Remplace l'ancien useIsHealthStructure par ceux-ci :
+export const useIsCnts = () =>
+  useAuthStore((state) => state.user?.role === "CNTS_AGENT" || state.user?.role === "CNTS_ADMIN");
+
+export const useIsHospital = () =>
+  useAuthStore((state) => state.user?.role === "HOSPITAL_AGENT");
+
+// Pour la redirection à la racine, tu peux faire un hook générique :
+export const useIsHealthProfessional = () =>
+  useAuthStore((state) => 
+    state.user?.role === "CNTS_AGENT" || 
+    state.user?.role === "CNTS_ADMIN" || 
+    state.user?.role === "HOSPITAL_AGENT"
+  );
 
 // ─── Actions (Optionnel mais très propre) ─────────────────────
 export const useAuthActions = () =>

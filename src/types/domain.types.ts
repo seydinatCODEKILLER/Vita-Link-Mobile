@@ -9,6 +9,11 @@ import {
 
 // ─── Donation ─────────────────────────────────────────────────
 
+export interface DonationStructure {
+  id: string;
+  name: string;
+}
+
 export interface DonationAlert {
   id: string;
   bloodType: BloodType;
@@ -24,6 +29,7 @@ export interface Donation {
   donatedAt: string | null;
   validatedAt: string | null;
   notes: string | null;
+   healthStructure: DonationStructure; 
   alertResponse: {
     qrCode: string | null;
     etaMinutes: number | null;

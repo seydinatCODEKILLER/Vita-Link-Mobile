@@ -645,6 +645,20 @@ export default function JambaarProfileScreen() {
                 ? "Votre prochain don est disponible maintenant"
                 : `Période de repos — prochain don le ${dayjs(profile.nextEligibilityAt).format("DD MMM YYYY")}`}
             </Text>
+            {/* 🆕 Rappel crucial du flux Sénégalais */}
+            {isEligible && (
+              <Text
+                style={{
+                  color: colors.textSubtle,
+                  fontSize: 10,
+                  marginTop: 2,
+                  fontStyle: "italic",
+                }}
+              >
+                ⚠️ Rappel : Seul le CNTS peut scanner votre QR Code pour valider
+                le don.
+              </Text>
+            )}
           </View>
         </View>
 

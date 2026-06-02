@@ -34,10 +34,10 @@ const PRIMARY_TABS = [
     iconOutline: "grid-outline" as const,
   },
   {
-    name: "alerts/index",
-    label: "Alertes",
-    icon: "medkit" as const,
-    iconOutline: "medkit-outline" as const,
+    name: "blood-requests/index",
+    label: "Demandes",
+    icon: "document-text" as const,
+    iconOutline: "document-text-outline" as const,
   },
   {
     name: "scan",
@@ -56,13 +56,22 @@ const PRIMARY_TABS = [
 // ─── Onglets secondaires (bottom sheet "Plus") ────────────────────────────────
 const SECONDARY_TABS = [
   {
-    name: "profile",
-    label: "Ma Structure",
-    icon: "business" as const,
-    route: "/(health)/profile" as const,
-    description: "Gérez votre établissement",
+    name: "alerts",
+    label: "Alertes Pénurie",
+    icon: "medkit" as const,
+    route: "/(health)/alerts" as const,
+    description: "Gérer les alertes de stock critique",
     color: "#FF6B6B",
-    shortcut: "⌘S",
+    shortcut: "⌘A",
+  },
+  {
+    name: "hospitals",
+    label: "Hôpitaux Affiliés",
+    icon: "business" as const,
+    route: "/(health)/hospitals" as const,
+    description: "Voir les hôpitaux de votre région",
+    color: "#4ECDC4",
+    shortcut: "⌘H",
   },
   {
     name: "journees",
@@ -70,8 +79,17 @@ const SECONDARY_TABS = [
     icon: "calendar" as const,
     route: "/(health)/journees" as const,
     description: "Planifiez vos collectes",
-    color: "#4ECDC4",
+    color: "#FFD93D",
     shortcut: "⌘J",
+  },
+  {
+    name: "my-structure",
+    label: "Ma Structure",
+    icon: "settings" as const,
+    route: "/(health)/profile" as const,
+    description: "Paramètres CNTS & Agents",
+    color: "#6C5CE7",
+    shortcut: "⌘S",
   },
 ] as const;
 
@@ -327,19 +345,16 @@ function MoreSheet({ visible, onClose, insetBottom }: MoreSheetProps) {
           },
         ]}
       >
-        {/* Subtle gradient background */}
         <LinearGradient
           colors={["rgba(255,255,255,0.02)", "transparent"]}
           style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
 
-        {/* Handle */}
         <View style={sheetStyles.handleContainer}>
           <View style={sheetStyles.handle} />
         </View>
 
-        {/* Header */}
         <View style={sheetStyles.header}>
           <View style={sheetStyles.headerLeft}>
             <Text style={sheetStyles.title}>Menu</Text>
@@ -354,7 +369,6 @@ function MoreSheet({ visible, onClose, insetBottom }: MoreSheetProps) {
           </TouchableOpacity>
         </View>
 
-        {/* Menu Items */}
         <View style={sheetStyles.menuList}>
           {SECONDARY_TABS.map((tab, index) => {
             const isActive = pathname.startsWith(`/(health)/${tab.name}`);
@@ -398,7 +412,6 @@ function MoreSheet({ visible, onClose, insetBottom }: MoreSheetProps) {
                         },
                       ]}
                     >
-                      {/* Icône compacte */}
                       <View
                         style={[
                           sheetStyles.iconContainer,
@@ -416,13 +429,12 @@ function MoreSheet({ visible, onClose, insetBottom }: MoreSheetProps) {
                         />
                       </View>
 
-                      {/* Contenu texte */}
                       <View style={sheetStyles.itemContent}>
                         <Text
                           style={[
                             sheetStyles.itemLabel,
                             {
-                              color: isActive ? colors.white : colors.white,
+                              color: colors.white,
                             },
                           ]}
                         >
@@ -442,7 +454,6 @@ function MoreSheet({ visible, onClose, insetBottom }: MoreSheetProps) {
                         </Text>
                       </View>
 
-                      {/* Métadonnées à droite */}
                       <View style={sheetStyles.itemMeta}>
                         <Text style={sheetStyles.shortcut}>{tab.shortcut}</Text>
                         <Ionicons
@@ -456,7 +467,6 @@ function MoreSheet({ visible, onClose, insetBottom }: MoreSheetProps) {
                   )}
                 </Pressable>
 
-                {/* Séparateur subtil */}
                 {index < SECONDARY_TABS.length - 1 && (
                   <View style={sheetStyles.separator} />
                 )}
@@ -465,10 +475,9 @@ function MoreSheet({ visible, onClose, insetBottom }: MoreSheetProps) {
           })}
         </View>
 
-        {/* Footer */}
         <View style={sheetStyles.footer}>
           <View style={sheetStyles.footerDot} />
-          <Text style={sheetStyles.footerText}>BloodLink Health</Text>
+          <Text style={sheetStyles.footerText}>Vita-Link CNTS</Text>
           <View style={sheetStyles.footerDot} />
         </View>
       </Animated.View>
@@ -568,8 +577,12 @@ export default function HealthLayout() {
       router.replace("/(auth)/welcome");
       return;
     }
-    if (user.role !== "HEALTH_STRUCTURE") {
-      router.replace("/(donor)");
+    if (user.role !== "CNTS_ADMIN" && user.role !== "CNTS_AGENT") {
+      if (user.role === "HOSPITAL_AGENT") {
+        router.replace("/(hospital)");
+      } else {
+        router.replace("/(donor)");
+      }
     }
   }, [isAuthenticated, user]);
 
@@ -602,8 +615,8 @@ export default function HealthLayout() {
   });
   const tabBarHeight = 68 + safeBottom;
 
-  if (!isAuthenticated || !user || user.role !== "HEALTH_STRUCTURE")
-    return null;
+  const isCntsUser = user?.role === "CNTS_ADMIN" || user?.role === "CNTS_AGENT";
+  if (!isAuthenticated || !user || !isCntsUser) return null;
 
   const moreColor = isSecondaryActive ? colors.red : colors.textMuted;
 
@@ -655,8 +668,9 @@ export default function HealthLayout() {
           />
         ))}
 
+        {/* ── Bouton "Plus" Ancré sur profile/edit ── */}
         <Tabs.Screen
-          name="alerts/[id]/index"
+          name="profile/edit" // ✅ On utilise un fichier qui existe physiquement
           options={{
             title: "Plus",
             tabBarButton: () => (
@@ -695,23 +709,25 @@ export default function HealthLayout() {
           }}
         />
 
-        {SECONDARY_TABS.map((tab) => (
-          <Tabs.Screen
-            key={tab.name}
-            name={tab.name}
-            options={{ href: null }}
-          />
-        ))}
+        {/* ── Toutes les routes cachées ── */}
+        <Tabs.Screen name="blood-requests/[id]" options={{ href: null }} />
 
+        <Tabs.Screen name="alerts/index" options={{ href: null }} />
         <Tabs.Screen name="alerts/create" options={{ href: null }} />
+        <Tabs.Screen name="alerts/[id]/index" options={{ href: null }} />
         <Tabs.Screen name="alerts/[id]/dashboard" options={{ href: null }} />
-        <Tabs.Screen name="staff/index" options={{ href: null }} />
-        <Tabs.Screen name="profile/edit" options={{ href: null }} />
-        <Tabs.Screen name="staff/add" options={{ href: null }} />
+
+        <Tabs.Screen name="hospitals/index" options={{ href: null }} />
+        <Tabs.Screen name="hospitals/[id]" options={{ href: null }} />
+
         <Tabs.Screen name="journees/index" options={{ href: null }} />
+        <Tabs.Screen name="journees/create" options={{ href: null }} />
         <Tabs.Screen name="journees/[id]/index" options={{ href: null }} />
         <Tabs.Screen name="journees/[id]/edit" options={{ href: null }} />
-        <Tabs.Screen name="journees/create" options={{ href: null }} />
+
+        <Tabs.Screen name="staff/index" options={{ href: null }} />
+        <Tabs.Screen name="staff/add" options={{ href: null }} />
+        <Tabs.Screen name="profile" options={{ href: null }} />
       </Tabs>
     </View>
   );

@@ -12,8 +12,10 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import * as Haptics from "expo-haptics";
-import { useStructureStats } from "@/src/hooks/useHealthStructure";
-import { useMyStructureAlerts } from "@/src/hooks/useAlerts";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/fr";
+import { useCntsDashboard } from "@/src/hooks/useDashboard";
 import { useAuthStore } from "@/src/store/auth.store";
 import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { BloodStockLevel, BloodType } from "@/src/types/shared.types";
@@ -21,12 +23,13 @@ import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { ThemeToggle } from "@/src/components/ui/ThemeToggle";
 import { AppColors } from "@/src/theme/colors";
-
-// ─── Imports pour l'erreur réseau ─────────────────────────────
 import { isNetworkError } from "@/src/utils/error.utils";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 
-// ─── Config Niveaux de Stock (Dynamique) ──────────────────────
+dayjs.extend(relativeTime);
+dayjs.locale("fr");
+
+// ─── Config Niveaux de Stock ──────────────────────────────
 const getLevelConfig = (
   colors: AppColors,
 ): Record<BloodStockLevel, { label: string; color: string }> => ({
@@ -36,7 +39,7 @@ const getLevelConfig = (
   SURPLUS: { label: "Surplus", color: "#60A5FA" },
 });
 
-// ─── StatCard ─────────────────────────────────────────────────
+// ─── StatCard ─────────────────────────────────────────────
 function StatCard({
   icon,
   label,
@@ -67,8 +70,6 @@ function StatCard({
       alignItems: "center",
       justifyContent: "center",
     },
-    statBody: { gap: 2 },
-    statUnit: { fontSize: 11, fontWeight: "600" },
     statLabel: {
       color: c.textMuted,
       fontSize: 9,
@@ -82,7 +83,7 @@ function StatCard({
       <View style={[styles.statIcon, { backgroundColor: color + "15" }]}>
         <Ionicons name={icon} size={15} color={color} />
       </View>
-      <View style={styles.statBody}>
+      <View style={{ gap: 2 }}>
         <Text
           style={{
             fontSize: 20,
@@ -92,7 +93,9 @@ function StatCard({
           }}
         >
           {value}
-          {unit ? <Text style={styles.statUnit}> {unit}</Text> : null}
+          {unit ? (
+            <Text style={{ fontSize: 11, fontWeight: "600" }}> {unit}</Text>
+          ) : null}
         </Text>
         <Text style={styles.statLabel}>{label}</Text>
       </View>
@@ -100,7 +103,7 @@ function StatCard({
   );
 }
 
-// ─── BloodStockRow ────────────────────────────────────────────
+// ─── BloodStockRow ────────────────────────────────────────
 function BloodStockRow({
   bloodType,
   quantity,
@@ -116,121 +119,113 @@ function BloodStockRow({
   const { label, color } = LEVEL_CONFIG[level];
   const typeLabel = BLOOD_TYPE_LABELS[bloodType] ?? bloodType.replace("_", "");
 
-  const styles = useThemedStyles((c) => ({
-    stockRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: 13,
-      borderBottomWidth: 0.5,
-      borderBottomColor: c.cardBorder,
-    },
-    stockLeft: { flexDirection: "row", alignItems: "center", gap: 11 },
-    bloodChip: {
-      minWidth: 38,
-      height: 38,
-      borderRadius: 10,
-      borderWidth: 0.5,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 6,
-    },
-    bloodChipText: { fontSize: 13, fontWeight: "900" },
-    levelLabel: { color: c.textMuted, fontSize: 12, fontWeight: "600" },
-    stockRight: { flexDirection: "row", alignItems: "baseline", gap: 4 },
-    stockQty: { fontSize: 19, fontWeight: "900" },
-    stockUnit: { color: c.textMuted, fontSize: 11, fontWeight: "500" },
-  }));
-
   return (
-    <View style={styles.stockRow}>
-      <View style={styles.stockLeft}>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: 13,
+        borderBottomWidth: 0.5,
+        borderBottomColor: colors.cardBorder,
+      }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 11 }}>
         <View
-          style={[
-            styles.bloodChip,
-            { backgroundColor: color + "12", borderColor: color + "28" },
-          ]}
+          style={{
+            minWidth: 38,
+            height: 38,
+            borderRadius: 10,
+            borderWidth: 0.5,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 6,
+            backgroundColor: color + "12",
+            borderColor: color + "28",
+          }}
         >
-          <Text style={[styles.bloodChipText, { color }]}>{typeLabel}</Text>
+          <Text style={{ fontSize: 13, fontWeight: "900", color }}>
+            {typeLabel}
+          </Text>
         </View>
-        <Text style={styles.levelLabel}>{label}</Text>
+        <Text
+          style={{ color: colors.textMuted, fontSize: 12, fontWeight: "600" }}
+        >
+          {label}
+        </Text>
       </View>
-      <View style={styles.stockRight}>
-        <Text style={[styles.stockQty, { color }]}>{quantity}</Text>
-        <Text style={styles.stockUnit}>poches</Text>
+      <View style={{ flexDirection: "row", alignItems: "baseline", gap: 4 }}>
+        <Text style={{ fontSize: 19, fontWeight: "900", color }}>
+          {quantity}
+        </Text>
+        <Text
+          style={{ color: colors.textMuted, fontSize: 11, fontWeight: "500" }}
+        >
+          poches
+        </Text>
       </View>
     </View>
   );
 }
 
-// ─── NOUVEAU : Skeleton Dashboard ─────────────────────────────
+// ─── Skeleton Dashboard ──────────────────────────────────
 function DashboardSkeleton({ colors }: { colors: AppColors }) {
-  const styles = useThemedStyles((c) => ({
-    cardBg: {
-      backgroundColor: c.cardBg,
-      borderRadius: 14,
-      borderWidth: 0.5,
-      borderColor: c.cardBorder,
-    },
-    line: {
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: c.cardBorder,
-    },
-  }));
-
   return (
     <View style={{ paddingHorizontal: 20, gap: 22, opacity: 0.6 }}>
-      {/* Fake Stats */}
       <View style={{ flexDirection: "row", gap: 8 }}>
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <View
             key={i}
-            style={[styles.cardBg, { flex: 1, height: 80, padding: 12 }]}
+            style={{
+              flex: 1,
+              height: 80,
+              borderRadius: 14,
+              borderWidth: 0.5,
+              borderColor: colors.cardBorder,
+              backgroundColor: colors.cardBg,
+              padding: 12,
+            }}
           />
         ))}
       </View>
-      {/* Fake Stocks */}
       <View style={{ gap: 10 }}>
-        <View style={[styles.line, { width: "30%" }]} />
-        <View style={[styles.cardBg, { height: 120 }]} />
-      </View>
-      {/* Fake Alerts */}
-      <View style={{ gap: 10 }}>
-        <View style={[styles.line, { width: "40%" }]} />
-        <View style={[styles.cardBg, { height: 90 }]} />
+        <View
+          style={{
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: colors.cardBorder,
+            width: "30%",
+          }}
+        />
+        <View
+          style={{
+            height: 120,
+            borderRadius: 16,
+            borderWidth: 0.5,
+            borderColor: colors.cardBorder,
+            backgroundColor: colors.cardBg,
+          }}
+        />
       </View>
     </View>
   );
 }
 
-// ─── Écran Principal ───────────────────────────────────────────
-export default function HealthHomeScreen() {
+// ─── Écran Principal ──────────────────────────────────────
+export default function CntsDashboardScreen() {
   const router = useRouter();
   const colors = useColors();
   const user = useAuthStore((s) => s.user);
   const isPending = useIsStructurePending();
-
   const tabBarHeight = useBottomTabBarHeight();
 
-  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
   const {
-    data: stats,
-    isLoading: statsLoading,
-    isError: isStatsError,
-    error: statsError,
-    refetch: refetchStats,
-  } = useStructureStats();
-
-  const {
-    data: alertsData,
-    isLoading: alertsLoading,
-    isError: isAlertsError,
-    error: alertsError,
-    refetch: refetchAlerts,
-  } = useMyStructureAlerts({
-    status: "ACTIVE",
-  });
+    data: dashboard,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useCntsDashboard(5);
 
   const fabScale = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -251,26 +246,12 @@ export default function HealthHomeScreen() {
     ]).start();
   }, []);
 
-  const activeAlerts = alertsData?.alerts ?? [];
-  const activeAlertsCount = stats?.alerts?.ACTIVE ?? 0;
-
-  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
-  const hasNetworkError =
-    (isStatsError && isNetworkError(statsError)) ||
-    (isAlertsError && isNetworkError(alertsError));
-
-  const handleRetryNetwork = () => {
-    refetchStats();
-    refetchAlerts();
-  };
-
   const handleCreateAlert = () => {
     if (isPending) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
-        "Structure en attente de validation",
-        "Votre structure n'est pas encore approuvée par nos équipes. Vous pourrez créer des alertes dès que votre dossier sera validé.",
-        [{ text: "Compris", style: "default" }],
+        "Structure en attente",
+        "Votre CNTS n'est pas encore approuvée. Vous pourrez créer des alertes dès validation.",
       );
       return;
     }
@@ -280,10 +261,7 @@ export default function HealthHomeScreen() {
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
-    centered: { alignItems: "center", justifyContent: "center" },
     scrollContent: { paddingHorizontal: 20 },
-
-    // Header
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -303,7 +281,6 @@ export default function HealthHomeScreen() {
       fontWeight: "900",
       letterSpacing: -0.5,
     },
-    notifWrap: { position: "relative" },
     notifBtn: {
       width: 40,
       height: 40,
@@ -313,24 +290,8 @@ export default function HealthHomeScreen() {
       borderColor: c.cardBorder,
       alignItems: "center",
       justifyContent: "center",
-      marginTop: 4,
     },
-    notifDot: {
-      position: "absolute",
-      top: 6,
-      right: 6,
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: c.red,
-      borderWidth: 1.5,
-      borderColor: c.bg,
-    },
-
-    // Stats
-    statsGrid: { flexDirection: "row", gap: 8, marginBottom: 24 },
-
-    // Sections
+    statsGrid: { flexDirection: "row", gap: 6, marginBottom: 24 },
     sectionHead: {
       flexDirection: "row",
       alignItems: "center",
@@ -352,13 +313,9 @@ export default function HealthHomeScreen() {
       overflow: "hidden",
       marginBottom: 22,
     },
-
-    // Empty
     empty: { alignItems: "center", padding: 24, gap: 8 },
     emptyText: { color: c.textMuted, fontSize: 13 },
-
-    // Alert Row
-    alertRow: {
+    requestRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
@@ -366,28 +323,21 @@ export default function HealthHomeScreen() {
       borderBottomWidth: 0.5,
       borderBottomColor: c.cardBorder,
     },
-    alertBadge: {
+    requestBadge: {
       width: 42,
       height: 42,
       borderRadius: 12,
       alignItems: "center",
       justifyContent: "center",
       flexShrink: 0,
-    },
-    badgeVital: {
       backgroundColor: c.red + "12",
       borderWidth: 0.5,
       borderColor: c.red + "40",
     },
-    badgeStd: {
-      backgroundColor: c.amber + "10",
-      borderWidth: 0.5,
-      borderColor: c.amber + "28",
-    },
-    alertBadgeText: { color: c.white, fontSize: 13, fontWeight: "900" },
-    alertInfo: { flex: 1, gap: 3 },
-    alertTitleRow: { flexDirection: "row", alignItems: "center", gap: 7 },
-    alertQty: { color: c.white, fontSize: 13, fontWeight: "700" },
+    requestBadgeText: { color: c.white, fontSize: 13, fontWeight: "900" },
+    requestInfo: { flex: 1, gap: 3 },
+    requestHospital: { color: c.white, fontSize: 13, fontWeight: "700" },
+    requestMeta: { color: c.textMuted, fontSize: 11 },
     vitalPill: {
       flexDirection: "row",
       alignItems: "center",
@@ -405,17 +355,7 @@ export default function HealthHomeScreen() {
       fontWeight: "800",
       letterSpacing: 0.5,
     },
-    alertService: {
-      color: c.textMuted,
-      fontSize: 11,
-      textTransform: "capitalize",
-    },
-
-    // FAB
-    fabWrap: {
-      position: "absolute",
-      right: 22,
-    },
+    fabWrap: { position: "absolute", right: 22 },
     fab: {
       width: 58,
       height: 58,
@@ -429,15 +369,9 @@ export default function HealthHomeScreen() {
       shadowRadius: 16,
       elevation: 12,
     },
-    fabDisabled: {
-      backgroundColor: c.cardBorder,
-      shadowOpacity: 0,
-      elevation: 0,
-    },
   }));
 
-  // ── 1. Chargement initial (Skeleton) ───────────────────────
-  if ((statsLoading || alertsLoading) && !stats && !alertsData) {
+  if (isLoading && !dashboard) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
@@ -453,8 +387,7 @@ export default function HealthHomeScreen() {
     );
   }
 
-  // ── 2. Erreur réseau sans cache ────────────────────────────
-  if (hasNetworkError && !stats && !alertsData) {
+  if (isError && isNetworkError(error) && !dashboard) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
@@ -465,12 +398,15 @@ export default function HealthHomeScreen() {
             </Text>
           </View>
         </View>
-        <NetworkErrorScreen onRetry={handleRetryNetwork} />
+        <NetworkErrorScreen onRetry={refetch} />
       </SafeAreaView>
     );
   }
 
-  // ── 3. Rendu normal ─────────────────────────────────────────
+  const kpis = dashboard?.kpis;
+  const bloodStocks = dashboard?.bloodStocks ?? [];
+  const recentRequests = dashboard?.recentRequests ?? [];
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
@@ -488,8 +424,6 @@ export default function HealthHomeScreen() {
               Tableau <Text style={{ color: colors.red }}>de bord</Text>
             </Text>
           </View>
-
-          {/* ✅ MODIFICATION : ThemeToggle + bouton notif côte à côte */}
           <View
             style={{
               flexDirection: "row",
@@ -499,40 +433,56 @@ export default function HealthHomeScreen() {
             }}
           >
             <ThemeToggle size={40} />
-
-            <View style={styles.notifWrap}>
-              <TouchableOpacity style={styles.notifBtn} activeOpacity={0.7}>
-                <Ionicons
-                  name="notifications-outline"
-                  size={20}
-                  color={colors.white}
+            <TouchableOpacity style={styles.notifBtn} activeOpacity={0.7}>
+              <Ionicons
+                name="notifications-outline"
+                size={20}
+                color={colors.white}
+              />
+              {(kpis?.pendingRequests ?? 0) > 0 && (
+                <View
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: colors.red,
+                    borderWidth: 1.5,
+                    borderColor: colors.bg,
+                  }}
                 />
-              </TouchableOpacity>
-              {activeAlertsCount > 0 && <View style={styles.notifDot} />}
-            </View>
+              )}
+            </TouchableOpacity>
           </View>
         </Animated.View>
 
-        {/* ── Stats ── */}
+        {/* ── KPIs Spécifiques CNTS ── */}
         <Animated.View style={[styles.statsGrid, { opacity: fadeAnim }]}>
           <StatCard
+            icon="document-text-outline"
+            label="Demandes"
+            value={kpis?.pendingRequests ?? 0}
+            color={colors.amber}
+          />
+          <StatCard
             icon="alert-circle-outline"
-            label="Alertes actives"
-            value={activeAlertsCount}
+            label="Stock Critique"
+            value={kpis?.criticalStocks ?? 0}
             color={colors.red}
           />
           <StatCard
-            icon="water-outline"
-            label="Dons validés"
-            value={stats?.totalDonations ?? 0}
-            color={colors.success}
+            icon="radio-button-on-outline"
+            label="Alertes"
+            value={kpis?.activeAlerts ?? 0}
+            color="#60A5FA"
           />
           <StatCard
-            icon="time-outline"
-            label="Tps réponse"
-            value={stats?.avgResponseTimeMinutes ?? "—"}
-            unit={stats?.avgResponseTimeMinutes ? "min" : ""}
-            color={colors.amber}
+            icon="water-outline"
+            label="Dons Total"
+            value={kpis?.totalDonations ?? 0}
+            color={colors.success}
           />
         </Animated.View>
 
@@ -541,10 +491,20 @@ export default function HealthHomeScreen() {
           <View style={styles.sectionHead}>
             <Ionicons name="flask-outline" size={14} color={colors.red} />
             <Text style={styles.sectionLabel}>RÉSERVES DE SANG</Text>
+            <TouchableOpacity
+              onPress={() => router.push("/(health)/stock" as any)}
+              style={{ marginLeft: "auto" }}
+            >
+              <Text
+                style={{ color: colors.red, fontSize: 11, fontWeight: "600" }}
+              >
+                Voir tout
+              </Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.card}>
-            {stats?.bloodStocks && stats.bloodStocks.length > 0 ? (
-              stats.bloodStocks.map((stock) => (
+            {bloodStocks.length > 0 ? (
+              bloodStocks.map((stock) => (
                 <BloodStockRow
                   key={stock.bloodType}
                   bloodType={stock.bloodType}
@@ -566,54 +526,62 @@ export default function HealthHomeScreen() {
           </View>
         </Animated.View>
 
-        {/* ── Alertes actives ── */}
+        {/* ── Demandes Récentes des Hôpitaux ── */}
         <Animated.View style={{ opacity: fadeAnim }}>
           <View style={styles.sectionHead}>
-            <Ionicons
-              name="radio-button-on-outline"
-              size={14}
-              color={colors.amber}
-            />
-            <Text style={styles.sectionLabel}>ALERTES EN COURS</Text>
+            <Ionicons name="business-outline" size={14} color={colors.amber} />
+            <Text style={styles.sectionLabel}>DEMANDES EN ATTENTE</Text>
+            <TouchableOpacity
+              onPress={() =>
+                router.push("/(health)/blood-requests/index" as any)
+              }
+              style={{ marginLeft: "auto" }}
+            >
+              <Text
+                style={{ color: colors.red, fontSize: 11, fontWeight: "600" }}
+              >
+                Voir tout
+              </Text>
+            </TouchableOpacity>
           </View>
           <View style={styles.card}>
-            {activeAlerts.length === 0 ? (
+            {recentRequests.length === 0 ? (
               <View style={styles.empty}>
                 <Ionicons
                   name="checkmark-circle-outline"
                   size={24}
                   color={colors.success}
                 />
-                <Text style={styles.emptyText}>Aucune urgence en cours</Text>
+                <Text style={styles.emptyText}>Aucune demande en attente</Text>
               </View>
             ) : (
-              activeAlerts.map((alert) => {
-                const isVital = alert.urgencyLevel === "VITAL";
+              recentRequests.map((req) => {
+                const isVital = req.urgencyLevel === "VITAL";
                 return (
                   <TouchableOpacity
-                    key={alert.id}
-                    style={styles.alertRow}
+                    key={req.id}
+                    style={styles.requestRow}
                     onPress={() =>
-                      router.push(`/(health)/alerts/${alert.id}` as any)
+                      router.push(`/(health)/blood-requests/${req.id}` as any)
                     }
                     activeOpacity={0.7}
                   >
-                    <View
-                      style={[
-                        styles.alertBadge,
-                        isVital ? styles.badgeVital : styles.badgeStd,
-                      ]}
-                    >
-                      <Text style={styles.alertBadgeText}>
-                        {BLOOD_TYPE_LABELS[alert.bloodType] ??
-                          alert.bloodType.replace("_", "")}
+                    <View style={styles.requestBadge}>
+                      <Text style={styles.requestBadgeText}>
+                        {BLOOD_TYPE_LABELS[req.bloodType] ??
+                          req.bloodType.replace("_", "")}
                       </Text>
                     </View>
-                    <View style={styles.alertInfo}>
-                      <View style={styles.alertTitleRow}>
-                        <Text style={styles.alertQty}>
-                          {alert.quantityConfirmed}/{alert.quantityNeeded}{" "}
-                          donneurs
+                    <View style={styles.requestInfo}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 7,
+                        }}
+                      >
+                        <Text style={styles.requestHospital} numberOfLines={1}>
+                          {req.requestingHospital.name}
                         </Text>
                         {isVital && (
                           <View style={styles.vitalPill}>
@@ -626,8 +594,9 @@ export default function HealthHomeScreen() {
                           </View>
                         )}
                       </View>
-                      <Text style={styles.alertService}>
-                        {alert.serviceUnit.replace("_", " ")}
+                      <Text style={styles.requestMeta}>
+                        {req.quantityNeeded} poches ·{" "}
+                        {dayjs(req.createdAt).fromNow()}
                       </Text>
                     </View>
                     <Ionicons
@@ -643,7 +612,7 @@ export default function HealthHomeScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* ── FAB ── */}
+      {/* ── FAB Créer Alerte Pénurie ── */}
       <Animated.View
         style={[
           styles.fabWrap,
@@ -651,15 +620,11 @@ export default function HealthHomeScreen() {
         ]}
       >
         <TouchableOpacity
-          style={[styles.fab, isPending && styles.fabDisabled]}
+          style={styles.fab}
           onPress={handleCreateAlert}
-          activeOpacity={isPending ? 0.6 : 0.85}
+          activeOpacity={0.85}
         >
-          <Ionicons
-            name="add"
-            size={28}
-            color={isPending ? colors.textSubtle : colors.white}
-          />
+          <Ionicons name="add" size={28} color={colors.white} />
         </TouchableOpacity>
       </Animated.View>
     </SafeAreaView>

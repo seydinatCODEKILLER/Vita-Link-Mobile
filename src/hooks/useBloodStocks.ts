@@ -34,6 +34,7 @@ export const useUpdateMyStock = () => {
         },
       );
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStats });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
     },
   });
 };

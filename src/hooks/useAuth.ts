@@ -11,6 +11,7 @@ import {
   VerifyOtpPayload,
 } from "../types/auth.types";
 import { registrationManager } from "@/src/utils/registration.utils";
+import { RegisterCntsFormValues, RegisterHospitalFormValues } from "../validators/auth.schema";
 
 // ─── Helper pour extraire le message d'erreur Axios ──────────
 const getErrorMessage = (err: any) =>
@@ -68,10 +69,7 @@ export const useVerifyOtp = () => {
 
   return useMutation({
     mutationFn: (payload: VerifyOtpPayload) => {
-      const cleanedPayload = Object.fromEntries(
-        Object.entries(payload).filter(([_, v]) => v !== ""),
-      );
-      return authApi.verifyOtp(cleanedPayload as VerifyOtpPayload);
+      return authApi.verifyOtp(payload);
     },
     onSuccess: async (response) => {
       await tokenManager.saveTokens(
@@ -103,13 +101,13 @@ export const useLogin = () => {
       const response = await authApi.login(payload);
       if (response.user.role === "ADMIN") {
         throw new Error(
-          "ADMIN_BLOCKED: L'application mobile est réservée aux donneurs et aux structures de santé."
+          "ADMIN_BLOCKED: L'application mobile est réservée aux donneurs et aux structures de santé.",
         );
       }
 
       return response;
     },
-    onSuccess: async (response) => {      
+    onSuccess: async (response) => {
       await tokenManager.saveTokens(
         response.accessToken,
         response.refreshToken,
@@ -131,7 +129,7 @@ export const useLogin = () => {
           text1: "Accès refusé 🚫",
           text2: err.message.replace("ADMIN_BLOCKED: ", ""),
         });
-        router.replace("/unauthorized"); 
+        router.replace("/unauthorized");
       } else {
         Toast.show({
           type: "error",
@@ -178,6 +176,94 @@ export const useLogout = () => {
     onSettled: async () => {
       await logout();
       router.replace("/(auth)/welcome");
+    },
+  });
+};
+
+// ─── Hook ─────────────────────────────────────────────────────
+export const useRegisterCnts = () => {
+  const router = useRouter();
+  return useMutation({
+    mutationFn: (payload: RegisterCntsFormValues) =>
+      authApi.registerCnts({
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        email: payload.email,
+        phone: payload.phone,
+        password: payload.password,
+        structureName: payload.structureName,
+        registrationNumber: payload.registrationNumber,
+        region: payload.region,
+        address: payload.address,
+        structurePhone: payload.structurePhone || undefined,
+        structureEmail: payload.structureEmail || undefined,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+      }),
+    onSuccess: () => {
+      Toast.show({
+        type: "success",
+        text1: "CNTS enregistrée 🏥",
+        text2: "Votre demande est en attente de vérification.",
+      });
+      router.replace("/pending-review" as Href);
+    },
+    onError: (err: any) => {
+      Toast.show({
+        type: "error",
+        text1: "Erreur d'inscription",
+        text2:
+          err?.response?.data?.message ||
+          err?.message ||
+          "Une erreur inattendue est survenue",
+      });
+    },
+  });
+};
+
+export const useRegisterHospital = () => {
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: (payload: RegisterHospitalFormValues) =>
+      authApi.registerHospital({
+        // Infos Directeur
+        firstName: payload.firstName,
+        lastName: payload.lastName,
+        email: payload.email,
+        phone: payload.phone,
+        password: payload.password,
+        
+        // Infos Hôpital
+        structureName: payload.structureName,
+        structureType: payload.structureType,
+        registrationNumber: payload.registrationNumber,
+        region: payload.region,
+        address: payload.address,
+        latitude: payload.latitude,
+        longitude: payload.longitude,
+        affiliatedCntsId: payload.affiliatedCntsId,
+        
+        // Optionnels
+        structurePhone: payload.structurePhone || undefined,
+        structureEmail: payload.structureEmail || undefined,
+      }),
+    onSuccess: () => {
+      Toast.show({
+        type: "success",
+        text1: "Établissement enregistré 🏥",
+        text2: "Votre demande est en attente de vérification par la CNTS.",
+      });
+      router.replace("/pending-review" as any); // Remplace par ta route
+    },
+    onError: (err: any) => {
+      Toast.show({
+        type: "error",
+        text1: "Erreur d'inscription",
+        text2:
+          err?.response?.data?.message ||
+          "Une erreur inattendue est survenue",
+      });
     },
   });
 };

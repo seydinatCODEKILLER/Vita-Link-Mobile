@@ -20,7 +20,7 @@ import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/fr";
-import { AlertStatus } from "@/src/types/shared.types";
+import { AlertOrigin, AlertStatus } from "@/src/types/shared.types";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
@@ -58,6 +58,30 @@ const getStatusConfig = (
   },
 });
 
+// Ajoute cette config pour l'origine
+const getOriginConfig = (
+  colors: AppColors,
+): Record<
+  AlertOrigin,
+  { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }
+> => ({
+  CNTS_DIRECT: {
+    label: "Direct",
+    color: colors.red,
+    icon: "flash",
+  },
+  CNTS_ESCALATION: {
+    label: "Escalade",
+    color: colors.amber,
+    icon: "arrow-up-circle",
+  },
+  HOSPITAL_DIRECT: {
+    label: "Hôpital",
+    color: colors.textMuted,
+    icon: "business",
+  },
+});
+
 // ─── Alert Card ────────────────────────────────────────────────
 function StructureAlertCard({
   alert,
@@ -71,6 +95,7 @@ function StructureAlertCard({
   statusConfig: ReturnType<typeof getStatusConfig>;
 }) {
   const config = statusConfig[alert.status];
+  const originConfig = getOriginConfig(colors); // ✅ Nouveau
   const bloodLabel =
     BLOOD_TYPE_LABELS[alert.bloodType] ?? alert.bloodType.replace("_", "");
   const isVital = alert.urgencyLevel === "VITAL";
@@ -134,6 +159,40 @@ function StructureAlertCard({
           </Text>
         </View>
 
+        {/* ✅ NOUVEAU : Badge d'Origine (Escalade vs Direct) */}
+        {alert.origin === "CNTS_ESCALATION" && (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 3,
+              paddingHorizontal: 6,
+              paddingVertical: 3,
+              borderRadius: 6,
+              borderWidth: 0.5,
+              backgroundColor: originConfig.CNTS_ESCALATION.color + "14",
+              borderColor: originConfig.CNTS_ESCALATION.color + "30",
+              marginRight: 4,
+            }}
+          >
+            <Ionicons
+              name="arrow-up-circle"
+              size={10}
+              color={originConfig.CNTS_ESCALATION.color}
+            />
+            <Text
+              style={{
+                color: originConfig.CNTS_ESCALATION.color,
+                fontSize: 9,
+                fontWeight: "700",
+              }}
+            >
+              Escalade
+            </Text>
+          </View>
+        )}
+
+        {/* Badge Statut */}
         <View
           style={{
             flexDirection: "row",
@@ -156,7 +215,7 @@ function StructureAlertCard({
         </View>
       </View>
 
-      {/* Progress Row */}
+      {/* Progress Row (Inchangé) */}
       <View style={{ gap: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
           <Ionicons name="people-outline" size={14} color={colors.textMuted} />

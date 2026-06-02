@@ -56,13 +56,13 @@ const getStockLevelConfig = (
     icon: "alert-circle-outline",
     label: "Critique",
   },
-  LOW: { color: "#F97316", icon: "trending-down-outline", label: "Bas" }, // Orange hors palette
+  LOW: { color: "#F97316", icon: "trending-down-outline", label: "Bas" },
   ADEQUATE: {
     color: colors.success,
     icon: "checkmark-circle-outline",
     label: "Adéquat",
   },
-  SURPLUS: { color: "#3B82F6", icon: "add-circle-outline", label: "Surplus" }, // Bleu hors palette
+  SURPLUS: { color: "#3B82F6", icon: "add-circle-outline", label: "Surplus" },
 });
 
 // ─── StockCard ────────────────────────────────────────────────
@@ -78,7 +78,9 @@ function StockCard({
 
   const config = BLOOD_TYPES_CONFIG.find((b) => b.value === stock.bloodType);
   const lvlConfig = STOCK_LEVEL_CONFIG[stock.level];
-  const progressPct = Math.min((stock.quantity / 20) * 100, 100);
+
+  // ✅ CORRECTION : Plafond de la jauge à 50 poches au lieu de 20 (plus réaliste pour une CNTS)
+  const progressPct = Math.min((stock.quantity / 50) * 100, 100);
 
   const styles = useThemedStyles((c) => ({
     stockCard: {
@@ -190,9 +192,7 @@ export default function StockScreen() {
   const STOCK_LEVEL_CONFIG = getStockLevelConfig(colors);
   const insets = useSafeAreaInsets();
 
-  // ✅ AJOUT : Extraction de `isError`, `error` et `refetch`
   const { data: stocks, isLoading, isError, error, refetch } = useMyStocks();
-
   const { mutateAsync: updateStock, isPending: isUpdating } =
     useUpdateMyStock();
 
@@ -223,10 +223,9 @@ export default function StockScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedBloodType(null);
     } catch (error: any) {
-      Alert.alert(
-        "Erreur",
-        error?.response?.data?.message || "Mise à jour échouée.",
-      );
+      // ✅ AMÉLIORATION : Gestion de l'erreur 403 (si un hôpital tente de modifier le stock)
+      const errorMsg = error?.response?.data?.message || "Mise à jour échouée.";
+      Alert.alert("Erreur", errorMsg);
     }
   };
 
@@ -316,7 +315,7 @@ export default function StockScreen() {
       borderColor: c.cardBorder,
       padding: 24,
       paddingTop: 16,
-      paddingBottom: Math.max(24, tabBarHeight + insets.bottom), // ← correction
+      paddingBottom: Math.max(24, tabBarHeight + insets.bottom),
       gap: 14,
       alignItems: "center",
     },
@@ -379,12 +378,13 @@ export default function StockScreen() {
     },
     confirmBtnText: { color: c.white, fontSize: 14, fontWeight: "700" },
     btnDisabled: { opacity: 0.5 },
-    errorText: { color: c.textMuted, fontSize: 16 },
+    errorText: { color: c.textMuted, fontSize: 16, textAlign: "center" },
     errorBack: {
       backgroundColor: c.red,
       paddingHorizontal: 24,
       paddingVertical: 12,
       borderRadius: 12,
+      marginTop: 8,
     },
     errorBackText: { color: "#FFFFFF", fontWeight: "700" },
   }));
@@ -396,8 +396,7 @@ export default function StockScreen() {
         <Ionicons name="time-outline" size={64} color={colors.textSubtle} />
         <Text style={styles.pendingTitle}>Structure en attente</Text>
         <Text style={styles.pendingSub}>
-          Votre structure doit être validée par nos équipes avant de pouvoir
-          gérer les stocks de sang.
+          Votre CNTS doit être validée avant de pouvoir gérer les stocks.
         </Text>
       </View>
     );
@@ -411,9 +410,8 @@ export default function StockScreen() {
     );
   }
 
-  // ✅ NOUVEAU : Gestion robuste des erreurs
+  // ── Gestion robuste des erreurs ──
   if (isError) {
-    // 1. Si c'est une erreur réseau → NetworkErrorScreen avec bouton Réessayer
     if (isNetworkError(error)) {
       return (
         <View style={styles.container}>
@@ -422,11 +420,15 @@ export default function StockScreen() {
       );
     }
 
-    // 2. Si c'est une erreur API (ex: 403 ou 500) → Message d'erreur classique
+    // Erreur API (403 si c'est un hôpital, 500, etc.)
+    const errorMessage =
+      (error as any)?.response?.data?.message ||
+      "Impossible de charger les stocks. Vous n'avez peut-être pas les droits nécessaires.";
+
     return (
       <View style={[styles.container, styles.centered]}>
         <Ionicons name="alert-circle-outline" size={40} color={colors.red} />
-        <Text style={styles.errorText}>Impossible de charger les stocks</Text>
+        <Text style={styles.errorText}>{errorMessage}</Text>
         <TouchableOpacity onPress={() => refetch()} style={styles.errorBack}>
           <Text style={styles.errorBackText}>Réessayer</Text>
         </TouchableOpacity>

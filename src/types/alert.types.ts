@@ -16,6 +16,15 @@ export interface AlertStructure {
   longitude: number | null;
 }
 
+// Ajoute ces valeurs dans ton shared.types.ts
+export const AlertOriginEnum = {
+  CNTS_DIRECT: "CNTS_DIRECT",
+  CNTS_ESCALATION: "CNTS_ESCALATION",
+  HOSPITAL_DIRECT: "HOSPITAL_DIRECT",
+} as const;
+export type AlertOrigin =
+  (typeof AlertOriginEnum)[keyof typeof AlertOriginEnum];
+
 export interface Alert {
   id: string;
   bloodType: BloodType;
@@ -30,6 +39,10 @@ export interface Alert {
   radiusKm: number;
   expiresAt: string | null;
   createdAt: string;
+
+  origin: AlertOrigin;
+  bloodRequestId: string | null;
+
   healthStructure: AlertStructure;
   distance_km?: number;
 }
@@ -103,6 +116,7 @@ export interface ActiveEngagement {
     id: string;
     bloodType: BloodType;
     urgencyLevel: UrgencyLevel;
+    origin: AlertOrigin; // 🆕 AJOUT CRITIQUE ICI
     healthStructure: AlertStructure;
   };
 }

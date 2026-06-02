@@ -92,6 +92,18 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.3)).current;
 
+  // 🆕 Logique d'origine de l'alerte (CNTS vs Hôpital)
+  const isCntsAlert =
+    alert.origin === "CNTS_DIRECT" || alert.origin === "CNTS_ESCALATION";
+
+  // 🆕 Détermination dynamique du nom à afficher
+  const displayStructureName = isCntsAlert
+    ? `🩸 ${alert.healthStructure.name}`
+    : alert.healthStructure.name;
+
+  // 🆕 Détermination dynamique du label du bouton
+  const ctaLabel = isCntsAlert ? "Je me rends au CNTS" : "J'y vais";
+
   const styles = useThemedStyles((c) => ({
     touchable: { marginBottom: 12 },
 
@@ -296,10 +308,16 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
   }, [isVital]);
 
   const handleRelay = async () => {
+    // 🆕 Amélioration du message de partage selon l'origine
+    const urgencyText = isVital ? "🚨 URGENCE VITALE" : "🩸 Appel aux donneurs";
+    const locationText = isCntsAlert
+      ? `au ${alert.healthStructure.name}`
+      : `à l'hôpital ${alert.healthStructure.name}`;
+
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       await Share.share({
-        message: `🚨 URGENCE : L'hôpital ${alert.healthStructure.name} a besoin de sang ${bloodLabel} ! Si tu es disponible et éligible, télécharge Vita-Link ou rends-y toi.`,
+        message: `${urgencyText} : On a besoin de donneurs ${locationText} pour du sang ${bloodLabel} ! Si tu es disponible et éligible, télécharge Vita-Link ou rends-y toi.`,
       });
     } catch {
       // Silencieux
@@ -331,7 +349,10 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
         {isVital && (
           <View style={styles.vitalBand}>
             <View style={styles.vitalDot} />
-            <Text style={styles.vitalBandText}>URGENCE VITALE</Text>
+            {/* 🆕 On précise si c'est une urgence hôpital ou pénurie CNTS */}
+            <Text style={styles.vitalBandText}>
+              {isCntsAlert ? "PÉNURIE CRITIQUE CNTS" : "URGENCE VITALE"}
+            </Text>
           </View>
         )}
 
@@ -351,7 +372,8 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
           <View style={styles.infoBlock}>
             <View style={styles.infoTop}>
               <Text style={styles.hospitalName} numberOfLines={1}>
-                {alert.healthStructure.name}
+                {/* 🆕 Nom dynamique */}
+                {displayStructureName}
               </Text>
               <View
                 style={[
@@ -371,12 +393,16 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
             </View>
 
             <View style={styles.metaRow}>
+              {/* 🆕 Icône dynamique : Médical pour hôpital, Goutte pour CNTS */}
               <Ionicons
-                name="medkit-outline"
+                name={isCntsAlert ? "water-outline" : "medkit-outline"}
                 size={12}
                 color={colors.textMuted}
               />
-              <Text style={styles.metaText}>{serviceLabel}</Text>
+              <Text style={styles.metaText}>
+                {/* 🆕 Si c'est le CNTS, on affiche "Centre de collecte" au lieu du service médical */}
+                {isCntsAlert ? "Centre de collecte" : serviceLabel}
+              </Text>
               <View style={styles.dot} />
               <Ionicons
                 name="location-outline"
@@ -418,7 +444,8 @@ export const AlertCard = ({ alert, onPress, onConfirm }: AlertCardProps) => {
               activeOpacity={0.8}
             >
               <Ionicons name="heart" size={13} color="#FFFFFF" />
-              <Text style={styles.ctaBtnText}>J&apos;y vais</Text>
+              {/* 🆕 Label dynamique */}
+              <Text style={styles.ctaBtnText}>{ctaLabel}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity

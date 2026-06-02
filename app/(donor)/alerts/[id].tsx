@@ -105,12 +105,14 @@ function EtaModal({
   onConfirm,
   isLoading,
   colors,
+  destinationText,
 }: {
   visible: boolean;
   onClose: () => void;
   onConfirm: (eta?: number) => void;
   isLoading: boolean;
   colors: AppColors;
+  destinationText: string;
 }) {
   const [etaText, setEtaText] = useState("");
 
@@ -193,8 +195,8 @@ function EtaModal({
               maxWidth: 280,
             }}
           >
-            Un QR Code sera généré. Présentez-le à l&apos;accueil de
-            l&apos;hôpital.
+            Un QR Code sera généré. Présentez-le à l&apos;accueil{" "}
+            {destinationText}.
           </Text>
 
           <View style={{ alignSelf: "stretch", marginBottom: 20 }}>
@@ -651,9 +653,16 @@ export default function AlertDetailScreen() {
             expiresAt: new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString(),
           });
         }
+
+        // 🆕 On passe l'origin et l'alertId correctement
         router.push({
           pathname: "/(donor)/qrcode" as any,
-          params: { qrCode: result.qrCode, alertId: id, isExpired: "false" },
+          params: {
+            qrCode: result.qrCode,
+            alertId: id,
+            isExpired: "false",
+            origin: alert?.origin || "HOSPITAL_DIRECT", // ← CRITIQUE POUR LE QR SCREEN
+          },
         });
       } catch {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -739,7 +748,11 @@ export default function AlertDetailScreen() {
   //   alert.healthStructure.latitude != null &&
   //   alert.healthStructure.longitude != null;
 
-  const hasCoords = false; 
+  const hasCoords = false;
+  // 🆕 Logique d'origine de l'alerte (CNTS vs Hôpital)
+  const isCntsAlert =
+    alert.origin === "CNTS_DIRECT" || alert.origin === "CNTS_ESCALATION";
+  const destinationText = isCntsAlert ? "au CNTS" : "à l'hôpital";
 
   return (
     <View style={styles.container}>
@@ -964,7 +977,13 @@ export default function AlertDetailScreen() {
                 onPress={() =>
                   router.push({
                     pathname: "/(donor)/qrcode" as any,
-                    params: { qrCode: activeEngagement?.qrCode },
+                    params: {
+                      qrCode: activeEngagement?.qrCode,
+                      alertId: activeEngagement?.alert?.id,
+                      origin:
+                        activeEngagement?.alert?.origin || "HOSPITAL_DIRECT", // 🆕
+                      isExpired: "false",
+                    },
                   })
                 }
                 style={[styles.confirmBtn, styles.confirmBtnVital, { flex: 1 }]}
@@ -975,8 +994,9 @@ export default function AlertDetailScreen() {
                 </View>
                 <View>
                   <Text style={styles.confirmBtnText}>Mon QR Code</Text>
+                  {/* 🆕 Texte dynamique */}
                   <Text style={styles.confirmBtnSub}>
-                    Présentez à l&apos;accueil
+                    Présentez {destinationText}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -1013,7 +1033,13 @@ export default function AlertDetailScreen() {
               onPress={() =>
                 router.push({
                   pathname: "/(donor)/qrcode" as any,
-                  params: { qrCode: activeEngagement?.qrCode },
+                  params: {
+                    qrCode: activeEngagement?.qrCode,
+                    alertId: activeEngagement?.alert?.id,
+                    origin:
+                      activeEngagement?.alert?.origin || "HOSPITAL_DIRECT",
+                    isExpired: "false",
+                  },
                 })
               }
               activeOpacity={0.7}
@@ -1108,6 +1134,7 @@ export default function AlertDetailScreen() {
         onConfirm={handleConfirm}
         isLoading={isConfirming}
         colors={colors}
+        destinationText={destinationText}
       />
     </View>
   );

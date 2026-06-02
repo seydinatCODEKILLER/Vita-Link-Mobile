@@ -38,6 +38,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     "expo-router",
     "@react-native-community/datetimepicker",
+     "expo-font",
     [
       "expo-splash-screen",
       {

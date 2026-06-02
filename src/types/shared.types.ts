@@ -3,9 +3,12 @@
 
 export const RoleEnum = {
   DONOR: "DONOR",
-  HEALTH_STRUCTURE: "HEALTH_STRUCTURE",
+  CNTS_AGENT: "CNTS_AGENT",
+  CNTS_ADMIN: "CNTS_ADMIN",
+  HOSPITAL_AGENT: "HOSPITAL_AGENT",
   ADMIN: "ADMIN",
 } as const;
+
 export type Role = (typeof RoleEnum)[keyof typeof RoleEnum];
 
 export const GenderEnum = {
@@ -13,6 +16,25 @@ export const GenderEnum = {
   FEMALE: "FEMALE",
 } as const;
 export type Gender = (typeof GenderEnum)[keyof typeof GenderEnum];
+
+export const BloodRequestStatusEnum = {
+  PENDING: "PENDING",
+  FULFILLED: "FULFILLED",
+  PARTIALLY_FULFILLED: "PARTIALLY_FULFILLED",
+  ESCALATED_TO_ALERT: "ESCALATED_TO_ALERT",
+  REJECTED: "REJECTED",
+  CANCELLED: "CANCELLED",
+} as const;
+export type BloodRequestStatus =
+  (typeof BloodRequestStatusEnum)[keyof typeof BloodRequestStatusEnum];
+
+export const AlertOriginEnum = {
+  CNTS_DIRECT: "CNTS_DIRECT",
+  CNTS_ESCALATION: "CNTS_ESCALATION",
+  HOSPITAL_DIRECT: "HOSPITAL_DIRECT",
+} as const;
+export type AlertOrigin =
+  (typeof AlertOriginEnum)[keyof typeof AlertOriginEnum];
 
 export const BloodTypeEnum = {
   A_POS: "A_POS",
@@ -37,7 +59,8 @@ export const UrgencyLevelEnum = {
   VITAL: "VITAL",
   STANDARD: "STANDARD",
 } as const;
-export type UrgencyLevel = (typeof UrgencyLevelEnum)[keyof typeof UrgencyLevelEnum];
+export type UrgencyLevel =
+  (typeof UrgencyLevelEnum)[keyof typeof UrgencyLevelEnum];
 
 export const AlertStatusEnum = {
   ACTIVE: "ACTIVE",
@@ -45,7 +68,8 @@ export const AlertStatusEnum = {
   EXPIRED: "EXPIRED",
   CANCELLED: "CANCELLED",
 } as const;
-export type AlertStatus = (typeof AlertStatusEnum)[keyof typeof AlertStatusEnum];
+export type AlertStatus =
+  (typeof AlertStatusEnum)[keyof typeof AlertStatusEnum];
 
 export const AlertResponseStatusEnum = {
   CONFIRMED: "CONFIRMED",
@@ -54,7 +78,8 @@ export const AlertResponseStatusEnum = {
   NO_SHOW: "NO_SHOW",
   CANCELLED: "CANCELLED",
 } as const;
-export type AlertResponseStatus = (typeof AlertResponseStatusEnum)[keyof typeof AlertResponseStatusEnum];
+export type AlertResponseStatus =
+  (typeof AlertResponseStatusEnum)[keyof typeof AlertResponseStatusEnum];
 
 export const ServiceUnitEnum = {
   EMERGENCY_ROOM: "EMERGENCY_ROOM",
@@ -63,7 +88,8 @@ export const ServiceUnitEnum = {
   GENERAL: "GENERAL",
   PEDIATRICS: "PEDIATRICS",
 } as const;
-export type ServiceUnit = (typeof ServiceUnitEnum)[keyof typeof ServiceUnitEnum];
+export type ServiceUnit =
+  (typeof ServiceUnitEnum)[keyof typeof ServiceUnitEnum];
 
 export const CouponStatusEnum = {
   ACTIVE: "ACTIVE",
@@ -71,7 +97,8 @@ export const CouponStatusEnum = {
   EXPIRED: "EXPIRED",
   CANCELLED: "CANCELLED",
 } as const;
-export type CouponStatus = (typeof CouponStatusEnum)[keyof typeof CouponStatusEnum];
+export type CouponStatus =
+  (typeof CouponStatusEnum)[keyof typeof CouponStatusEnum];
 
 export const BloodStockLevelEnum = {
   CRITICAL: "CRITICAL",
@@ -79,14 +106,16 @@ export const BloodStockLevelEnum = {
   ADEQUATE: "ADEQUATE",
   SURPLUS: "SURPLUS",
 } as const;
-export type BloodStockLevel = (typeof BloodStockLevelEnum)[keyof typeof BloodStockLevelEnum];
+export type BloodStockLevel =
+  (typeof BloodStockLevelEnum)[keyof typeof BloodStockLevelEnum];
 
 export const HealthStructureStatusEnum = {
   PENDING_REVIEW: "PENDING_REVIEW",
   VERIFIED: "VERIFIED",
   SUSPENDED: "SUSPENDED",
 } as const;
-export type HealthStructureStatus = (typeof HealthStructureStatusEnum)[keyof typeof HealthStructureStatusEnum];
+export type HealthStructureStatus =
+  (typeof HealthStructureStatusEnum)[keyof typeof HealthStructureStatusEnum];
 
 // ─── Pagination ───────────────────────────────────────────────
 

@@ -9,7 +9,6 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import dayjs from "dayjs";
@@ -18,12 +17,9 @@ import { useMyBadges } from "@/src/hooks/useJambaar";
 import { Badge } from "@/src/types/domain.types";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
-
-// ─── Imports pour l'erreur réseau ─────────────────────────────
 import { isNetworkError } from "@/src/utils/error.utils";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 
-// ─── Émoji par défaut selon le type de badge ──────────────────
 function getDefaultEmoji(badge: Badge): string {
   const name = badge.name.toLowerCase();
   if (
@@ -84,7 +80,6 @@ function getDefaultEmoji(badge: Badge): string {
   return "🏅";
 }
 
-// ─── Parseur critères ──────────────────────────────────────────
 function parseCriteria(criteriaJson: string): string {
   try {
     const c = JSON.parse(criteriaJson);
@@ -100,13 +95,12 @@ function parseCriteria(criteriaJson: string): string {
   }
 }
 
-// ─── Détermine si un badge est "nouveau" (débloqué < 24h) ────
 function isNewBadge(badge: Badge): boolean {
   if (!badge.isUnlocked || !badge.earnedAt) return false;
   return dayjs().diff(dayjs(badge.earnedAt), "hour") < 24;
 }
 
-// ─── Skeleton Badges ──────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────
 function BadgesSkeleton({ colors }: { colors: AppColors }) {
   const styles = useThemedStyles((c) => ({
     cardBg: {
@@ -128,7 +122,6 @@ function BadgesSkeleton({ colors }: { colors: AppColors }) {
 
   return (
     <View style={{ paddingHorizontal: 20, opacity: 0.6, gap: 28 }}>
-      {/* Fake Progress Card */}
       <View style={[styles.cardBg, { padding: 18, gap: 12 }]}>
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View style={[styles.line, { width: "40%" }]} />
@@ -143,7 +136,6 @@ function BadgesSkeleton({ colors }: { colors: AppColors }) {
         />
         <View style={[styles.line, { width: "60%", height: 8 }]} />
       </View>
-      {/* Fake Grid */}
       <View style={{ gap: 14 }}>
         <View style={[styles.line, { width: "30%", height: 8 }]} />
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
@@ -156,7 +148,7 @@ function BadgesSkeleton({ colors }: { colors: AppColors }) {
   );
 }
 
-// ─── Particule d'étincelle ────────────────────────────────────
+// ─── SparkleParticle — Math.random() stabilisé avec useRef ────
 function SparkleParticle({
   index,
   totalParticles,
@@ -167,9 +159,11 @@ function SparkleParticle({
   colors: AppColors;
 }) {
   const angle = (index / totalParticles) * 360;
-  const distance = 40 + Math.random() * 30;
-  const size = 4 + Math.random() * 6;
-  const delay = Math.random() * 200;
+
+  // ✅ Fix : Math.random() mémorisé, ne recalcule pas à chaque render
+  const distance = useRef(40 + Math.random() * 30).current;
+  const size = useRef(4 + Math.random() * 6).current;
+  const delay = useRef(Math.random() * 200).current;
 
   const opacity = useRef(new Animated.Value(0)).current;
   const translateX = useRef(new Animated.Value(0)).current;
@@ -182,7 +176,7 @@ function SparkleParticle({
     const dx = Math.cos(rad) * distance;
     const dy = Math.sin(rad) * distance;
 
-    Animated.sequence([
+    const animation = Animated.sequence([
       Animated.delay(400 + delay),
       Animated.parallel([
         Animated.timing(opacity, {
@@ -220,11 +214,19 @@ function SparkleParticle({
         delay: 300,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
 
-    setTimeout(() => {
+    animation.start();
+
+    const hapticTimer = setTimeout(() => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }, 400 + delay);
+
+    // ✅ Fix : cleanup
+    return () => {
+      animation.stop();
+      clearTimeout(hapticTimer);
+    };
   }, []);
 
   return (
@@ -274,6 +276,8 @@ function BadgeCard({
   const badgeEmoji = badge.iconUrl ? null : getDefaultEmoji(badge);
 
   useEffect(() => {
+    let shineLoop: Animated.CompositeAnimation | null = null;
+
     if (isNew) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -306,7 +310,8 @@ function BadgeCard({
         }),
       ]).start();
 
-      Animated.loop(
+      // ✅ Fix : loop mémorisé pour pouvoir le stopper
+      shineLoop = Animated.loop(
         Animated.sequence([
           Animated.timing(newBadgeShine, {
             toValue: 1,
@@ -319,7 +324,8 @@ function BadgeCard({
             useNativeDriver: true,
           }),
         ]),
-      ).start();
+      );
+      shineLoop.start();
     } else {
       Animated.parallel([
         Animated.spring(scaleAnim, {
@@ -337,15 +343,25 @@ function BadgeCard({
         }),
       ]).start();
     }
+
+    // ✅ Fix : cleanup du loop infini
+    return () => {
+      shineLoop?.stop();
+    };
   }, []);
 
   return (
+    // ✅ Fix : overflow "visible" pour éviter l'écran noir sur build release
     <Animated.View
       style={[
         styles.badgeCard,
         isUnlocked ? styles.badgeUnlocked : styles.badgeLocked,
         isNew && { borderColor: colors.amber + "60" },
-        { opacity: fadeAnim, transform: [{ scale: scaleAnim }] },
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+          overflow: "visible",
+        },
       ]}
     >
       {isNew && (
@@ -360,6 +376,7 @@ function BadgeCard({
           ))}
         </>
       )}
+
       {isNew && (
         <Animated.View
           style={[
@@ -378,6 +395,7 @@ function BadgeCard({
           ]}
         />
       )}
+
       {isUnlocked && <View style={styles.unlockedHalo} />}
       {isUnlocked && (
         <View
@@ -388,16 +406,18 @@ function BadgeCard({
         />
       )}
 
+      {/* ✅ Fix : translateX avec valeurs numériques au lieu de "%" */}
       {isNew && (
         <Animated.View
           style={[
             styles.newBadgeBanner,
             {
               transform: [
+                { rotate: "25deg" },
                 {
                   translateX: newBadgeShine.interpolate({
                     inputRange: [0, 1],
-                    outputRange: ["-100%", "100%"],
+                    outputRange: [-120, 120],
                   }),
                 },
               ],
@@ -471,7 +491,7 @@ function BadgeCard({
   );
 }
 
-// ─── Section header ────────────────────────────────────────────
+// ─── Section Header ────────────────────────────────────────────
 function SectionHeader({
   title,
   count,
@@ -525,10 +545,7 @@ function SectionHeader({
 
 // ─── Écran principal ───────────────────────────────────────────
 export default function BadgesScreen() {
-  const router = useRouter();
   const colors = useColors();
-
-  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
   const { data, isLoading, isError, error, refetch } = useMyBadges();
   const hasNetworkError = isError && isNetworkError(error);
 
@@ -649,7 +666,8 @@ export default function BadgesScreen() {
       justifyContent: "center",
       gap: 7,
       position: "relative",
-      overflow: "hidden",
+      // ✅ Fix : "visible" au lieu de "hidden" pour éviter l'écran noir
+      overflow: "visible",
     },
     badgeUnlocked: {
       backgroundColor: c.amber + "06",
@@ -671,6 +689,7 @@ export default function BadgesScreen() {
       left: 0,
       right: 0,
       height: 2.5,
+      borderRadius: 2,
       backgroundColor: c.amber,
       opacity: 0.7,
     },
@@ -767,7 +786,6 @@ export default function BadgesScreen() {
       backgroundColor: c.amber,
       paddingHorizontal: 10,
       paddingVertical: 2,
-      transform: [{ rotate: "25deg" }],
       shadowColor: c.amber,
       shadowOffset: { width: 0, height: 2 },
       shadowOpacity: 0.5,
@@ -783,7 +801,7 @@ export default function BadgesScreen() {
   }));
 
   const goBack = useSmartBack({
-    defaultRoute: "/(donor)/jambaar", // Par défaut, retour au hub Jambaar
+    defaultRoute: "/(donor)/jambaar",
     routeMap: {
       jambaar: "/(donor)/jambaar",
       profile: "/(donor)/profile",
@@ -839,40 +857,42 @@ export default function BadgesScreen() {
           Mes <Text style={{ color: colors.amber }}>Badges</Text>
         </Text>
       </View>
-      {data && (
+      {data ? (
         <View style={styles.headerBadge}>
           <Text style={styles.headerBadgeText}>
             {data.earned}/{data.total}
           </Text>
         </View>
+      ) : (
+        <View style={{ width: 40 }} />
       )}
-      {!data && <View style={{ width: 40 }} />}
     </Animated.View>
   );
 
-  // ── 1. Chargement initial (Skeleton) ───────────────────────
   if (isLoading && !data) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.topHalo} />
-        {renderHeader()}
-        <BadgesSkeleton colors={colors} />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {renderHeader()}
+          <BadgesSkeleton colors={colors} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
 
-  // ── 2. Erreur réseau sans cache ────────────────────────────
   if (hasNetworkError && !data) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.topHalo} />
-        {renderHeader()}
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {renderHeader()}
+        </ScrollView>
         <NetworkErrorScreen onRetry={refetch} />
       </SafeAreaView>
     );
   }
 
-  // ── 3. Rendu normal ─────────────────────────────────────────
   if (!data) return null;
 
   const unlockedBadges = data.badges.filter((b) => b.isUnlocked);
@@ -884,7 +904,6 @@ export default function BadgesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topHalo} />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[

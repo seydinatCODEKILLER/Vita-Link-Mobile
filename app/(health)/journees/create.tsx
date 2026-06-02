@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,13 +8,14 @@ import {
   Animated,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
+import { useNavigation } from "@react-navigation/native";
 import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -170,7 +171,7 @@ type FormDataState = Partial<DayStep1Values> &
 
 // ─── Écran principal ───────────────────────────────────────────
 export default function CreateJourneeScreen() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { mutateAsync: createDay, isPending } = useCreateDay();
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
@@ -181,6 +182,7 @@ export default function CreateJourneeScreen() {
       dashboard: "/(health)",
     },
   });
+  const insets = useSafeAreaInsets();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -715,6 +717,17 @@ export default function CreateJourneeScreen() {
   );
 
   const stepInfo = STEPS[currentStep - 1];
+
+  useEffect(() => {
+    // Si on est sur une étape > 1, on empêche le retour natif (swipe/hardware)
+    if (currentStep > 1) {
+      const unsubscribe = navigation.addListener("beforeRemove", (e) => {
+        e.preventDefault(); // Bloque le retour natif
+        setCurrentStep((s) => s - 1); // Retour manuel à l'étape précédente
+      });
+      return unsubscribe; // Nettoyage
+    }
+  }, [currentStep, navigation]);
 
   return (
     <View style={styles.container}>

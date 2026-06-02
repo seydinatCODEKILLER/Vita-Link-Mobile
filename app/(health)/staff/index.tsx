@@ -25,6 +25,14 @@ const getAvatarColors = (colors: AppColors) => [
   { bg: colors.amber + "14", text: colors.amber },
 ];
 
+const getRoleConfig = (
+  colors: AppColors,
+): Record<string, { label: string; color: string }> => ({
+  CNTS_ADMIN: { label: "Admin CNTS", color: colors.amber },
+  CNTS_AGENT: { label: "Agent CNTS", color: colors.success },
+  HOSPITAL_AGENT: { label: "Agent Hôpital", color: "#60A5FA" },
+});
+
 // ─── Skeleton Staff ────────────────────────────────────────────
 function StaffSkeleton({ colors }: { colors: AppColors }) {
   const styles = useThemedStyles((c) => ({
@@ -129,6 +137,12 @@ function StaffRow({
 }) {
   const colors = useColors();
   const AVATAR_COLORS = getAvatarColors(colors);
+  const ROLE_CONFIG = getRoleConfig(colors);
+
+  const roleConf = ROLE_CONFIG[member.role] ?? {
+    label: "Agent",
+    color: colors.textMuted,
+  };
 
   const isAdmin = member.isStructureAdmin;
   const avatarColor = isAdmin
@@ -202,11 +216,22 @@ function StaffRow({
           <Text style={styles.name} numberOfLines={1}>
             {member.firstName} {member.lastName}
           </Text>
-          {isAdmin && (
-            <View style={styles.directorPill}>
-              <Text style={styles.directorPillText}>Directeur</Text>
-            </View>
-          )}
+          <View
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 6,
+              backgroundColor: roleConf.color + "13",
+              borderWidth: 0.5,
+              borderColor: roleConf.color + "30",
+            }}
+          >
+            <Text
+              style={{ color: roleConf.color, fontSize: 10, fontWeight: "700" }}
+            >
+              {roleConf.label}
+            </Text>
+          </View>
         </View>
         <Text style={styles.email} numberOfLines={1}>
           {member.email}

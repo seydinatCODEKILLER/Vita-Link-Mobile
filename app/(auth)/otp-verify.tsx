@@ -184,12 +184,6 @@ export default function OtpVerifyScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
     email: string;
-    phone: string;
-    firstName: string;
-    lastName: string;
-    bloodType: string;
-    gender: string;
-    dateOfBirth: string;
   }>();
 
   const { mutateAsync: verifyOtp, isPending } = useVerifyOtp();
@@ -480,12 +474,6 @@ export default function OtpVerifyScreen() {
       await verifyOtp({
         email: params.email,
         code: otpCode,
-        phone: params.phone,
-        firstName: params.firstName,
-        lastName: params.lastName,
-        bloodType: params.bloodType as any,
-        gender: params.gender as any,
-        dateOfBirth: params.dateOfBirth || undefined,
       });
     } catch {
       setHasError(true);

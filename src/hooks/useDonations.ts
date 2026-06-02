@@ -28,10 +28,12 @@ export const useScanDonation = () => {
   return useMutation({
     mutationFn: (qrCode: string) => donationsApi.scanAndValidate(qrCode),
     onSuccess: (data) => {
-      // Invalider les caches pertinents après un scan réussi
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
-      queryClient.invalidateQueries({ queryKey: ["structureDonations"] });
-      queryClient.invalidateQueries({ queryKey: ["bloodStocks"] });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.structureDonations,
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodStocks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
     },
   });
 };

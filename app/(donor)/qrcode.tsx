@@ -24,10 +24,11 @@ import { useThemeStore } from "@/src/store/theme.store";
 
 export default function QrCodeScreen() {
   const router = useRouter();
-  const { qrCode, alertId, isExpired } = useLocalSearchParams<{
+  const { qrCode, alertId, isExpired, origin } = useLocalSearchParams<{
     qrCode: string;
     alertId: string;
     isExpired?: string;
+    origin?: string; // 🆕 Récupération de l'origine de l'alerte
   }>();
   const tabBarHeight = useBottomTabBarHeight();
   const colors = useColors();
@@ -41,6 +42,18 @@ export default function QrCodeScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.88)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
+
+  // 🆕 Logique d'origine de l'alerte (CNTS vs Hôpital)
+  const isCntsAlert = origin === "CNTS_DIRECT" || origin === "CNTS_ESCALATION";
+
+  // 🆕 Textes dynamiques selon la destination du donneur
+  const destinationText = isCntsAlert
+    ? "au Centre National de Transfusion Sanguine (CNTS)"
+    : "à l'accueil de l'hôpital pour orienter votre passage";
+
+  const instructionDetail = isCntsAlert
+    ? "L'agent du CNTS scannera ce code pour valider votre don, mettre à jour les réserves de sang et créditer vos"
+    : "L'hôpital vérifiera votre venue. La validation finale par le CNTS créditera vos";
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
@@ -129,7 +142,7 @@ export default function QrCodeScreen() {
     },
     qrCardWrapper: { paddingHorizontal: 24, marginBottom: 20 },
     qrCard: {
-      backgroundColor: "#FFFFFF", // card toujours blanche — le QR doit être lisible
+      backgroundColor: "#FFFFFF",
       borderRadius: 24,
       overflow: "hidden",
       shadowColor: c.red,
@@ -355,7 +368,7 @@ export default function QrCodeScreen() {
     if (!alertId) return;
     Alert.alert(
       "Annuler votre venue ?",
-      "L'hôpital compte sur vous. Si vous annulez, votre engagement sera supprimé et vous redeviendrez disponible pour d'autres alertes.",
+      "L'établissement compte sur vous. Si vous annulez, votre engagement sera supprimé et vous redeviendrez disponible pour d'autres alertes.",
       [
         { text: "Non, je maintiens", style: "cancel" },
         {
@@ -421,9 +434,10 @@ export default function QrCodeScreen() {
               <Ionicons name="close" size={20} color={colors.white} />
             </TouchableOpacity>
             <View style={styles.headerCenter}>
+              {/* 🆕 Badge plus précis sémantiquement */}
               <View style={styles.successBadge}>
                 <View style={styles.successDot} />
-                <Text style={styles.successBadgeText}>Don confirmé</Text>
+                <Text style={styles.successBadgeText}>Engagement pris</Text>
               </View>
             </View>
             <TouchableOpacity
@@ -443,8 +457,9 @@ export default function QrCodeScreen() {
             ]}
           >
             <Text style={styles.title}>Votre Pass Don 🩸</Text>
+            {/* 🆕 Texte dynamique selon la destination (CNTS ou Hôpital) */}
             <Text style={styles.subtitle}>
-              Présentez ce QR Code à l&apos;accueil de l&apos;hôpital
+              Présentez ce QR Code {destinationText}
             </Text>
           </Animated.View>
 
@@ -471,7 +486,6 @@ export default function QrCodeScreen() {
               <View style={styles.dottedLine} />
 
               <View style={styles.qrWrapper}>
-                {/* QR toujours sur fond blanc — lisibilité scanner */}
                 <QRCode
                   value={qrCode}
                   size={200}
@@ -505,8 +519,8 @@ export default function QrCodeScreen() {
                 />
               </View>
               <Text style={styles.instructionText}>
-                L&apos;agent de santé scannera ce code pour valider votre don et
-                créditer vos{" "}
+                {/* 🆕 Instruction dynamique selon qui scannera le code */}
+                {instructionDetail}{" "}
                 <Text style={{ color: colors.amber, fontWeight: "700" }}>
                   points Jambaar
                 </Text>
