@@ -9,6 +9,7 @@ import { QUERY_KEYS } from "@/src/constants/query_key";
 import { Alert } from "@/src/types/alert.types";
 import logger from "@/src/utils/logger.utils";
 import { useAlertStore } from "../store/alerts.store";
+import { BloodStock } from "../types/domain.types";
 
 export const useSocket = () => {
   const queryClient = useQueryClient();
@@ -139,14 +140,19 @@ export const useSocket = () => {
     socket.on("stock:updated", (data) => {
       logger.info("🩸 Stock de sang mis à jour via Socket :", data.bloodType);
 
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodStocks });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
-    });
-
-    socket.on("stock:critical", (data) => {
-      logger.info("🚨 Stock critique signalé aux admins :", data);
-      queryClient.invalidateQueries({ queryKey: ["admin", "stocks"] });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
+      queryClient.setQueryData<BloodStock[]>(
+        QUERY_KEYS.bloodStocks,
+        (oldStocks) => {
+          if (!oldStocks) return oldStocks;
+          return oldStocks.map((s) =>
+            s.bloodType === data.bloodType
+              ? { ...s, quantity: data.quantity, level: data.level }
+              : s,
+          );
+        },
+      );
+      queryClient.refetchQueries({ queryKey: ["dashboard", "cnts"] });
+            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStats });
     });
 
     // ── 7. STRUCTURE VALIDÉE ─────────────────────────────────

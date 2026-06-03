@@ -1,6 +1,7 @@
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/fr";
+import { BloodStockLevel } from "../types/shared.types";
 
 dayjs.extend(relativeTime);
 dayjs.locale("fr");
@@ -68,3 +69,10 @@ export const formatServiceUnit = (unit: string): string => {
 export function isEventToday(scheduledDate: string): boolean {
   return dayjs(scheduledDate).isSame(dayjs(), "day");
 }
+
+export const calculateStockLevel = (quantity: number): BloodStockLevel => {
+  if (quantity === 0) return "CRITICAL";
+  if (quantity <= 5) return "LOW";
+  if (quantity <= 30) return "ADEQUATE";
+  return "SURPLUS";
+};
