@@ -24,6 +24,14 @@ import { AppColors } from "@/src/theme/colors";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
 
+// ─── Calcul du niveau basé sur la quantité ──────────────────
+const calculateStockLevel = (quantity: number): BloodStockLevel => {
+  if (quantity === 0) return "CRITICAL";
+  if (quantity <= 5) return "LOW"; // Ajustez ces seuils selon vos besoins
+  if (quantity <= 30) return "ADEQUATE";
+  return "SURPLUS";
+};
+
 // ─── Config Groupes Sanguins ──────────────────────────────────
 const BLOOD_TYPES_CONFIG: {
   value: BloodType;
@@ -77,8 +85,12 @@ function StockCard({
   const STOCK_LEVEL_CONFIG = getStockLevelConfig(colors);
 
   const config = BLOOD_TYPES_CONFIG.find((b) => b.value === stock.bloodType);
-  const lvlConfig = STOCK_LEVEL_CONFIG[stock.level];
 
+  // ✅ CORRECTION : On calcule le niveau localement en fonction de la quantité réelle
+  const computedLevel = calculateStockLevel(stock.quantity);
+  const lvlConfig = STOCK_LEVEL_CONFIG[computedLevel];
+
+  // ✅ CORRECTION : Plafond de la jauge à 50 poches au lieu de 20 (plus réaliste pour une CNTS)
   const progressPct = Math.min((stock.quantity / 50) * 100, 100);
 
   const styles = useThemedStyles((c) => ({
@@ -222,7 +234,6 @@ export default function StockScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSelectedBloodType(null);
     } catch (error: any) {
-      // ✅ AMÉLIORATION : Gestion de l'erreur 403 (si un hôpital tente de modifier le stock)
       const errorMsg = error?.response?.data?.message || "Mise à jour échouée.";
       Alert.alert("Erreur", errorMsg);
     }
@@ -419,7 +430,6 @@ export default function StockScreen() {
       );
     }
 
-    // Erreur API (403 si c'est un hôpital, 500, etc.)
     const errorMessage =
       (error as any)?.response?.data?.message ||
       "Impossible de charger les stocks. Vous n'avez peut-être pas les droits nécessaires.";
@@ -486,11 +496,15 @@ export default function StockScreen() {
         {/* ── Grille ── */}
         <View style={styles.grid}>
           {BLOOD_TYPES_CONFIG.map((bt) => {
-            const stock = stockMap.get(bt.value) ?? {
+            const apiStock = stockMap.get(bt.value);
+
+            // ✅ CORRECTION : On s'assure que la quantité et le niveau sont toujours calculés localement
+            const stock = {
               bloodType: bt.value,
-              quantity: 0,
-              level: "CRITICAL" as BloodStockLevel,
+              quantity: apiStock?.quantity ?? 0,
+              level: calculateStockLevel(apiStock?.quantity ?? 0), // Calcul local forcé
             };
+
             return (
               <StockCard
                 key={bt.value}
