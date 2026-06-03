@@ -25,7 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: "sn.vitalink.mobile",
     adaptiveIcon: {
       backgroundColor: "#E6F4FE",
-      foregroundImage: "./assets/images/forground.png",
+      foregroundImage: "./assets/images/icon.png",
     },
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
