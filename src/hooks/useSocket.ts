@@ -140,6 +140,7 @@ export const useSocket = () => {
     socket.on("stock:updated", (data) => {
       logger.info("🩸 Stock de sang mis à jour via Socket :", data.bloodType);
 
+      // ✅ Mise à jour instantanée du cache de l'écran Stock CNTS
       queryClient.setQueryData<BloodStock[]>(
         QUERY_KEYS.bloodStocks,
         (oldStocks) => {
@@ -151,8 +152,15 @@ export const useSocket = () => {
           );
         },
       );
+
+      // ✅ Forcer le refetch IMMÉDIAT du Dashboard CNTS
       queryClient.refetchQueries({ queryKey: ["dashboard", "cnts"] });
-            queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStats });
+
+      // ✅ NOUVEAU : Forcer le refetch IMMÉDIAT du Dashboard Hôpital
+      queryClient.refetchQueries({ queryKey: ["dashboard", "hospital"] });
+
+      // Invalider les stats
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStats });
     });
 
     // ── 7. STRUCTURE VALIDÉE ─────────────────────────────────

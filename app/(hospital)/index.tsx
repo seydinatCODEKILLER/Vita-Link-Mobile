@@ -17,7 +17,10 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/fr";
 import { useHospitalDashboard } from "@/src/hooks/useDashboard";
 import { useAuthStore } from "@/src/store/auth.store";
-import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
+import {
+  BLOOD_TYPE_LABELS,
+  calculateStockLevel,
+} from "@/src/utils/format.utils"; // ✅ Import de la fonction partagée
 import { BloodStockLevel, BloodType } from "@/src/types/shared.types";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
@@ -107,7 +110,7 @@ function StatCard({
 function BloodStockRow({
   bloodType,
   quantity,
-  level,
+  level: _serverLevel, // ✅ On ignore le level du serveur
   colors,
 }: {
   bloodType: BloodType;
@@ -115,6 +118,9 @@ function BloodStockRow({
   level: BloodStockLevel;
   colors: AppColors;
 }) {
+  // ✅ On calcule le niveau localement en fonction de la quantité réelle
+  const level = calculateStockLevel(quantity);
+
   const LEVEL_CONFIG = getLevelConfig(colors);
   const { label, color } = LEVEL_CONFIG[level];
   const typeLabel = BLOOD_TYPE_LABELS[bloodType] ?? bloodType.replace("_", "");
@@ -321,7 +327,7 @@ export default function HospitalDashboardScreen() {
       gap: 12,
       padding: 13,
       borderBottomWidth: 0.5,
-      borderBottomColor: c.cardBorder,
+      borderBottomColor: colors.cardBorder,
     },
     requestBadge: {
       width: 42,
@@ -546,7 +552,7 @@ export default function HospitalDashboardScreen() {
             />
             <Text style={styles.sectionLabel}>MES DEMANDES</Text>
             <TouchableOpacity
-              onPress={() => router.push("/(hospital)/blood-request" as any)}
+              onPress={() => router.push("/(hospital)/blood-request?from=dashboard" as any)}
               style={{ marginLeft: "auto" }}
             >
               <Text
@@ -574,7 +580,7 @@ export default function HospitalDashboardScreen() {
                     key={req.id}
                     style={styles.requestRow}
                     onPress={() =>
-                      router.push(`/(hospital)/blood-request/${req.id}` as any)
+                      router.push(`/(hospital)/blood-request/${req.id}?from=dashboard` as any)
                     }
                     activeOpacity={0.7}
                   >

@@ -18,6 +18,7 @@ import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 import { isNetworkError } from "@/src/utils/error.utils";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 
 // ─── Skeleton Détail Alerte ────────────────────────────────────
 function AlertDetailSkeleton({ colors }: { colors: AppColors }) {
@@ -63,10 +64,17 @@ function AlertDetailSkeleton({ colors }: { colors: AppColors }) {
 
 // ─── Écran Principal ───────────────────────────────────────────
 export default function HospitalAlertDetailScreen() {
-  const router = useRouter();
   const { id: alertId } = useLocalSearchParams<{ id: string }>();
   const tabBarHeight = useBottomTabBarHeight();
   const colors = useColors();
+
+  const goBack = useSmartBack({
+    defaultRoute: "/(hospital)/alerts",
+    routeMap: {
+      blood_request_detail: `/(hospital)/blood-request`,
+      dashboardAlerts: "/(hospital)/alerts",
+    },
+  });
 
   const { data: alert, isLoading, isError, error, refetch } = useAlert(alertId);
 
@@ -299,7 +307,7 @@ export default function HospitalAlertDetailScreen() {
       <TouchableOpacity
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.back();
+          goBack();
         }}
         style={styles.backBtn}
         activeOpacity={0.7}

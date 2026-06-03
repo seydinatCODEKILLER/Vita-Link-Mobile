@@ -173,7 +173,7 @@ export default function HospitalBloodRequestsScreen() {
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/(hospital)/blood-request/create" as any);
+    router.push("/(hospital)/blood-request/create?from=blood_request" as any);
   };
 
   const renderItem = ({ item }: any) => {
@@ -187,7 +187,7 @@ export default function HospitalBloodRequestsScreen() {
         style={styles.card}
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.push(`/(hospital)/blood-request/${item.id}` as any);
+          router.push(`/(hospital)/blood-request/${item.id}?from=blood_request` as any);
         }}
         activeOpacity={0.7}
       >

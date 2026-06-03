@@ -334,7 +334,7 @@ export default function HospitalAlertsScreen() {
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/(hospital)/alerts/create" as any);
+    router.push("/(hospital)/alerts/create?from=dashboardAlerts" as any);
   };
 
   return (

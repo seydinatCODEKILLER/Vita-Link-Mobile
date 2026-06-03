@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -13,6 +13,7 @@ import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
 import { isNetworkError } from "@/src/utils/error.utils";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 
 const getAvatarColors = (colors: AppColors) => [
   { bg: colors.success + "14", text: colors.success },
@@ -233,6 +234,13 @@ export default function HospitalStaffScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(hospital)/profile",
+    routeMap: {
+      profile: "/(hospital)/profile",
+    },
+  });
+
   const { data: staff, isLoading, isError, error, refetch } = useMyStaff();
   const { mutateAsync: removeStaff } = useRemoveStaff();
 
@@ -280,7 +288,7 @@ export default function HospitalStaffScreen() {
       );
       return;
     }
-    router.push("/(hospital)/staff/add" as any);
+    router.push("/(hospital)/staff/add?from=staff" as any);
   };
 
   const styles = useThemedStyles((c) => ({
@@ -372,7 +380,7 @@ export default function HospitalStaffScreen() {
     <>
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => goBack()}
           style={styles.backBtn}
           activeOpacity={0.7}
         >

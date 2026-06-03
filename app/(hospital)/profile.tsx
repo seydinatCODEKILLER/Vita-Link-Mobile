@@ -521,7 +521,7 @@ export default function HospitalProfileScreen() {
               label="Gérer le personnel"
               value="Équipe"
               valueColor="#60A5FA"
-              onPress={() => router.push("/(hospital)/staff" as any)}
+              onPress={() => router.push("/(hospital)/staff?from=profile" as any)}
               colors={colors}
             />
             <View style={styles.sep} />

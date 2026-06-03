@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { useForm, Controller } from "react-hook-form";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Slider from "@react-native-community/slider";
 import * as Haptics from "expo-haptics";
@@ -253,6 +254,13 @@ export default function CreateAlertScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const tabBarHeight = useBottomTabBarHeight();
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(hospital)/alerts",
+    routeMap: {
+      dashboardAlerts: "/(hospital)/alerts",
+    },
+  });
+
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
     safeArea: { flex: 1 },
@@ -482,7 +490,7 @@ export default function CreateAlertScreen() {
         {/* ── Header ── */}
         <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backBtn}
             activeOpacity={0.75}
           >
