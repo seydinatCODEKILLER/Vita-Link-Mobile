@@ -9,20 +9,13 @@ import { QUERY_KEYS } from "@/src/constants/query_key";
 import { Alert } from "@/src/types/alert.types";
 import logger from "@/src/utils/logger.utils";
 import { useAlertStore } from "../store/alerts.store";
-import { clearPendingQr } from "../utils/qr.utils";
 
 export const useSocket = () => {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
 
-  const {
-    setInAppAlert,
-    setJambaarCelebration,
-    setBadgeUnlock,
-    addAlert,
-    removeAlert,
-  } = useAlertStore();
+  const { setInAppAlert, removeAlert } = useAlertStore();
 
   const socketRef = useRef<Socket | null>(null);
   const isConnecting = useRef(false);
@@ -69,102 +62,18 @@ export const useSocket = () => {
       logger.error("❌ Socket.io erreur de connexion :", err.message);
     });
 
-    // ── 1. NOUVELLE ALERTE (Pour les DONNEURS) ────────────────
+    // ── 1. NOUVELLE ALERTE (Redirigé vers l'agent si besoin) ──
     socket.on("alert:new", (data: Alert) => {
-      if (user.role !== "DONOR") return;
-
-      logger.info("🚨 Nouvelle alerte reçue via Socket :", data.id);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-
-      setInAppAlert({
-        id: data.id,
-        title:
-          data.urgencyLevel === "VITAL"
-            ? "🚨 URGENCE VITALE"
-            : "🩸 Alerte donneur",
-        body: `Groupe ${data.bloodType} requis — ${data.healthStructure?.name}`,
-        data: { alertId: data.id, urgencyLevel: data.urgencyLevel },
-        receivedAt: new Date(),
-      });
-
-      addAlert(data);
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
+      // Les agents reçoivent les alertes via leur propre route "my-structure",
+      // mais on peut garder cet événement pour une notification in-app globale si nécessaire.
+      // Pour l'instant, on ne fait rien de spécifique pour ne pas polluer l'interface agent.
+      logger.info("🚨 Nouvelle alerte diffusée :", data.id);
     });
 
-    // ── 2. DON VALIDÉ (Pour les DONNEURS) ────────────────────
-    socket.on("donation:validated", (data: any) => {
-      if (user.role !== "DONOR") return;
-
-      logger.info("🎉 Don validé, points crédités :", data.pointsAwarded);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-      clearPendingQr().catch((err) =>
-        logger.warn("Erreur nettoyage QR local", err),
-      );
-
-      const currentUser = useAuthStore.getState().user;
-      if (currentUser?.jambaarsProfile) {
-        updateUser({
-          jambaarsProfile: {
-            ...currentUser.jambaarsProfile,
-            totalPoints:
-              data.totalPoints ??
-              currentUser.jambaarsProfile.totalPoints + data.pointsAwarded,
-            donationCount: currentUser.jambaarsProfile.donationCount + 1,
-            currentGrade:
-              data.newGrade ?? currentUser.jambaarsProfile.currentGrade,
-            nextEligibilityAt:
-              data.nextEligibilityAt ??
-              currentUser.jambaarsProfile.nextEligibilityAt,
-            lastDonationAt: new Date().toISOString(),
-            livesSavedEstimate:
-              currentUser.jambaarsProfile.livesSavedEstimate + 3,
-          },
-        });
-      }
-
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.me });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.activeEngagement });
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.hasActiveConfirmation,
-      });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myDonations });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarsProfile });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.leaderboard });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarssBadges });
-
-      setJambaarCelebration({
-        pointsEarned: data.pointsAwarded,
-        message: data.gradeChanged
-          ? `Nouveau grade : ${data.newGrade} !`
-          : "Votre don a été validé !",
-      });
-    });
-
-    // ── 3. BADGE DÉBLOQUÉ (Pour les DONNEURS) ────────────────
-    socket.on(
-      "badges:earned",
-      (data: { name: string; description: string; iconUrl?: string }) => {
-        if (user.role !== "DONOR") return;
-
-        logger.info("🏅 Badge débloqué :", data.name);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
-        setBadgeUnlock({
-          name: data.name,
-          description: data.description,
-          iconUrl: data.iconUrl,
-        });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.jambaarssBadges });
-      },
-    );
-
-    // ── 4. QUOTA ATTEINT ─────────────────────────────────────
+    // ── 2. QUOTA ATTEINT ─────────────────────────────────────
     socket.on("alert:quota_reached", (data: { alertId: string }) => {
       logger.info("🎯 Quota atteint pour l'alerte :", data.alertId);
 
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.alert(data.alertId),
       });
@@ -176,7 +85,6 @@ export const useSocket = () => {
       if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
       }
-      // 🆕 L'hôpital aussi doit voir son dashboard mis à jour
       if (user.role === "HOSPITAL_AGENT") {
         queryClient.invalidateQueries({
           queryKey: QUERY_KEYS.hospitalDashboard(),
@@ -184,13 +92,12 @@ export const useSocket = () => {
       }
     });
 
-    // ── 5. ALERTE FERMÉE ─────────────────────────────────────
+    // ── 3. ALERTE FERMÉE ─────────────────────────────────────
     socket.on("alert:closed", (data: { alertId: string; status: string }) => {
       logger.info("🔒 Alerte fermée :", data.alertId);
 
       removeAlert(data.alertId);
 
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.nearbyAlerts });
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.alert(data.alertId),
       });
@@ -202,7 +109,6 @@ export const useSocket = () => {
       if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
       }
-      // 🆕 L'hôpital aussi doit voir son dashboard mis à jour
       if (user.role === "HOSPITAL_AGENT") {
         queryClient.invalidateQueries({
           queryKey: QUERY_KEYS.hospitalDashboard(),
@@ -210,20 +116,18 @@ export const useSocket = () => {
       }
     });
 
-    // ── 6. RÉPONSE DONNEUR (Pour CNTS / HÔPITAL) ────────────
+    // ── 4. RÉPONSE DONNEUR (Pour CNTS / HÔPITAUX) ────────────
     socket.on("response:new", (data: { alertId: string }) => {
       logger.info("🚶 Nouveau donneur confirmé sur l'alerte :", data.alertId);
 
-      if (user.role !== "DONOR") {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.alertResponses(data.alertId),
       });
     });
 
-    // ── 7. DONNEUR ARRIVÉ (Pour CNTS / HÔPITAL) ──────────────
+    // ── 5. DONNEUR ARRIVÉ (Pour CNTS / HÔPITAUX) ──────────────
     socket.on("response:arrived", (data: { alertId: string }) => {
       logger.info("🏥 Donneur arrivé sur l'alerte :", data.alertId);
       queryClient.invalidateQueries({
@@ -231,7 +135,7 @@ export const useSocket = () => {
       });
     });
 
-    // ── 8. STOCK MIS À JOUR (Pour CNTS) ──────────────────────
+    // ── 6. STOCK MIS À JOUR (Pour CNTS) ──────────────────────
     socket.on("stock:updated", (data) => {
       logger.info("🩸 Stock de sang mis à jour via Socket :", data.bloodType);
 
@@ -245,7 +149,7 @@ export const useSocket = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
     });
 
-    // ── 9. STRUCTURE VALIDÉE ─────────────────────────────────
+    // ── 7. STRUCTURE VALIDÉE ─────────────────────────────────
     socket.on(
       "structure:verified",
       (data: { structureId: string; status: string; verifiedAt: string }) => {
@@ -268,91 +172,7 @@ export const useSocket = () => {
       },
     );
 
-    // ── 10. JOURNÉE DE DON ANNULÉE (Pour le Donneur) ──────────
-    socket.on(
-      "donation-day:cancelled",
-      (data: { dayId: string; title: string; cancelReason: string }) => {
-        if (user.role !== "DONOR") return;
-
-        logger.info("📅 Journée de don annulée via Socket :", data.dayId);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-
-        setInAppAlert({
-          id: data.dayId,
-          title: "📅 Collecte annulée",
-          body: `"${data.title}" a été annulée. Raison : ${data.cancelReason}`,
-          data: { dayId: data.dayId, type: "day_cancelled" },
-          receivedAt: new Date(),
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ["donation-days", "published"],
-        });
-        queryClient.invalidateQueries({
-          queryKey: ["donation-days", "my-registrations"],
-        });
-        queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.donationDay(data.dayId),
-        });
-      },
-    );
-
-    // ── 11. JOURNÉE DE DON MODIFIÉE (Pour le Donneur) ────────
-    socket.on("donation-day:updated", (data: { dayId: string }) => {
-      if (user.role !== "DONOR") return;
-
-      logger.info("✏️ Journée de don modifiée via Socket :", data.dayId);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-
-      setInAppAlert({
-        id: `update-${data.dayId}`,
-        title: "📅 Modification de collecte",
-        body: "Les détails d'une journée à laquelle vous êtes inscrit ont changé.",
-        data: { dayId: data.dayId, type: "day_updated" },
-        receivedAt: new Date(),
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["donation-days", "published"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["donation-days", "my-registrations"],
-      });
-      queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.donationDay(data.dayId),
-      });
-    });
-
-    // ── 12. STATUT INSCRIPTION MIS À JOUR ────────────────────
-    socket.on(
-      "registration:status-updated",
-      (data: { dayId: string; status: string }) => {
-        logger.info(
-          "✅ Statut inscription mis à jour via Socket :",
-          data.status,
-        );
-
-        if (data.status === "ATTENDED" && user.role === "DONOR") {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setInAppAlert({
-            id: `reg-${data.dayId}`,
-            title: "✅ Présence confirmée",
-            body: "Votre présence à la collecte a été validée par l'équipe médicale.",
-            data: { dayId: data.dayId, type: "registration_updated" },
-            receivedAt: new Date(),
-          });
-        }
-
-        queryClient.invalidateQueries({
-          queryKey: ["donation-days", "my-registrations"],
-        });
-        queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.donationDay(data.dayId),
-        });
-      },
-    );
-
-    // ── 🆕 13. ESCALADE ALERTE HÔPITAL (Pour la CNTS) ──────────
+    // ── 8. ESCALADE ALERTE HÔPITAL (Pour la CNTS) ──────────
     socket.on(
       "alert:escalation",
       (data: {
@@ -361,7 +181,6 @@ export const useSocket = () => {
         bloodType: string;
         urgencyLevel: string;
       }) => {
-        // Seule la CNTS reçoit cet événement de la part d'un hôpital
         if (user.role !== "CNTS_ADMIN" && user.role !== "CNTS_AGENT") return;
 
         logger.info(
@@ -378,13 +197,12 @@ export const useSocket = () => {
           receivedAt: new Date(),
         });
 
-        // Rafraîchir la liste des alertes de la structure (CNTS) et le dashboard
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
       },
     );
 
-    // ── 14. NOUVELLE DEMANDE DE SANG (Pour la CNTS) ────────
+    // ── 9. NOUVELLE DEMANDE DE SANG (Pour la CNTS) ────────
     socket.on(
       "blood-request:new",
       (data: {
@@ -413,7 +231,7 @@ export const useSocket = () => {
       },
     );
 
-    // ── 15. DEMANDE DE SANG TRAITÉE (Pour l'Hôpital) ──────
+    // ── 10. DEMANDE DE SANG TRAITÉE (Pour l'Hôpital) ──────
     socket.on("blood-request:fulfilled", (data: { requestId: string }) => {
       if (user.role !== "HOSPITAL_AGENT") return;
 
@@ -444,9 +262,6 @@ export const useSocket = () => {
     queryClient,
     updateUser,
     setInAppAlert,
-    setJambaarCelebration,
-    setBadgeUnlock,
-    addAlert,
     removeAlert,
   ]);
 

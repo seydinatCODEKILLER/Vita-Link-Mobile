@@ -4,13 +4,11 @@ import {
   Text,
   TouchableOpacity,
   Animated,
-  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { useCheckPendingRegistration } from "@/src/hooks/usePendingRegistration";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
 import { ThemeToggle } from "@/src/components/ui/ThemeToggle";
@@ -197,8 +195,6 @@ export default function WelcomeScreen() {
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === "dark";
-
-  useCheckPendingRegistration();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;

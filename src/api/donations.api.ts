@@ -18,16 +18,4 @@ export const donationsApi = {
     }>("/donations/scan", { qrCode });
     return data;
   },
-  // ── GET /donations/me → Historique du donneur ──────────────
-  getMyDonations: async (params?: {
-    page?: number;
-    limit?: number;
-  }): Promise<{ donations: Donation[]; pagination: any }> => {
-    const { data } = await api.get<{
-      success: boolean;
-      donations: Donation[];
-      pagination: any;
-    }>("/donations/me", { params });
-    return data;
-  },
 };

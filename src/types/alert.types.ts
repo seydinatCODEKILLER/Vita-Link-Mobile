@@ -105,18 +105,3 @@ export interface CreateAlertResponse {
   alert: Alert;
   notifiedDonors: number;
 }
-
-// ─── Engagement Actif ─────────────────────────────────────────
-
-export interface ActiveEngagement {
-  id: string;
-  qrCode: string;
-  etaMinutes: number | null;
-  alert: {
-    id: string;
-    bloodType: BloodType;
-    urgencyLevel: UrgencyLevel;
-    origin: AlertOrigin; // 🆕 AJOUT CRITIQUE ICI
-    healthStructure: AlertStructure;
-  };
-}

@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useAuthStore } from "@/src/store/auth.store";
 import { useLogout } from "@/src/hooks/useAuth";
-import { useUpdateAvailability } from "@/src/hooks/useAvailability";
+// import { useUpdateAvailability } from "@/src/hooks/useAvailability";
 import { useMyStructure } from "@/src/hooks/useHealthStructure";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { AppColors } from "@/src/theme/colors";
@@ -129,7 +129,7 @@ export default function HealthProfileScreen() {
   const theme = useThemeStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
   const { data: structure, isLoading: isStructureLoading } = useMyStructure();
-  useUpdateAvailability();
+  // useUpdateAvailability();
   const { mutateAsync: logout, isPending: isLoggingOut } = useLogout();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;

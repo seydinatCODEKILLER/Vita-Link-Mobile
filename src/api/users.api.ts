@@ -5,7 +5,6 @@ import {
 } from "@/src/types/user.types";
 import { api } from "./client";
 import { buildApiBody } from "@/src/utils/form-data.utils";
-import { ActiveEngagement } from "../types/alert.types";
 
 export const usersApi = {
   // ── GET /users/me ─────────────────────────────────────────
@@ -56,17 +55,6 @@ export const usersApi = {
     return data.user;
   },
 
-  // ── PATCH /users/me/availability ─────────────────────────
-  updateAvailability: async (
-    isAvailable: boolean,
-  ): Promise<{ id: string; isAvailable: boolean }> => {
-    const { data } = await api.patch<{
-      success: boolean;
-      user: { id: string; isAvailable: boolean };
-    }>("/users/me/availability", { isAvailable });
-    return data.user;
-  },
-
   // ── PATCH /users/me/expo-token ────────────────────────────
   updateExpoToken: async (expoPushToken: string): Promise<void> => {
     await api.patch("/users/me/expo-token", { expoPushToken });
@@ -78,13 +66,5 @@ export const usersApi = {
       "/users/me",
     );
     return data;
-  },
-
-  getActiveEngagement: async (): Promise<ActiveEngagement | null> => {
-    const { data } = await api.get<{
-      success: boolean;
-      engagement: ActiveEngagement | null;
-    }>("/users/me/active-engagement");
-    return data.engagement;
   },
 };

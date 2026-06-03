@@ -5,7 +5,7 @@ import { QUERY_KEYS } from "@/src/constants/query_key";
 
 export const useMyStocks = () => {
   return useQuery({
-    queryKey: QUERY_KEYS.bloodStocks, // ✅ Utilise la clé définie dans ton fichier
+    queryKey: QUERY_KEYS.bloodStocks,
     queryFn: bloodStocksApi.getMyStocks,
     staleTime: 30_000,
   });
