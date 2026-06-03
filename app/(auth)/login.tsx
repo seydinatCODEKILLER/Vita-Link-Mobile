@@ -31,9 +31,15 @@ export default function LoginScreen() {
   // ── Redirect si déjà connecté ──
   useEffect(() => {
     if (user) {
-      router.replace(
-        user.role === "HEALTH_STRUCTURE" ? "/(health)" : "/(donor)",
-      );
+      // ✅ FIX : Redirection basée sur les vrais rôles agent, plus de donneur
+      if (user.role === "CNTS_AGENT" || user.role === "CNTS_ADMIN") {
+        router.replace("/(health)");
+      } else if (user.role === "HOSPITAL_AGENT") {
+        router.replace("/(hospital)");
+      } else {
+        // Sécurité : si un donneur ou admin se connecte ici, on le bloque
+        router.replace("/unauthorized");
+      }
     }
   }, [user]);
 
@@ -187,35 +193,6 @@ export default function LoginScreen() {
       alignItems: "center",
       justifyContent: "center",
     },
-    dividerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      marginBottom: 24,
-    },
-    dividerLine: {
-      flex: 1,
-      height: 1,
-      backgroundColor: c.cardBorder,
-    },
-    dividerText: {
-      color: c.textSubtle,
-      fontSize: 12,
-    },
-    donorRow: {
-      flexDirection: "row",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    donorText: {
-      color: c.textMuted,
-      fontSize: 14,
-    },
-    donorLink: {
-      color: c.red,
-      fontSize: 14,
-      fontWeight: "700",
-    },
     securityRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -355,24 +332,6 @@ export default function LoginScreen() {
                 </>
               )}
             </TouchableOpacity>
-
-            {/* ── Divider ── */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>ou</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* ── Lien donneur ── */}
-            <View style={styles.donorRow}>
-              <Text style={styles.donorText}>Vous êtes donneur ? </Text>
-              <TouchableOpacity
-                onPress={() => router.push("/(auth)/reconnect-donor")}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.donorLink}>Se reconnecter par code</Text>
-              </TouchableOpacity>
-            </View>
           </Animated.View>
 
           {/* ── Info sécurité ── */}

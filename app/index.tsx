@@ -15,16 +15,17 @@ export default function Index() {
     return <Redirect href="/unauthorized" />;
   }
 
-  // 3. 🆕 Le CNTS (Agents et Admins CNTS) → Va vers le groupe (health)
+  // 3. Le CNTS (Agents et Admins CNTS) → Va vers le groupe (health)
   if (role === "CNTS_AGENT" || role === "CNTS_ADMIN") {
     return <Redirect href="/(health)" />;
   }
 
-  // 4. 🆕 L'Hôpital (Agents hôpital) → Va vers le nouveau groupe (hospital)
+  // 4. L'Hôpital (Agents hôpital) → Va vers le groupe (hospital)
   if (role === "HOSPITAL_AGENT") {
     return <Redirect href="/(hospital)" />;
   }
 
-  // 5. Par défaut (DONOR) → Va vers le groupe donneur
-  return <Redirect href="/(donor)" />;
+  // 5. ✅ Par défaut (DONOR ou rôle inconnu) → Accès non autorisé
+  // Les donneurs utilisent désormais l'application dédiée "Vita-Link Donor"
+  return <Redirect href="/unauthorized" />;
 }

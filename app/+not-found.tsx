@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   Animated,
-  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -192,31 +191,6 @@ export default function NotFound() {
           <Ionicons name="arrow-back" size={16} color={colors.white} />
           <Text style={styles.buttonText}>Retour à l&apos;accueil</Text>
         </TouchableOpacity>
-
-        {/* Navigation secondaire */}
-        <View style={styles.secondaryNav}>
-          <TouchableOpacity
-            onPress={() => router.replace("/(health)/alerts")}
-            style={styles.navLink}
-            activeOpacity={0.5}
-          >
-            <Text style={styles.navLinkText}>Alertes</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.replace("/(health)/profile")}
-            style={styles.navLink}
-            activeOpacity={0.5}
-          >
-            <Text style={styles.navLinkText}>Profil</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.replace("/(health)/stock")}
-            style={styles.navLink}
-            activeOpacity={0.5}
-          >
-            <Text style={styles.navLinkText}>Stock</Text>
-          </TouchableOpacity>
-        </View>
       </Animated.View>
     </View>
   );

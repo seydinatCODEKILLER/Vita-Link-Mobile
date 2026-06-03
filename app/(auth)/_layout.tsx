@@ -12,13 +12,9 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="welcome" />
-      <Stack.Screen name="register-donor" />
-      <Stack.Screen name="register-structure" />
-      <Stack.Screen name="otp-verify" />
       <Stack.Screen name="login" />
-      <Stack.Screen name="reconnect-donor" />
-      <Stack.Screen name="reconnect-hospital" />
-      <Stack.Screen name="reconnect-cnts" />
+      <Stack.Screen name="register-hospital" />
+      <Stack.Screen name="register-cnts" />
     </Stack>
   );
 }
