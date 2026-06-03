@@ -10,6 +10,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useBloodRequests } from "@/src/hooks/useBloodRequests";
+import { useAffiliatedHospitals } from "@/src/hooks/useHealthStructure";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useColors } from "@/src/theme/useTheme";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
@@ -21,27 +23,34 @@ dayjs.extend(relativeTime);
 dayjs.locale("fr");
 
 export default function HospitalDetailScreen() {
-  const { id, name, status, address, region } = useLocalSearchParams<{
-    id: string;
-    name: string;
-    status: string;
-    address: string;
-    region: string;
-  }>();
+  // ✅ CORRECTION : On ne récupère plus que l'ID depuis l'URL
+  const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const colors = useColors();
 
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/hospitals",
+    routeMap: {
+      hospitalList: "/(health)/hospitals",
+      bloodRequests: "/(health)/blood-requests",
+      dashboard: "/(health)",
+    },
+  });
+
+  // ✅ AJOUT : On récupère la liste des hôpitaux (depuis le cache de React Query)
+  const { data: hospitalsData } = useAffiliatedHospitals();
+
+  // ✅ AJOUT : On trouve l'hôpital correspondant dans le cache
+  const hospital = hospitalsData?.find((h) => h.id === id);
+
   // On réutilise le hook des demandes en filtrant par l'ID de l'hôpital
-  // Côté backend, getRequests renvoie les demandes selon le rôle.
-  // Pour voir les demandes d'un hôpital spécifique, il faut que le backend
-  // accepte un filtre hospitalId (ou alors on filtre côté client).
-  // Ici on suppose qu'on filtre côté client pour l'instant :
   const { data, isLoading, isError, error, refetch } = useBloodRequests();
 
   const hospitalRequests =
     data?.requests.filter((r) => r.requestingHospital.id === id) ?? [];
 
-  const isVerified = status === "VERIFIED";
+  // ✅ AJOUT : On détermine le statut de vérification
+  const isVerified = hospital?.status === "VERIFIED";
 
   if (isLoading)
     return (
@@ -65,7 +74,7 @@ export default function HospitalDetailScreen() {
         {/* Header */}
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => goBack()}
             style={{
               width: 38,
               height: 38,
@@ -86,7 +95,8 @@ export default function HospitalDetailScreen() {
             }}
             numberOfLines={1}
           >
-            {name}
+            {/* ✅ CORRECTION : On utilise les données du cache */}
+            {hospital?.name ?? "Détails de l'hôpital"}
           </Text>
         </View>
 
@@ -113,6 +123,7 @@ export default function HospitalDetailScreen() {
             >
               Informations
             </Text>
+            {/* ✅ CORRECTION : On affiche le statut réel */}
             <View
               style={{
                 flexDirection: "row",
@@ -148,8 +159,10 @@ export default function HospitalDetailScreen() {
               style={{ flexDirection: "row", alignItems: "center", gap: 6 }}
             >
               <Ionicons name="location-outline" size={14} color={colors.red} />
+              {/* ✅ CORRECTION : On utilise les données du cache */}
               <Text style={{ color: colors.textMuted, fontSize: 13 }}>
-                {address}, {region}
+                {hospital?.address ?? "Adresse non renseignée"},{" "}
+                {hospital?.region ?? ""}
               </Text>
             </View>
           </View>
@@ -239,14 +252,18 @@ export default function HospitalDetailScreen() {
                       color:
                         req.status === "PENDING"
                           ? colors.amber
-                          : colors.success,
+                          : req.status === "ESCALATED_TO_ALERT"
+                            ? colors.red
+                            : colors.success,
                       fontSize: 11,
                       fontWeight: "600",
                     }}
                   >
                     {req.status === "PENDING"
                       ? "En attente"
-                      : req.status.replace("_", " ")}
+                      : req.status === "ESCALATED_TO_ALERT"
+                        ? "Escaladée"
+                        : req.status.replace("_", " ")}
                   </Text>
                 </View>
               </TouchableOpacity>

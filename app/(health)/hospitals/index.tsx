@@ -206,7 +206,7 @@ export default function AffiliatedHospitalsScreen() {
 
   const handlePress = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(`/(health)/hospitals/${id}`);
+    router.push(`/(health)/hospitals/${id}?from=hospital-list`);
   };
 
   const styles = useThemedStyles((c) => ({

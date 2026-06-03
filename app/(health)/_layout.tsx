@@ -577,12 +577,15 @@ export default function HealthLayout() {
       router.replace("/(auth)/welcome");
       return;
     }
-    if (user.role !== "CNTS_ADMIN" && user.role !== "CNTS_AGENT") {
-      if (user.role === "HOSPITAL_AGENT") {
-        router.replace("/(hospital)");
-      } else {
-        router.replace("/(donor)");
-      }
+
+    // ✅ Redirection basée sur les rôles Agents
+    if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
+      router.replace("/(health)");
+    } else if (user.role === "HOSPITAL_AGENT") {
+      router.replace("/(hospital)");
+    } else {
+      // Les donneurs ou les admins n'ont rien à faire sur cette application
+      router.replace("/unauthorized");
     }
   }, [isAuthenticated, user]);
 
@@ -610,10 +613,10 @@ export default function HealthLayout() {
 
   const safeBottom = Platform.select({
     ios: insets.bottom,
-    android: insets.bottom > 0 ? insets.bottom : 16,
+    android: insets.bottom > 0 ? insets.bottom + 8 : 28,
     default: 8,
   });
-  const tabBarHeight = 68 + safeBottom;
+  const tabBarHeight = 64 + safeBottom;
 
   const isCntsUser = user?.role === "CNTS_ADMIN" || user?.role === "CNTS_AGENT";
   if (!isAuthenticated || !user || !isCntsUser) return null;

@@ -48,7 +48,7 @@ interface Props {
   visible: boolean;
   onClose: () => void;
   requestId: string;
-  request: BloodRequest;
+  request: BloodRequest | undefined;
 }
 
 export default function BloodRequestHandleSheet({
@@ -66,6 +66,9 @@ export default function BloodRequestHandleSheet({
   );
   const [quantityProvided, setQuantityProvided] = useState("");
   const [cntsNotes, setCntsNotes] = useState("");
+
+  // ✅ CORRECTION : Si la demande n'est pas encore chargée, on ne risque pas d'accéder à ses propriétés
+  if (!request) return null;
 
   const selectedConfig = ACTIONS_CONFIG.find((a) => a.value === selectedAction);
 

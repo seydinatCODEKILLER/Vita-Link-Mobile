@@ -12,6 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSmartBack } from "@/src/hooks/useSmartBack";
 import {
   useBloodRequestDetail,
   useCancelBloodRequest,
@@ -65,7 +67,15 @@ export default function BloodRequestDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const isCnts = useIsCnts();
+  const tabBarHeight = useBottomTabBarHeight();
   const [isSheetVisible, setIsSheetVisible] = useState(false);
+  const goBack = useSmartBack({
+    defaultRoute: "/(health)/blood-requests",
+    routeMap: {
+      list: "/(health)/blood-requests",
+      dashboard: "/(health)",
+    },
+  });
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -201,6 +211,7 @@ export default function BloodRequestDetailScreen() {
     cancelBtn: {
       marginHorizontal: 20,
       marginTop: 4,
+      marginBottom: 20, // ✅ AJOUT : marge basse pour le bouton annuler
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
@@ -213,7 +224,6 @@ export default function BloodRequestDetailScreen() {
     },
     fab: {
       position: "absolute",
-      bottom: 28,
       right: 22,
       flexDirection: "row",
       alignItems: "center",
@@ -236,10 +246,7 @@ export default function BloodRequestDetailScreen() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.navHeader}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-          >
+          <TouchableOpacity onPress={() => goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={18} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.navTitle} numberOfLines={1}>
@@ -256,10 +263,7 @@ export default function BloodRequestDetailScreen() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.navHeader}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-          >
+          <TouchableOpacity onPress={() => goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={18} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.navTitle} numberOfLines={1}>
@@ -294,15 +298,12 @@ export default function BloodRequestDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 110 }}
+        contentContainerStyle={{ paddingBottom: tabBarHeight + 80 }}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Nav header ── */}
         <Animated.View style={[styles.navHeader, { opacity: fadeAnim }]}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-          >
+          <TouchableOpacity onPress={() => goBack()} style={styles.backBtn}>
             <Ionicons name="arrow-back" size={18} color={colors.white} />
           </TouchableOpacity>
           <Text style={styles.navTitle} numberOfLines={1}>
@@ -598,7 +599,7 @@ export default function BloodRequestDetailScreen() {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             setIsSheetVisible(true);
           }}
-          style={styles.fab}
+          style={[styles.fab, { bottom: tabBarHeight + 20 }]}
         >
           <Ionicons name="construct-outline" size={20} color="#fff" />
           <Text style={{ color: "#fff", fontWeight: "800", fontSize: 14 }}>
@@ -607,12 +608,15 @@ export default function BloodRequestDetailScreen() {
         </TouchableOpacity>
       )}
 
-      <BloodRequestHandleSheet
-        visible={isSheetVisible}
-        onClose={() => setIsSheetVisible(false)}
-        requestId={id}
-        request={request!}
-      />
+      {/* ✅ CORRECTION : On ne monte le Sheet QUE si request est défini */}
+      {request && (
+        <BloodRequestHandleSheet
+          visible={isSheetVisible}
+          onClose={() => setIsSheetVisible(false)}
+          requestId={id}
+          request={request}
+        />
+      )}
     </SafeAreaView>
   );
 }

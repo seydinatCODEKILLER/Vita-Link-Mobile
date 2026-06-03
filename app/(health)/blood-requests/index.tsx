@@ -335,7 +335,7 @@ export default function BloodRequestListScreen() {
 
   const handlePress = (id: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    router.push(`/(health)/blood-requests/${id}`);
+    router.push(`/(health)/blood-requests/${id}?from=list`);
   };
 
   const styles = useThemedStyles((c) => ({

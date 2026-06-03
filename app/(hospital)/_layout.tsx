@@ -51,10 +51,17 @@ export default function HospitalLayout() {
       router.replace("/(auth)/welcome");
       return;
     }
-    if (user.role !== "HOSPITAL_AGENT") {
-      if (user.role === "DONOR") router.replace("/(donor)");
-      else if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT")
-        router.replace("/(health)");
+
+    // ✅ Redirection basée sur les rôles Agents
+    if (user.role === "HOSPITAL_AGENT") {
+      // L'hôpital reste sur son propre layout
+      return;
+    } else if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
+      // La CNTS est redirigée vers le layout Health
+      router.replace("/(health)");
+    } else {
+      // Les donneurs ou les admins n'ont rien à faire ici
+      router.replace("/unauthorized");
     }
   }, [isAuthenticated, user]);
 
@@ -80,7 +87,7 @@ export default function HospitalLayout() {
   // ── Styles ──
   const safeBottom = Platform.select({
     ios: insets.bottom,
-    android: insets.bottom > 0 ? insets.bottom : 20,
+    android: insets.bottom > 0 ? insets.bottom + 8 : 28,
     default: 8,
   });
   const tabBarHeight = 64 + safeBottom;

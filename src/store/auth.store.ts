@@ -2,7 +2,6 @@ import { create } from "zustand";
 import { User } from "@/src/types/user.types";
 import * as SecureStore from "expo-secure-store";
 import { tokenManager } from "@/src/utils/token.utils";
-import { registrationManager } from "@/src/utils/registration.utils";
 
 const USER_KEY = "vitalink_user";
 
@@ -41,7 +40,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await Promise.all([
       tokenManager.clearTokens(),
       SecureStore.deleteItemAsync(USER_KEY),
-      registrationManager.clearPendingDonor(),
     ]);
     set({ user: null, isAuthenticated: false });
   },

@@ -79,7 +79,6 @@ function StockCard({
   const config = BLOOD_TYPES_CONFIG.find((b) => b.value === stock.bloodType);
   const lvlConfig = STOCK_LEVEL_CONFIG[stock.level];
 
-  // ✅ CORRECTION : Plafond de la jauge à 50 poches au lieu de 20 (plus réaliste pour une CNTS)
   const progressPct = Math.min((stock.quantity / 50) * 100, 100);
 
   const styles = useThemedStyles((c) => ({

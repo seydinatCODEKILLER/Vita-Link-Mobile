@@ -39,6 +39,14 @@ const getLevelConfig = (
   SURPLUS: { label: "Surplus", color: "#60A5FA" },
 });
 
+// ─── Calcul du niveau basé sur la quantité ──────────────────
+const calculateStockLevel = (quantity: number): BloodStockLevel => {
+  if (quantity === 0) return "CRITICAL";
+  if (quantity <= 5) return "LOW"; // Ajustez ces seuils selon vos besoins
+  if (quantity <= 30) return "ADEQUATE";
+  return "SURPLUS";
+};
+
 // ─── StatCard ─────────────────────────────────────────────
 function StatCard({
   icon,
@@ -107,7 +115,7 @@ function StatCard({
 function BloodStockRow({
   bloodType,
   quantity,
-  level,
+  level: _serverLevel, // On renomme pour ignorer la valeur du serveur
   colors,
 }: {
   bloodType: BloodType;
@@ -115,6 +123,9 @@ function BloodStockRow({
   level: BloodStockLevel;
   colors: AppColors;
 }) {
+  // ✅ On calcule le niveau localement en fonction de la quantité
+  const level = calculateStockLevel(quantity);
+
   const LEVEL_CONFIG = getLevelConfig(colors);
   const { label, color } = LEVEL_CONFIG[level];
   const typeLabel = BLOOD_TYPE_LABELS[bloodType] ?? bloodType.replace("_", "");
