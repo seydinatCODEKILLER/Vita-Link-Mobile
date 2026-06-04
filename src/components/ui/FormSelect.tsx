@@ -10,6 +10,7 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // ✅ AJOUT : Import du hook
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 
 interface FormSelectProps {
@@ -26,7 +27,6 @@ interface FormSelectProps {
 }
 
 export const FormSelect: React.FC<FormSelectProps> = (props) => {
-  // Hook appelé ici — le composant est toujours utilisé dans un arbre React
   const colors = useColors();
   return <FormSelectInner {...props} colors={colors} />;
 };
@@ -47,6 +47,9 @@ function FormSelectInner({
 }: FormSelectProps & { colors: ReturnType<typeof useColors> }) {
   const [visible, setVisible] = useState(false);
   const [search, setSearch] = useState("");
+
+  // ✅ AJOUT : Récupération de la hauteur de la barre système en bas de l'écran
+  const insets = useSafeAreaInsets();
 
   const slideAnim = useRef(new Animated.Value(500)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
@@ -146,7 +149,7 @@ function FormSelectInner({
       borderBottomWidth: 0,
       borderColor: c.cardBorder,
       maxHeight: "72%",
-      paddingBottom: 32,
+      // ✅ MODIFICATION : Le paddingBottom sera appliqué dynamiquement via style inline
     },
     handleBar: {
       width: 36,
@@ -371,7 +374,14 @@ function FormSelectInner({
         </TouchableWithoutFeedback>
 
         <Animated.View
-          style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+          style={[
+            styles.sheet,
+            {
+              transform: [{ translateY: slideAnim }],
+              // ✅ AJOUT : Padding dynamique qui s'adapte à la barre gestuelle du téléphone
+              paddingBottom: Math.max(32, insets.bottom + 16),
+            },
+          ]}
         >
           <View style={styles.handleBar} />
 
@@ -426,7 +436,11 @@ function FormSelectInner({
             keyExtractor={(item) => item}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
+            // ✅ AJOUT : Espace en bas de la liste pour que le dernier élément ne soit pas masqué
+            contentContainerStyle={[
+              styles.listContent,
+              { paddingBottom: insets.bottom > 0 ? 16 : 0 },
+            ]}
             ItemSeparatorComponent={() => <View style={styles.separator} />}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>

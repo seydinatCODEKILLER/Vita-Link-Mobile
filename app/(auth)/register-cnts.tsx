@@ -10,7 +10,10 @@ import {
   Platform,
   Keyboard,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
@@ -133,6 +136,7 @@ export default function RegisterCntsScreen() {
   const { mutateAsync: registerCnts, isPending } = useRegisterCnts();
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
+  const insets = useSafeAreaInsets();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isGeolocating, setIsGeolocating] = useState(false);
@@ -216,7 +220,11 @@ export default function RegisterCntsScreen() {
     },
     subtitle: { color: c.textMuted, fontSize: 13, lineHeight: 20 },
     scroll: { flex: 1 },
-    scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 24 },
+    scrollContent: {
+      paddingHorizontal: 24,
+      paddingTop: 20,
+      paddingBottom: Math.max(24, insets.bottom + 40),
+    },
     stepContent: { gap: 2 },
     // ── Geo ──
     geoWrapper: { marginBottom: 16 },
@@ -825,7 +833,7 @@ export default function RegisterCntsScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
           {/* ── Header ── */}
           <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
             <TouchableOpacity

@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ScrollView, // ✅ AJOUT : Import du ScrollView
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -67,7 +68,6 @@ export default function BloodRequestHandleSheet({
   const [quantityProvided, setQuantityProvided] = useState("");
   const [cntsNotes, setCntsNotes] = useState("");
 
-  // ✅ CORRECTION : Si la demande n'est pas encore chargée, on ne risque pas d'accéder à ses propriétés
   if (!request) return null;
 
   const selectedConfig = ACTIONS_CONFIG.find((a) => a.value === selectedAction);
@@ -140,7 +140,7 @@ export default function BloodRequestHandleSheet({
             activeOpacity={1}
           />
 
-          {/* Sheet */}
+          {/* Sheet Container */}
           <View
             style={{
               backgroundColor: colors.cardBg,
@@ -150,176 +150,218 @@ export default function BloodRequestHandleSheet({
               borderLeftWidth: 1,
               borderRightWidth: 1,
               borderColor: colors.cardBorder,
-              paddingBottom: Math.max(28, insets.bottom + 12),
+              maxHeight: "90%", // ✅ Limite la hauteur à 90% de l'écran
             }}
           >
-            {/* ── Header ── */}
-            <View
-              style={{
-                padding: 22,
-                paddingBottom: 16,
-                borderBottomWidth: 1,
-                borderBottomColor: colors.cardBorder,
+            {/* ✅ AJOUT : ScrollView pour la zone de contenu */}
+            <ScrollView
+              keyboardShouldPersistTaps="handled" // Permet de cliquer sur les boutons même avec le clavier ouvert
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{
+                // Padding dynamique pour éviter que le dernier bouton soit masqué par la barre gestuelle
+                paddingBottom: Math.max(28, insets.bottom + 12),
               }}
             >
-              {/* Handle */}
+              {/* ── Header ── */}
               <View
                 style={{
-                  width: 32,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: colors.cardBorder,
-                  alignSelf: "center",
-                  marginBottom: 16,
+                  padding: 22,
+                  paddingBottom: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.cardBorder,
                 }}
-              />
+              >
+                {/* Handle */}
+                <View
+                  style={{
+                    width: 32,
+                    height: 4,
+                    borderRadius: 2,
+                    backgroundColor: colors.cardBorder,
+                    alignSelf: "center",
+                    marginBottom: 16,
+                  }}
+                />
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <View>
+                    <Text
+                      style={{
+                        color: colors.white,
+                        fontSize: 18,
+                        fontWeight: "800",
+                        letterSpacing: -0.3,
+                      }}
+                    >
+                      Traiter la demande
+                    </Text>
+                    <Text
+                      style={{
+                        color: colors.textSubtle,
+                        fontSize: 12,
+                        marginTop: 3,
+                      }}
+                    >
+                      {request.requestingHospital.name}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={resetAndClose}
+                    style={{
+                      width: 30,
+                      height: 30,
+                      borderRadius: 9,
+                      backgroundColor: colors.cardBorder + "40",
+                      borderWidth: 1,
+                      borderColor: colors.cardBorder,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="close" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* ── Context pill ── */}
               <View
                 style={{
                   flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
+                  alignItems: "center",
+                  gap: 12,
+                  marginHorizontal: 22,
+                  marginTop: 14,
+                  padding: 12,
+                  borderRadius: 12,
+                  backgroundColor: colors.red + "08",
+                  borderWidth: 1,
+                  borderColor: colors.red + "18",
                 }}
               >
-                <View>
-                  <Text
-                    style={{
-                      color: colors.white,
-                      fontSize: 18,
-                      fontWeight: "800",
-                      letterSpacing: -0.3,
-                    }}
-                  >
-                    Traiter la demande
-                  </Text>
-                  <Text
-                    style={{
-                      color: colors.textSubtle,
-                      fontSize: 12,
-                      marginTop: 3,
-                    }}
-                  >
-                    {request.requestingHospital.name}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={resetAndClose}
+                <Text
                   style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 9,
-                    backgroundColor: colors.cardBorder + "40",
-                    borderWidth: 1,
-                    borderColor: colors.cardBorder,
-                    alignItems: "center",
-                    justifyContent: "center",
+                    color: colors.red,
+                    fontSize: 20,
+                    fontWeight: "900",
+                    letterSpacing: -1,
                   }}
                 >
-                  <Ionicons name="close" size={16} color={colors.textMuted} />
-                </TouchableOpacity>
+                  {request.bloodType.replace("_", "")}
+                </Text>
+                <View
+                  style={{
+                    width: 1,
+                    height: 18,
+                    backgroundColor: colors.cardBorder,
+                  }}
+                />
+                <Text style={{ color: colors.textSubtle, fontSize: 12 }}>
+                  <Text style={{ color: colors.white, fontWeight: "700" }}>
+                    {request.quantityNeeded} poches
+                  </Text>
+                  {" demandées · "}
+                  <Text style={{ color: colors.white, fontWeight: "700" }}>
+                    {request.quantityProvided ?? 0}
+                  </Text>
+                  {" fournies"}
+                </Text>
               </View>
-            </View>
 
-            {/* ── Context pill ── */}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                marginHorizontal: 22,
-                marginTop: 14,
-                padding: 12,
-                borderRadius: 12,
-                backgroundColor: colors.red + "08",
-                borderWidth: 1,
-                borderColor: colors.red + "18",
-              }}
-            >
-              <Text
-                style={{
-                  color: colors.red,
-                  fontSize: 20,
-                  fontWeight: "900",
-                  letterSpacing: -1,
-                }}
-              >
-                {request.bloodType.replace("_", "")}
-              </Text>
+              {/* ── Actions grid ── */}
               <View
                 style={{
-                  width: 1,
-                  height: 18,
-                  backgroundColor: colors.cardBorder,
+                  flexDirection: "row",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  paddingHorizontal: 22,
+                  marginTop: 14,
                 }}
-              />
-              <Text style={{ color: colors.textSubtle, fontSize: 12 }}>
-                <Text style={{ color: colors.white, fontWeight: "700" }}>
-                  {request.quantityNeeded} poches
-                </Text>
-                {" demandées · "}
-                <Text style={{ color: colors.white, fontWeight: "700" }}>
-                  {request.quantityProvided ?? 0}
-                </Text>
-                {" fournies"}
-              </Text>
-            </View>
-
-            {/* ── Actions grid ── */}
-            <View
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: 8,
-                paddingHorizontal: 22,
-                marginTop: 14,
-              }}
-            >
-              {ACTIONS_CONFIG.map((action) => {
-                const isSelected = selectedAction === action.value;
-                return (
-                  <TouchableOpacity
-                    key={action.value}
-                    onPress={() => {
-                      setSelectedAction(action.value);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                    activeOpacity={0.75}
-                    style={{
-                      width: "47.5%",
-                      alignItems: "center",
-                      gap: 6,
-                      paddingVertical: 13,
-                      paddingHorizontal: 8,
-                      borderRadius: 14,
-                      borderWidth: isSelected ? 1.5 : 1,
-                      borderColor: isSelected
-                        ? action.color
-                        : colors.cardBorder,
-                      backgroundColor: isSelected
-                        ? action.color + "12"
-                        : colors.cardBg + "80",
-                    }}
-                  >
-                    <Ionicons
-                      name={action.icon}
-                      size={22}
-                      color={isSelected ? action.color : colors.textSubtle}
-                    />
-                    <Text
+              >
+                {ACTIONS_CONFIG.map((action) => {
+                  const isSelected = selectedAction === action.value;
+                  return (
+                    <TouchableOpacity
+                      key={action.value}
+                      onPress={() => {
+                        setSelectedAction(action.value);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      activeOpacity={0.75}
                       style={{
-                        fontSize: 11,
-                        fontWeight: "700",
-                        color: isSelected ? action.color : colors.textSubtle,
+                        width: "47.5%",
+                        alignItems: "center",
+                        gap: 6,
+                        paddingVertical: 13,
+                        paddingHorizontal: 8,
+                        borderRadius: 14,
+                        borderWidth: isSelected ? 1.5 : 1,
+                        borderColor: isSelected
+                          ? action.color
+                          : colors.cardBorder,
+                        backgroundColor: isSelected
+                          ? action.color + "12"
+                          : colors.cardBg + "80",
                       }}
                     >
-                      {action.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                      <Ionicons
+                        name={action.icon}
+                        size={22}
+                        color={isSelected ? action.color : colors.textSubtle}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          fontWeight: "700",
+                          color: isSelected ? action.color : colors.textSubtle,
+                        }}
+                      >
+                        {action.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-            {/* ── Partial qty input ── */}
-            {selectedAction === "PARTIALLY_FULFILL" && (
+              {/* ── Partial qty input ── */}
+              {selectedAction === "PARTIALLY_FULFILL" && (
+                <View style={{ paddingHorizontal: 22, marginTop: 14, gap: 8 }}>
+                  <Text
+                    style={{
+                      fontSize: 11,
+                      fontWeight: "700",
+                      color: colors.textSubtle,
+                      textTransform: "uppercase",
+                      letterSpacing: 0.7,
+                    }}
+                  >
+                    Quantité fournie (sur {request.quantityNeeded})
+                  </Text>
+                  <TextInput
+                    style={{
+                      backgroundColor: "#60A5FA" + "0A",
+                      borderWidth: 1,
+                      borderColor: "#60A5FA" + "40",
+                      borderRadius: 12,
+                      padding: 13,
+                      color: colors.white,
+                      fontSize: 16,
+                      fontWeight: "700",
+                    }}
+                    keyboardType="number-pad"
+                    placeholder="Ex : 2"
+                    placeholderTextColor={colors.textSubtle}
+                    value={quantityProvided}
+                    onChangeText={setQuantityProvided}
+                  />
+                </View>
+              )}
+
+              {/* ── Notes input ── */}
               <View style={{ paddingHorizontal: 22, marginTop: 14, gap: 8 }}>
                 <Text
                   style={{
@@ -330,98 +372,66 @@ export default function BloodRequestHandleSheet({
                     letterSpacing: 0.7,
                   }}
                 >
-                  Quantité fournie (sur {request.quantityNeeded})
+                  Notes CNTS (optionnel)
                 </Text>
                 <TextInput
                   style={{
-                    backgroundColor: "#60A5FA" + "0A",
+                    backgroundColor: colors.cardBorder + "18",
                     borderWidth: 1,
-                    borderColor: "#60A5FA" + "40",
+                    borderColor: colors.cardBorder,
                     borderRadius: 12,
                     padding: 13,
                     color: colors.white,
-                    fontSize: 16,
-                    fontWeight: "700",
+                    fontSize: 13,
+                    minHeight: 70,
+                    textAlignVertical: "top",
                   }}
-                  keyboardType="number-pad"
-                  placeholder="Ex : 2"
+                  multiline
+                  placeholder="Contexte, raison du refus, détails..."
                   placeholderTextColor={colors.textSubtle}
-                  value={quantityProvided}
-                  onChangeText={setQuantityProvided}
+                  value={cntsNotes}
+                  onChangeText={setCntsNotes}
                 />
               </View>
-            )}
 
-            {/* ── Notes input ── */}
-            <View style={{ paddingHorizontal: 22, marginTop: 14, gap: 8 }}>
-              <Text
+              {/* ── Confirm button ── */}
+              <TouchableOpacity
+                onPress={handleConfirm}
+                disabled={!selectedAction || isPending}
+                activeOpacity={0.8}
                 style={{
-                  fontSize: 11,
-                  fontWeight: "700",
-                  color: colors.textSubtle,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.7,
+                  marginHorizontal: 22,
+                  marginTop: 18,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  paddingVertical: 14,
+                  borderRadius: 14,
+                  backgroundColor: selectedAction
+                    ? confirmColor
+                    : colors.cardBorder,
+                  opacity: isPending ? 0.7 : 1,
                 }}
               >
-                Notes CNTS (optionnel)
-              </Text>
-              <TextInput
-                style={{
-                  backgroundColor: colors.cardBorder + "18",
-                  borderWidth: 1,
-                  borderColor: colors.cardBorder,
-                  borderRadius: 12,
-                  padding: 13,
-                  color: colors.white,
-                  fontSize: 13,
-                  minHeight: 70,
-                  textAlignVertical: "top",
-                }}
-                multiline
-                placeholder="Contexte, raison du refus, détails..."
-                placeholderTextColor={colors.textSubtle}
-                value={cntsNotes}
-                onChangeText={setCntsNotes}
-              />
-            </View>
-
-            {/* ── Confirm button ── */}
-            <TouchableOpacity
-              onPress={handleConfirm}
-              disabled={!selectedAction || isPending}
-              activeOpacity={0.8}
-              style={{
-                marginHorizontal: 22,
-                marginTop: 18,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                paddingVertical: 14,
-                borderRadius: 14,
-                backgroundColor: selectedAction
-                  ? confirmColor
-                  : colors.cardBorder,
-                opacity: isPending ? 0.7 : 1,
-              }}
-            >
-              {isPending ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark" size={18} color="#fff" />
-                  <Text
-                    style={{
-                      color: "#fff",
-                      fontWeight: "800",
-                      fontSize: 14,
-                    }}
-                  >
-                    Confirmer l&apos;action
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+                {isPending ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={18} color="#fff" />
+                    <Text
+                      style={{
+                        color: "#fff",
+                        fontWeight: "800",
+                        fontSize: 14,
+                      }}
+                    >
+                      Confirmer l&apos;action
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </KeyboardAvoidingView>
