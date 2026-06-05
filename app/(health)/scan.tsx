@@ -17,14 +17,18 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { CameraView, Camera } from "expo-camera";
 import { useScanDonation } from "@/src/hooks/useDonations";
+import { useScanPurchaseOrder } from "@/src/hooks/usePurchaseOrders";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useAuthStore } from "@/src/store/auth.store";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SCAN_SIZE = SCREEN_WIDTH * 0.7;
+
+type ScanMode = "DONATION" | "PURCHASE_ORDER";
 
 export default function ScanScreen() {
   const insets = useSafeAreaInsets();
@@ -35,9 +39,11 @@ export default function ScanScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [successData, setSuccessData] = useState<any>(null);
+  const [scanMode, setScanMode] = useState<ScanMode | null>(null);
   const [flashOn, setFlashOn] = useState(false);
 
-  const isCntsUser = user?.role === "CNTS_ADMIN" || user?.role === "CNTS_AGENT";
+  const isCntsUser =
+    user?.role === "CNTS_ADMIN" || user?.role === "CNTS_AGENT";
 
   const goBack = useSmartBack({
     defaultRoute: "/(health)",
@@ -47,8 +53,12 @@ export default function ScanScreen() {
     },
   });
 
-  const { mutateAsync: scanDonation, isPending: isScanning } =
+  const { mutateAsync: scanDonation, isPending: isScanningDonation } =
     useScanDonation();
+  const { mutateAsync: scanPurchaseOrder, isPending: isScanningOrder } =
+    useScanPurchaseOrder();
+
+  const isScanning = isScanningDonation || isScanningOrder;
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
@@ -93,7 +103,12 @@ export default function ScanScreen() {
     },
     scanArea: { flex: 1, alignItems: "center", justifyContent: "center" },
     scanFrame: { width: SCAN_SIZE, height: SCAN_SIZE, position: "relative" },
-    corner: { position: "absolute", width: 30, height: 30, borderColor: c.red },
+    corner: {
+      position: "absolute",
+      width: 30,
+      height: 30,
+      borderColor: c.red,
+    },
     topLeft: {
       top: 0,
       left: 0,
@@ -170,6 +185,19 @@ export default function ScanScreen() {
       width: "100%",
     },
     donorInfoText: { color: c.white, fontSize: 14, fontWeight: "700" },
+    hospitalRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: c.cardBg,
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: c.cardBorder,
+      width: "100%",
+    },
+    hospitalText: { color: c.white, fontSize: 14, fontWeight: "700" },
     pointsRow: {
       width: "100%",
       flexDirection: "row",
@@ -215,18 +243,30 @@ export default function ScanScreen() {
     })();
   }, []);
 
+  // ── Routeur de Préfixe ──
   const handleBarcodeScanned = async ({ data }: { data: string }) => {
     if (scanned || isScanning) return;
     setScanned(true);
-    if (!data.startsWith("VITA-")) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(
-        "QR Code invalide",
-        "Ce code ne correspond pas à un pass Vita-Link. Vérifiez que le donneur affiche bien son pass sur l'application.",
-        [{ text: "OK", onPress: () => setScanned(false) }],
-      );
-      return;
+
+    if (data.startsWith("VITA-")) {
+      return handleDonationScan(data);
     }
+
+    if (data.startsWith("CMD-")) {
+      return handlePurchaseOrderScan(data);
+    }
+
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    Alert.alert(
+      "QR Code invalide",
+      "Ce code ne correspond ni à un pass donneur ni à un bon de commande Vita-Link.",
+      [{ text: "OK", onPress: () => setScanned(false) }],
+    );
+  };
+
+  // ── Handler Donation ──
+  const handleDonationScan = async (data: string) => {
+    setScanMode("DONATION");
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const result = await scanDonation(data);
@@ -238,13 +278,45 @@ export default function ScanScreen() {
         error?.response?.data?.message ||
         "Erreur lors de la validation du don.";
       Alert.alert("Échec de la validation", msg, [
-        { text: "OK", onPress: () => setScanned(false) },
+        {
+          text: "OK",
+          onPress: () => {
+            setScanned(false);
+            setScanMode(null);
+          },
+        },
+      ]);
+    }
+  };
+
+  // ── Handler Bon de Commande ──
+  const handlePurchaseOrderScan = async (data: string) => {
+    setScanMode("PURCHASE_ORDER");
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const result = await scanPurchaseOrder(data);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSuccessData(result);
+    } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      const msg =
+        error?.response?.data?.message ||
+        "Erreur lors de la validation du bon.";
+      Alert.alert("Échec de la validation", msg, [
+        {
+          text: "OK",
+          onPress: () => {
+            setScanned(false);
+            setScanMode(null);
+          },
+        },
       ]);
     }
   };
 
   const handleRescan = () => {
     setSuccessData(null);
+    setScanMode(null);
     setScanned(false);
   };
 
@@ -352,13 +424,13 @@ export default function ScanScreen() {
           <View style={styles.instructions}>
             <Ionicons name="qr-code-outline" size={24} color="#FFFFFF" />
             <Text style={styles.instructionText}>
-              Scannez le Pass du donneur pour valider son don
+              Scannez un Pass Donneur ou un Bon de Commande
             </Text>
           </View>
         </SafeAreaView>
       </CameraView>
 
-      {/* ── Modal succès ── */}
+      {/* ── Modal Succès Dynamique ── */}
       <Modal visible={!!successData} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View
@@ -366,44 +438,120 @@ export default function ScanScreen() {
           >
             <View style={styles.successIconWrap}>
               <Ionicons
-                name="checkmark-circle"
+                name={scanMode === "DONATION" ? "water" : "checkmark-circle"}
                 size={48}
-                color={colors.success}
+                color={scanMode === "DONATION" ? colors.red : colors.success}
               />
             </View>
-            <Text style={styles.successTitle}>Don validé ! 🩸</Text>
-            <Text style={styles.successSub}>
-              Le don a été enregistré, le stock de la CNTS a été mis à jour et
-              les points ont été crédités au donneur.
-            </Text>
 
-            <View style={styles.donorInfoRow}>
-              <Ionicons name="person-outline" size={16} color={colors.white} />
-              <Text style={styles.donorInfoText}>
-                {successData?.donation?.donor?.firstName}{" "}
-                {successData?.donation?.donor?.lastName} —{" "}
-                {successData?.donation?.bloodType?.replace("_", "")}
-              </Text>
-            </View>
-
-            <View style={styles.pointsRow}>
-              <Text style={styles.pointsLabel}>Points Jambaar crédités</Text>
-              <Text style={styles.pointsValue}>
-                +{successData?.jambaar?.pointsAwarded} pts
-              </Text>
-            </View>
-
-            {successData?.jambaar?.gradeChanged && (
-              <View style={styles.gradeBanner}>
-                <Ionicons name="trophy" size={16} color={colors.amber} />
-                <Text style={styles.gradeText}>
-                  Nouveau grade : {successData?.jambaar?.newGrade} !
+            {/* ── SUCCÈS DONATION ── */}
+            {scanMode === "DONATION" && (
+              <>
+                <Text style={styles.successTitle}>Don validé ! 🩸</Text>
+                <Text style={styles.successSub}>
+                  Le don a été enregistré, le stock a été mis à jour et les
+                  points ont été crédités au donneur.
                 </Text>
-              </View>
+
+                <View style={styles.donorInfoRow}>
+                  <Ionicons
+                    name="person-outline"
+                    size={16}
+                    color={colors.white}
+                  />
+                  <Text style={styles.donorInfoText}>
+                    {successData?.donation?.donor?.firstName}{" "}
+                    {successData?.donation?.donor?.lastName} —{" "}
+                    {successData?.donation?.bloodType?.replace("_", "")}
+                  </Text>
+                </View>
+
+                <View style={styles.pointsRow}>
+                  <Text style={styles.pointsLabel}>
+                    Points Jambaar crédités
+                  </Text>
+                  <Text style={styles.pointsValue}>
+                    +{successData?.jambaar?.pointsAwarded} pts
+                  </Text>
+                </View>
+
+                {successData?.jambaar?.gradeChanged && (
+                  <View style={styles.gradeBanner}>
+                    <Ionicons name="trophy" size={16} color={colors.amber} />
+                    <Text style={styles.gradeText}>
+                      Nouveau grade : {successData?.jambaar?.newGrade} !
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
 
+            {/* ── SUCCÈS BON DE COMMANDE ── */}
+            {scanMode === "PURCHASE_ORDER" && (
+              <>
+                <Text style={[styles.successTitle, { color: colors.success }]}>
+                  Bon validé ! 🏥
+                </Text>
+                <Text style={styles.successSub}>
+                  Remise du sang confirmée. L&apos;hôpital a été notifié en temps
+                  réel.
+                </Text>
+
+                <View style={styles.donorInfoRow}>
+                  <Ionicons
+                    name="water-outline"
+                    size={16}
+                    color={colors.red}
+                  />
+                  <Text style={styles.donorInfoText}>
+                    {successData?.order?.quantity} poche(s) —{" "}
+                    {BLOOD_TYPE_LABELS[successData?.order?.bloodType] ??
+                      successData?.order?.bloodType?.replace("_", " ")}
+                  </Text>
+                </View>
+
+                <View style={styles.hospitalRow}>
+                  <Ionicons
+                    name="business-outline"
+                    size={16}
+                    color={colors.white}
+                  />
+                  <Text style={styles.hospitalText}>
+                    {successData?.order?.hospital?.name}
+                  </Text>
+                </View>
+
+                <View
+                  style={[
+                    styles.pointsRow,
+                    {
+                      backgroundColor: colors.success + "14",
+                      borderColor: colors.success + "33",
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.pointsLabel, { color: colors.textMuted }]}
+                  >
+                    Statut du bon
+                  </Text>
+                  <Text
+                    style={[styles.pointsValue, { color: colors.success }]}
+                  >
+                    UTILISÉ
+                  </Text>
+                </View>
+              </>
+            )}
+
+            {/* ── Bouton Rescan commun ── */}
             <TouchableOpacity
-              style={styles.rescanBtn}
+              style={[
+                styles.rescanBtn,
+                scanMode === "PURCHASE_ORDER" && {
+                  backgroundColor: colors.success,
+                },
+              ]}
               onPress={handleRescan}
               activeOpacity={0.8}
             >

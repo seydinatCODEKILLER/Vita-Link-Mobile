@@ -14,6 +14,7 @@ export interface BloodRequest {
   fulfilledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  purchaseOrder: PurchaseOrder | null;
   
   requestingHospital: {
     id: string;
@@ -56,4 +57,16 @@ export interface ListBloodRequestsFilters {
   page?: number;
   limit?: number;
   status?: BloodRequestStatus;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  code: string;
+  bloodType: BloodType;
+  quantity: number;
+  status: "PENDING" | "USED" | "EXPIRED" | "CANCELLED";
+  expiresAt: string;
+  scannedAt: string | null;
+  cnts: { id: string; name: string; address: string };
+  hospital: { id: string; name: string; address: string };
 }

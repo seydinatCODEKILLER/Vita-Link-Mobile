@@ -27,14 +27,42 @@ import dayjs from "dayjs";
 // ─── Status Config ─────────────────────────────────────────────
 const STATUS_CONFIG: Record<
   string,
-  { label: string; icon: keyof typeof Ionicons.glyphMap; colorKey: "success" | "red" | "amber" | "blue" | "textMuted" }
+  {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    colorKey: "success" | "red" | "amber" | "blue" | "textMuted";
+  }
 > = {
-  PENDING: { label: "En attente CNTS", icon: "time-outline", colorKey: "amber" },
-  FULFILLED: { label: "Demande comblée", icon: "checkmark-circle-outline", colorKey: "success" },
-  PARTIALLY_FULFILLED: { label: "Partiellement comblée", icon: "git-compare-outline", colorKey: "blue" },
-  ESCALATED_TO_ALERT: { label: "Alerte lancée", icon: "alert-circle-outline", colorKey: "red" },
-  REJECTED: { label: "Refusée", icon: "close-circle-outline", colorKey: "textMuted" },
-  CANCELLED: { label: "Annulée", icon: "remove-circle-outline", colorKey: "textMuted" },
+  PENDING: {
+    label: "En attente CNTS",
+    icon: "time-outline",
+    colorKey: "amber",
+  },
+  FULFILLED: {
+    label: "Demande comblée",
+    icon: "checkmark-circle-outline",
+    colorKey: "success",
+  },
+  PARTIALLY_FULFILLED: {
+    label: "Partiellement comblée",
+    icon: "git-compare-outline",
+    colorKey: "blue",
+  },
+  ESCALATED_TO_ALERT: {
+    label: "Alerte lancée",
+    icon: "alert-circle-outline",
+    colorKey: "red",
+  },
+  REJECTED: {
+    label: "Refusée",
+    icon: "close-circle-outline",
+    colorKey: "textMuted",
+  },
+  CANCELLED: {
+    label: "Annulée",
+    icon: "remove-circle-outline",
+    colorKey: "textMuted",
+  },
 };
 
 // ─── Skeleton ──────────────────────────────────────────────────
@@ -53,7 +81,14 @@ function RequestDetailSkeleton() {
     <View style={{ paddingHorizontal: 20, gap: 10, opacity: 0.55 }}>
       <View style={[styles.cardBg, { padding: 16, gap: 12 }]}>
         <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
-          <View style={{ width: 62, height: 62, borderRadius: 16, backgroundColor: styles.line.backgroundColor }} />
+          <View
+            style={{
+              width: 62,
+              height: 62,
+              borderRadius: 16,
+              backgroundColor: styles.line.backgroundColor,
+            }}
+          />
           <View style={{ flex: 1, gap: 8 }}>
             <View style={[styles.line, { height: 14, width: "55%" }]} />
             <View style={[styles.line, { height: 9, width: "35%" }]} />
@@ -62,7 +97,10 @@ function RequestDetailSkeleton() {
       </View>
       <View style={{ flexDirection: "row", gap: 9 }}>
         {[1, 2, 3, 4].map((i) => (
-          <View key={i} style={[styles.cardBg, { flex: 1, height: 80, borderRadius: 14 }]} />
+          <View
+            key={i}
+            style={[styles.cardBg, { flex: 1, height: 80, borderRadius: 14 }]}
+          />
         ))}
       </View>
       <View style={[styles.cardBg, { height: 70, borderRadius: 13 }]} />
@@ -103,7 +141,12 @@ function NotesCard({
       alignItems: "center",
       justifyContent: "center",
     },
-    label: { color: c.textMuted, fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
+    label: {
+      color: c.textMuted,
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 0.5,
+    },
     divider: { height: 0.5, backgroundColor: c.cardBorder },
     text: { color: c.white, fontSize: 12, lineHeight: 19, opacity: 0.8 },
   }));
@@ -180,7 +223,9 @@ export default function BloodRequestDetailScreen() {
           onPress: async () => {
             try {
               await cancelRequest(request.id);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
               goBack();
             } catch (err: any) {
               Alert.alert(
@@ -196,7 +241,12 @@ export default function BloodRequestDetailScreen() {
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
-    centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
+    centered: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 12,
+    },
     // ── Header ──
     header: {
       flexDirection: "row",
@@ -241,9 +291,24 @@ export default function BloodRequestDetailScreen() {
       justifyContent: "center",
       flexShrink: 0,
     },
-    bloodBadgeText: { color: c.white, fontSize: 22, fontWeight: "900", lineHeight: 25 },
-    bloodBadgeSub: { fontSize: 9, fontWeight: "700", letterSpacing: 0.6, marginTop: 2 },
-    heroQty: { color: c.white, fontSize: 20, fontWeight: "800", letterSpacing: -0.5 },
+    bloodBadgeText: {
+      color: c.white,
+      fontSize: 22,
+      fontWeight: "900",
+      lineHeight: 25,
+    },
+    bloodBadgeSub: {
+      fontSize: 9,
+      fontWeight: "700",
+      letterSpacing: 0.6,
+      marginTop: 2,
+    },
+    heroQty: {
+      color: c.white,
+      fontSize: 20,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
     heroDesc: { color: c.textMuted, fontSize: 12, marginTop: 2 },
     statusPill: {
       flexDirection: "row",
@@ -257,6 +322,24 @@ export default function BloodRequestDetailScreen() {
       marginTop: 9,
     },
     statusPillText: { fontSize: 11, fontWeight: "700", letterSpacing: 0.3 },
+
+    purchaseOrderBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 0.5,
+      borderColor: colors.success + "4D",
+      backgroundColor: colors.success + "0D",
+      borderRadius: 16,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      marginTop: 4,
+    },
+    purchaseOrderBtnText: {
+      color: colors.success,
+      fontSize: 15,
+      fontWeight: "700",
+    },
     // ── Info Grid ──
     infoGrid: {
       flexDirection: "row",
@@ -287,7 +370,12 @@ export default function BloodRequestDetailScreen() {
       marginBottom: 5,
     },
     infoValueRow: { flexDirection: "row", alignItems: "baseline", gap: 3 },
-    infoValue: { color: c.white, fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
+    infoValue: {
+      color: c.white,
+      fontSize: 22,
+      fontWeight: "800",
+      letterSpacing: -0.5,
+    },
     infoValueSm: { fontSize: 14, fontWeight: "700" },
     infoUnit: { color: c.textMuted, fontSize: 11, fontWeight: "500" },
     // ── Alert Banner ──
@@ -368,7 +456,11 @@ export default function BloodRequestDetailScreen() {
   if (!request) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
+        <Ionicons
+          name="alert-circle-outline"
+          size={48}
+          color={colors.textMuted}
+        />
         <Text style={{ color: colors.textMuted, fontSize: 15 }}>
           Demande introuvable
         </Text>
@@ -381,9 +473,15 @@ export default function BloodRequestDetailScreen() {
   const isEscalated = request.status === "ESCALATED_TO_ALERT";
   const isFulfilled = request.status === "FULFILLED";
 
+  const hasPurchaseOrder =
+    (isFulfilled || request.status === "PARTIALLY_FULFILLED") &&
+    request.purchaseOrder != null;
+
   const bloodLabel =
     BLOOD_TYPE_LABELS[request.bloodType] ??
     request.bloodType.replaceAll("_", " ");
+
+   //CMD-62XM-XN88
 
   const escalatedAlert = request.escalatedAlert;
 
@@ -395,7 +493,9 @@ export default function BloodRequestDetailScreen() {
   const accentBg = isVital ? "rgba(220,30,30,0.07)" : colors.amber + "0D";
   const accentBorder = isVital ? "rgba(220,30,30,0.28)" : colors.amber + "38";
   const accentBadgeBg = isVital ? "rgba(220,30,30,0.14)" : colors.amber + "1A";
-  const accentBadgeBorder = isVital ? "rgba(220,30,30,0.38)" : colors.amber + "4D";
+  const accentBadgeBorder = isVital
+    ? "rgba(220,30,30,0.38)"
+    : colors.amber + "4D";
 
   const formattedDate = request.createdAt
     ? dayjs(request.createdAt).format("DD MMM")
@@ -432,7 +532,11 @@ export default function BloodRequestDetailScreen() {
               <View
                 style={[
                   styles.bloodBadge,
-                  { backgroundColor: accentBadgeBg, borderWidth: 0.5, borderColor: accentBadgeBorder },
+                  {
+                    backgroundColor: accentBadgeBg,
+                    borderWidth: 0.5,
+                    borderColor: accentBadgeBorder,
+                  },
                 ]}
               >
                 <Text style={styles.bloodBadgeText}>{bloodLabel}</Text>
@@ -458,7 +562,11 @@ export default function BloodRequestDetailScreen() {
                     },
                   ]}
                 >
-                  <Ionicons name={statusEntry.icon} size={11} color={statusColor} />
+                  <Ionicons
+                    name={statusEntry.icon}
+                    size={11}
+                    color={statusColor}
+                  />
                   <Text style={[styles.statusPillText, { color: statusColor }]}>
                     {statusEntry.label}
                   </Text>
@@ -471,7 +579,12 @@ export default function BloodRequestDetailScreen() {
           <View style={styles.infoGrid}>
             {/* Demandé */}
             <View style={styles.infoCard}>
-              <View style={[styles.infoIcon, { backgroundColor: colors.red + "20" }]}>
+              <View
+                style={[
+                  styles.infoIcon,
+                  { backgroundColor: colors.red + "20" },
+                ]}
+              >
                 <Ionicons name="water-outline" size={15} color={colors.red} />
               </View>
               <Text style={styles.infoLabel}>DEMANDÉ</Text>
@@ -528,7 +641,10 @@ export default function BloodRequestDetailScreen() {
               <View
                 style={[
                   styles.infoIcon,
-                  { backgroundColor: (isVital ? colors.red : colors.amber) + "20" },
+                  {
+                    backgroundColor:
+                      (isVital ? colors.red : colors.amber) + "20",
+                  },
                 ]}
               >
                 <Ionicons
@@ -563,7 +679,9 @@ export default function BloodRequestDetailScreen() {
                 />
               </View>
               <Text style={styles.infoLabel}>CRÉÉE LE</Text>
-              <Text style={{ color: colors.white, fontSize: 14, fontWeight: "600" }}>
+              <Text
+                style={{ color: colors.white, fontSize: 14, fontWeight: "600" }}
+              >
                 {formattedDate}
               </Text>
             </View>
@@ -594,14 +712,19 @@ export default function BloodRequestDetailScreen() {
                     { backgroundColor: colors.red + "1A" },
                   ]}
                 >
-                  <Ionicons name="megaphone-outline" size={17} color={colors.red} />
+                  <Ionicons
+                    name="megaphone-outline"
+                    size={17}
+                    color={colors.red}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.alertTitle, { color: colors.red }]}>
                     Alerte donneurs active
                   </Text>
                   <Text style={styles.alertSub}>
-                    La CNTS a lancé un appel d&apos;urgence. Touchez pour suivre.
+                    La CNTS a lancé un appel d&apos;urgence. Touchez pour
+                    suivre.
                   </Text>
                 </View>
                 <Ionicons
@@ -635,6 +758,69 @@ export default function BloodRequestDetailScreen() {
               iconBg={colors.amber + "1A"}
               colors={colors}
             />
+          )}
+
+          {hasPurchaseOrder && (
+            <TouchableOpacity
+              style={styles.purchaseOrderBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({
+                  pathname: "/(hospital)/blood-request/purchase-order",
+                  params: {
+                    code: request.purchaseOrder!.code,
+                    bloodRequestId: request.id,
+                    status: request.purchaseOrder!.status,
+                    expiresAt: request.purchaseOrder!.expiresAt,
+                    quantity: String(request.purchaseOrder!.quantity),
+                    bloodType: request.purchaseOrder!.bloodType,
+                    cntsName: request.purchaseOrder!.cnts.name,
+                    cntsAddress: request.purchaseOrder!.cnts.address,
+                  },
+                });
+              }}
+              activeOpacity={0.8}
+            >
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              >
+                <View
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
+                    backgroundColor: colors.success + "1A",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name="qr-code-outline"
+                    size={17}
+                    color={colors.success}
+                  />
+                </View>
+                <View>
+                  <Text style={styles.purchaseOrderBtnText}>
+                    Voir mon bon de commande
+                  </Text>
+                  <Text
+                    style={{
+                      color: colors.textMuted,
+                      fontSize: 11,
+                      marginTop: 1,
+                    }}
+                  >
+                    {request.purchaseOrder!.code}
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={colors.success + "99"}
+              />
+            </TouchableOpacity>
           )}
 
           {/* ── Bouton Annuler ── */}

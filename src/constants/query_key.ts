@@ -39,6 +39,10 @@ export const QUERY_KEYS = {
   bloodRequests: (filters?: object) => ["blood-requests", filters],
   bloodRequest: (id: string) => ["blood-requests", id],
 
+  // Purchase Orders (Bons de commande)
+  purchaseOrders: (filters?: object) => ["purchase-orders", filters],
+  purchaseOrder: (id: string) => ["purchase-orders", id],
+
   // Notifications
   myNotifications: ["notifications", "me"],
 } as const;

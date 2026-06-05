@@ -63,11 +63,8 @@ export const useSocket = () => {
       logger.error("❌ Socket.io erreur de connexion :", err.message);
     });
 
-    // ── 1. NOUVELLE ALERTE (Redirigé vers l'agent si besoin) ──
+    // ── 1. NOUVELLE ALERTE ──
     socket.on("alert:new", (data: Alert) => {
-      // Les agents reçoivent les alertes via leur propre route "my-structure",
-      // mais on peut garder cet événement pour une notification in-app globale si nécessaire.
-      // Pour l'instant, on ne fait rien de spécifique pour ne pas polluer l'interface agent.
       logger.info("🚨 Nouvelle alerte diffusée :", data.id);
     });
 
@@ -117,7 +114,7 @@ export const useSocket = () => {
       }
     });
 
-    // ── 4. RÉPONSE DONNEUR (Pour CNTS / HÔPITAUX) ────────────
+    // ── 4. RÉPONSE DONNEUR ────────────────────────────────────
     socket.on("response:new", (data: { alertId: string }) => {
       logger.info("🚶 Nouveau donneur confirmé sur l'alerte :", data.alertId);
 
@@ -128,7 +125,7 @@ export const useSocket = () => {
       });
     });
 
-    // ── 5. DONNEUR ARRIVÉ (Pour CNTS / HÔPITAUX) ──────────────
+    // ── 5. DONNEUR ARRIVÉ ──────────────────────────────────────
     socket.on("response:arrived", (data: { alertId: string }) => {
       logger.info("🏥 Donneur arrivé sur l'alerte :", data.alertId);
       queryClient.invalidateQueries({
@@ -136,11 +133,10 @@ export const useSocket = () => {
       });
     });
 
-    // ── 6. STOCK MIS À JOUR (Pour CNTS) ──────────────────────
+    // ── 6. STOCK MIS À JOUR ──────────────────────────────────
     socket.on("stock:updated", (data) => {
       logger.info("🩸 Stock de sang mis à jour via Socket :", data.bloodType);
 
-      // ✅ Mise à jour instantanée du cache de l'écran Stock CNTS
       queryClient.setQueryData<BloodStock[]>(
         QUERY_KEYS.bloodStocks,
         (oldStocks) => {
@@ -153,13 +149,8 @@ export const useSocket = () => {
         },
       );
 
-      // ✅ Forcer le refetch IMMÉDIAT du Dashboard CNTS
       queryClient.refetchQueries({ queryKey: ["dashboard", "cnts"] });
-
-      // ✅ NOUVEAU : Forcer le refetch IMMÉDIAT du Dashboard Hôpital
       queryClient.refetchQueries({ queryKey: ["dashboard", "hospital"] });
-
-      // Invalider les stats
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStats });
     });
 
@@ -186,7 +177,7 @@ export const useSocket = () => {
       },
     );
 
-    // ── 8. ESCALADE ALERTE HÔPITAL (Pour la CNTS) ──────────
+    // ── 8. ESCALADE ALERTE HÔPITAL ──────────────────────────
     socket.on(
       "alert:escalation",
       (data: {
@@ -216,7 +207,7 @@ export const useSocket = () => {
       },
     );
 
-    // ── 9. NOUVELLE DEMANDE DE SANG (Pour la CNTS) ────────
+    // ── 9. NOUVELLE DEMANDE DE SANG ────────────────────────
     socket.on(
       "blood-request:new",
       (data: {
@@ -245,7 +236,7 @@ export const useSocket = () => {
       },
     );
 
-    // ── 10. DEMANDE DE SANG TRAITÉE (Pour l'Hôpital) ──────
+    // ── 10. DEMANDE DE SANG TRAITÉE ──────────────────────────
     socket.on("blood-request:fulfilled", (data: { requestId: string }) => {
       if (user.role !== "HOSPITAL_AGENT") return;
 
@@ -267,6 +258,119 @@ export const useSocket = () => {
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.hospitalDashboard(),
       });
+    });
+
+    // ── 11. BON DE COMMANDE CRÉÉ (Pour l'Hôpital) ──────────
+    socket.on(
+      "purchase_order:created",
+      (data: {
+        orderId: string;
+        code: string;
+        bloodType: string;
+        quantity: number;
+        expiresAt: string;
+      }) => {
+        if (user.role !== "HOSPITAL_AGENT") return;
+
+        logger.info(
+          "📋 Bon de commande créé pour votre demande :",
+          data.orderId,
+        );
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        setInAppAlert({
+          id: data.orderId,
+          title: "📋 Bon de commande prêt",
+          body: `Votre bon pour ${data.quantity} poche(s) ${data.bloodType.replace("_", "")} est disponible. Code : ${data.code}`,
+          data: { orderId: data.orderId, type: "purchase_order" },
+          receivedAt: new Date(),
+        });
+
+        // Rafraîchir la liste des demandes et le dashboard hospitalier
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.purchaseOrders(),
+        });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.hospitalDashboard(),
+        });
+      },
+    );
+
+    // ── 12. BON DE COMMANDE VALIDÉ/SCANNÉ (Pour la CNTS & Hôpital) ──
+    socket.on(
+      "purchase_order:validated",
+      (data: {
+        orderId: string;
+        code: string;
+        scannedAt: string;
+        bloodType: string;
+        quantity: number;
+      }) => {
+        logger.info("✅ Bon de commande scanné/validé :", data.orderId);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+        // Côté Hôpital : notification de confirmation de retrait
+        if (user.role === "HOSPITAL_AGENT") {
+          setInAppAlert({
+            id: data.orderId,
+            title: "🚚 Sang récupéré",
+            body: `Le bon ${data.code} a été validé par la CNTS. ${data.quantity} poche(s) ${data.bloodType.replace("_", "")} retirée(s).`,
+            data: { orderId: data.orderId, type: "purchase_order_validated" },
+            receivedAt: new Date(),
+          });
+        }
+
+        // Les deux rôles ont besoin de rafraîchir leurs données
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.purchaseOrders(),
+        });
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
+
+        if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.cntsDashboard(),
+          });
+        }
+        if (user.role === "HOSPITAL_AGENT") {
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.hospitalDashboard(),
+          });
+        }
+      },
+    );
+
+    // useSocket.ts
+
+    // ── CNTS : Alerte de confirmation requise ──
+    socket.on("purchase_order:expired_confirm_required", (data: any) => {
+      if (user.role !== "CNTS_ADMIN" && user.role !== "CNTS_AGENT") return;
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      setInAppAlert({
+        id: data.orderId,
+        title: "⏳ Bon expiré - Confirmation requise",
+        body: data.message,
+        data: { orderId: data.orderId, type: "expired_confirm" },
+        receivedAt: new Date(),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchaseOrders() });
+    });
+
+    // ── Hôpital : Stock restitué car non retiré ──
+    socket.on("purchase_order:cancelled_stock_restored", (data: any) => {
+      if (user.role !== "HOSPITAL_AGENT") return;
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setInAppAlert({
+        id: data.orderId,
+        title: "❌ Bon annulé",
+        body: data.message,
+        data: { orderId: data.orderId, type: "order_cancelled" },
+        receivedAt: new Date(),
+      });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchaseOrders() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
     });
 
     socketRef.current = socket;

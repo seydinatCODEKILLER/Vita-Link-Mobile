@@ -172,6 +172,7 @@ export default function HospitalLayout() {
         <Tabs.Screen name="alerts/create" options={{ href: null }} />
         <Tabs.Screen name="alerts/[id]" options={{ href: null }} />
         <Tabs.Screen name="blood-request/create" options={{ href: null }} />
+        <Tabs.Screen name="blood-request/purchase-order" options={{ href: null }} />
         <Tabs.Screen name="blood-request/[id]" options={{ href: null }} />
         <Tabs.Screen name="staff/index" options={{ href: null }} />
         <Tabs.Screen name="staff/add" options={{ href: null }} />

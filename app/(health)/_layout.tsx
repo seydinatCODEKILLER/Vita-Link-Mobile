@@ -65,6 +65,15 @@ const SECONDARY_TABS = [
     shortcut: "⌘A",
   },
   {
+    name: "purchase-orders",
+    label: "Bons de Commande",
+    icon: "receipt" as const,
+    route: "/(health)/purchase-orders" as const,
+    description: "Suivre les retraits de sang des hôpitaux",
+    color: "#4ECDC4",
+    shortcut: "⌘B",
+  },
+  {
     name: "hospitals",
     label: "Hôpitaux Affiliés",
     icon: "business" as const,
@@ -722,6 +731,8 @@ export default function HealthLayout() {
 
         <Tabs.Screen name="hospitals/index" options={{ href: null }} />
         <Tabs.Screen name="hospitals/[id]" options={{ href: null }} />
+
+        <Tabs.Screen name="purchase-orders/index" options={{ href: null }} />
 
         <Tabs.Screen name="journees/index" options={{ href: null }} />
         <Tabs.Screen name="journees/create" options={{ href: null }} />

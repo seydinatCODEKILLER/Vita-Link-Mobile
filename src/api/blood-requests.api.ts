@@ -3,6 +3,7 @@ import {
   BloodRequest,
   HandleRequestPayload,
   ListBloodRequestsFilters,
+  PurchaseOrder,
 } from "../types/blood-request.types";
 import { BloodType, UrgencyLevel } from "../types/shared.types";
 
@@ -56,5 +57,12 @@ export const bloodRequestsApi = {
       request: BloodRequest;
     }>("/blood-requests", payload);
     return data.request;
+  },
+
+  getPurchaseOrder: async (bloodRequestId: string): Promise<PurchaseOrder> => {
+    const { data } = await api.get<{ success: boolean; order: PurchaseOrder }>(
+      `/purchase-orders/${bloodRequestId}`,
+    );
+    return data.order;
   },
 };
