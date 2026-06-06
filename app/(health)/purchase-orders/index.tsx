@@ -14,6 +14,8 @@ import { usePurchaseOrders } from "@/src/hooks/usePurchaseOrders";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useSmartBack } from "@/src/hooks/useSmartBack";
 import ExpiredOrderConfirmSheet from "@/src/components/ui/ExpiredOrderConfirmSheet";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { isNetworkError } from "@/src/utils/error.utils";
 import { PurchaseOrder } from "@/src/types/blood-request.types";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -33,7 +35,6 @@ const STATUS_CONFIG: Record<
     color: "success",
     icon: "checkmark-circle-outline",
   },
-  // ⚠️ CORRECTION ICI : icon="alert-circle-outline" au lieu de icon="alert-circle-outline"
   EXPIRED: { label: "Expiré", color: "red", icon: "alert-circle-outline" },
   CANCELLED: {
     label: "Annulé",
@@ -42,13 +43,72 @@ const STATUS_CONFIG: Record<
   },
 };
 
-// Onglets de filtrage
+// ─── Onglets de filtrage ────────────────────────────────────
 const TAB_FILTERS = [
-  { label: "En attente", value: "PENDING" },
-  { label: "Expirés", value: "EXPIRED" },
-  { label: "Utilisés", value: "USED" },
+  {
+    label: "En attente",
+    value: "PENDING",
+    icon: "time-outline" as keyof typeof Ionicons.glyphMap,
+  },
+  {
+    label: "Expirés",
+    value: "EXPIRED",
+    icon: "alert-circle-outline" as keyof typeof Ionicons.glyphMap,
+  },
+  {
+    label: "Utilisés",
+    value: "USED",
+    icon: "checkmark-circle-outline" as keyof typeof Ionicons.glyphMap,
+  },
 ];
 
+// ─── Skeleton Card ──────────────────────────────────────────
+function SkeletonCard() {
+  const styles = useThemedStyles((c) => ({
+    card: {
+      marginHorizontal: 20,
+      marginBottom: 10,
+      backgroundColor: c.cardBg,
+      borderRadius: 16,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      padding: 16,
+      gap: 12,
+    },
+    row: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    circle: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      backgroundColor: c.cardBorder,
+    },
+    badge: {
+      width: 80,
+      height: 22,
+      borderRadius: 8,
+      backgroundColor: c.cardBorder,
+    },
+    line: { height: 12, borderRadius: 6, backgroundColor: c.cardBorder },
+  }));
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.row}>
+        <View style={styles.circle} />
+        <View style={styles.badge} />
+      </View>
+      <View style={[styles.line, { width: "70%" }]} />
+      <View style={[styles.line, { width: "50%" }]} />
+      <View style={[styles.line, { width: "40%" }]} />
+    </View>
+  );
+}
+
+// ─── Écran principal ────────────────────────────────────────
 export default function CntsPurchaseOrdersScreen() {
   const router = useRouter();
   const colors = useColors();
@@ -60,16 +120,18 @@ export default function CntsPurchaseOrdersScreen() {
 
   const goBack = useSmartBack({ defaultRoute: "/(health)" });
 
-  const { data, isLoading, refetch, isRefetching } = usePurchaseOrders({
-    status: activeTab,
-    limit: 20,
-  });
+  const { data, isLoading, isError, error, refetch, isRefetching } =
+    usePurchaseOrders({
+      status: activeTab,
+      limit: 20,
+    });
 
-  // ⚠️ CORRECTION ICI : data?.data n'existe pas, c'est data?.orders
   const orders = data?.orders ?? [];
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.bg },
+
+    // ── Header ──
     header: {
       flexDirection: "row",
       alignItems: "center",
@@ -88,7 +150,9 @@ export default function CntsPurchaseOrdersScreen() {
       alignItems: "center",
       justifyContent: "center",
     },
+    headerCenter: { alignItems: "center", gap: 2 },
     headerTitle: { color: c.white, fontSize: 17, fontWeight: "700" },
+    headerSub: { color: c.textMuted, fontSize: 11, fontWeight: "500" },
     scanBtn: {
       flexDirection: "row",
       alignItems: "center",
@@ -99,6 +163,8 @@ export default function CntsPurchaseOrdersScreen() {
       borderRadius: 12,
     },
     scanBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+
+    // ── Tabs ──
     tabsContainer: {
       flexDirection: "row",
       paddingHorizontal: 20,
@@ -106,9 +172,14 @@ export default function CntsPurchaseOrdersScreen() {
       gap: 8,
     },
     tab: {
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 5,
+      paddingHorizontal: 10,
+      paddingVertical: 9,
+      borderRadius: 12,
       borderWidth: 1,
       borderColor: c.cardBorder,
       backgroundColor: c.cardBg,
@@ -117,8 +188,10 @@ export default function CntsPurchaseOrdersScreen() {
       backgroundColor: c.red + "1A",
       borderColor: c.red + "4D",
     },
-    tabText: { fontSize: 12, fontWeight: "700", color: c.textMuted },
+    tabText: { fontSize: 11, fontWeight: "700", color: c.textMuted },
     tabTextActive: { color: c.red },
+
+    // ── Card ──
     card: {
       marginHorizontal: 20,
       marginBottom: 10,
@@ -126,74 +199,156 @@ export default function CntsPurchaseOrdersScreen() {
       borderRadius: 16,
       borderWidth: 0.5,
       borderColor: c.cardBorder,
-      padding: 14,
+      padding: 16,
+      overflow: "hidden",
+    },
+    cardAccent: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      width: 3,
+      height: "100%",
+      borderTopLeftRadius: 16,
+      borderBottomLeftRadius: 16,
     },
     cardTop: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "flex-start",
-      marginBottom: 10,
+      marginBottom: 12,
     },
+    cardLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
     bloodBadge: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+      width: 48,
+      height: 48,
+      borderRadius: 14,
       backgroundColor: c.red + "14",
       borderWidth: 1,
       borderColor: c.red + "30",
       alignItems: "center",
       justifyContent: "center",
     },
-    bloodBadgeText: {
-      color: c.red,
-      fontSize: 14,
-      fontWeight: "900",
+    bloodBadgeText: { color: c.red, fontSize: 15, fontWeight: "900" },
+    cardTitleGroup: { gap: 3 },
+    cardCode: {
+      color: c.white,
+      fontSize: 13,
+      fontWeight: "800",
+      letterSpacing: 0.5,
     },
+    cardDate: { color: c.textMuted, fontSize: 11, fontWeight: "500" },
     statusBadge: {
       flexDirection: "row",
       alignItems: "center",
       gap: 4,
       paddingHorizontal: 8,
-      paddingVertical: 4,
+      paddingVertical: 5,
       borderRadius: 8,
       borderWidth: 0.5,
     },
     statusText: { fontSize: 10, fontWeight: "700" },
-    cardBody: { gap: 6 },
-    infoRow: {
-      flexDirection: "row",
+
+    // ── Divider ──
+    divider: {
+      height: 0.5,
+      backgroundColor: c.cardBorder,
+      marginBottom: 12,
+    },
+
+    // ── Card Body ──
+    cardBody: { gap: 7 },
+    infoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    infoIconWrap: {
+      width: 24,
+      height: 24,
+      borderRadius: 7,
+      backgroundColor: c.cardBorder + "80",
       alignItems: "center",
-      gap: 6,
+      justifyContent: "center",
     },
-    infoText: { color: c.textMuted, fontSize: 12, fontWeight: "500" },
-    codeText: {
-      color: c.white,
-      fontSize: 12,
-      fontWeight: "700",
-      letterSpacing: 0.5,
-    },
+    infoText: { color: c.textMuted, fontSize: 12, fontWeight: "500", flex: 1 },
+    infoTextBold: { color: c.white, fontSize: 12, fontWeight: "700" },
+
+    // ── Confirm Btn ──
     confirmBtn: {
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
       gap: 6,
-      marginTop: 10,
-      paddingVertical: 10,
-      borderRadius: 10,
+      marginTop: 12,
+      paddingVertical: 11,
+      borderRadius: 11,
       backgroundColor: c.red + "14",
       borderWidth: 1,
       borderColor: c.red + "30",
     },
     confirmBtnText: { color: c.red, fontSize: 12, fontWeight: "700" },
+
+    // ── Empty ──
     emptyContainer: {
       alignItems: "center",
       justifyContent: "center",
       paddingTop: 80,
-      gap: 10,
+      gap: 12,
     },
-    emptyText: { color: c.textMuted, fontSize: 14, textAlign: "center" },
+    emptyIconWrap: {
+      width: 72,
+      height: 72,
+      borderRadius: 20,
+      backgroundColor: c.cardBg,
+      borderWidth: 0.5,
+      borderColor: c.cardBorder,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyTitle: { color: c.white, fontSize: 15, fontWeight: "700" },
+    emptyText: {
+      color: c.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+      lineHeight: 19,
+    },
+
+    // ── Error ──
+    errorContainer: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      gap: 12,
+    },
+    errorIconWrap: {
+      width: 64,
+      height: 64,
+      borderRadius: 18,
+      backgroundColor: c.red + "14",
+      borderWidth: 1,
+      borderColor: c.red + "30",
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 4,
+    },
+    errorTitle: { color: c.white, fontSize: 16, fontWeight: "700" },
+    errorText: {
+      color: c.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    retryBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: c.red,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 12,
+      marginTop: 4,
+    },
+    retryBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   }));
 
+  // ── Handlers ──
   const handleTabPress = (tab: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveTab(tab);
@@ -205,6 +360,7 @@ export default function CntsPurchaseOrdersScreen() {
     setIsSheetVisible(true);
   };
 
+  // ── Render Card ──
   const renderItem = ({ item }: { item: PurchaseOrder }) => {
     const statusCfg = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.PENDING;
     const statusColor =
@@ -212,12 +368,18 @@ export default function CntsPurchaseOrdersScreen() {
 
     return (
       <View style={styles.card}>
+        {/* Accent bar gauche colorée selon statut */}
+        <View style={[styles.cardAccent, { backgroundColor: statusColor }]} />
+
         <View style={styles.cardTop}>
-          <View style={styles.bloodBadge}>
-            <Text style={styles.bloodBadgeText}>
-              {item.bloodType.replace("_", "")}
-            </Text>
+          <View style={styles.cardLeft}>
+            <View style={styles.bloodBadge}>
+              <Text style={styles.bloodBadgeText}>
+                {item.bloodType.replace("_", "")}
+              </Text>
+            </View>
           </View>
+
           <View
             style={[
               styles.statusBadge,
@@ -234,32 +396,52 @@ export default function CntsPurchaseOrdersScreen() {
           </View>
         </View>
 
+        <View style={styles.divider} />
+
         <View style={styles.cardBody}>
           <View style={styles.infoRow}>
-            <Ionicons
-              name="business-outline"
-              size={13}
-              color={colors.textMuted}
-            />
-            <Text style={styles.infoText}>{item.hospital.name}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Ionicons name="water-outline" size={13} color={colors.textMuted} />
-            <Text style={styles.infoText}>
-              {item.quantity} poche(s) — {item.bloodType.replace("_", " ")}
+            <View style={styles.infoIconWrap}>
+              <Ionicons
+                name="business-outline"
+                size={12}
+                color={colors.textMuted}
+              />
+            </View>
+            <Text style={styles.infoText} numberOfLines={1}>
+              {item.hospital.name}
             </Text>
           </View>
+
           <View style={styles.infoRow}>
-            <Ionicons
-              name="qr-code-outline"
-              size={13}
-              color={colors.textMuted}
-            />
-            <Text style={styles.codeText}>{item.code}</Text>
+            <View style={styles.infoIconWrap}>
+              <Ionicons
+                name="water-outline"
+                size={12}
+                color={colors.textMuted}
+              />
+            </View>
+            <Text style={styles.infoText}>
+              <Text style={styles.infoTextBold}>{item.quantity}</Text> poche(s)
+              — {item.bloodType.replace("_", " ")}
+            </Text>
           </View>
+
+          {item.expiresAt && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons
+                  name="hourglass-outline"
+                  size={12}
+                  color={colors.textMuted}
+                />
+              </View>
+              <Text style={styles.infoText}>
+                Expire {dayjs(item.expiresAt).fromNow()}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Bouton de confirmation si EXPIRED */}
         {item.status === "EXPIRED" && (
           <TouchableOpacity
             style={styles.confirmBtn}
@@ -276,8 +458,62 @@ export default function CntsPurchaseOrdersScreen() {
     );
   };
 
+  // ── Empty State ──
+  const emptyLabel =
+    activeTab === "PENDING"
+      ? "en attente"
+      : activeTab === "EXPIRED"
+        ? "expiré"
+        : "utilisé";
+
+  const ListEmpty = !isLoading ? (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIconWrap}>
+        <Ionicons
+          name="document-text-outline"
+          size={32}
+          color={colors.textSubtle}
+        />
+      </View>
+      <Text style={styles.emptyTitle}>Aucun bon {emptyLabel}</Text>
+      <Text style={styles.emptyText}>
+        Les bons de commande {emptyLabel}s apparaîtront ici.
+      </Text>
+    </View>
+  ) : null;
+
+  // ── Error State ──
+  const renderError = () => {
+    if (isNetworkError(error)) {
+      return <NetworkErrorScreen onRetry={refetch} />;
+    }
+
+    const errorMessage =
+      (error as any)?.response?.data?.message ||
+      "Impossible de charger les bons de commande.";
+
+    return (
+      <View style={styles.errorContainer}>
+        <View style={styles.errorIconWrap}>
+          <Ionicons name="alert-circle-outline" size={28} color={colors.red} />
+        </View>
+        <Text style={styles.errorTitle}>Une erreur est survenue</Text>
+        <Text style={styles.errorText}>{errorMessage}</Text>
+        <TouchableOpacity
+          style={styles.retryBtn}
+          onPress={() => refetch()}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="refresh-outline" size={16} color="#fff" />
+          <Text style={styles.retryBtnText}>Réessayer</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* ── Header ── */}
       <View style={styles.header}>
         <TouchableOpacity
           onPress={goBack}
@@ -286,9 +522,14 @@ export default function CntsPurchaseOrdersScreen() {
         >
           <Ionicons name="arrow-back" size={19} color={colors.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Bons de Commande 📋</Text>
 
-        {/* Bouton vers le Scanner */}
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Bons de Commande</Text>
+          <Text style={styles.headerSub}>
+            {orders.length > 0 ? `${orders.length} bon(s)` : "Aucun résultat"}
+          </Text>
+        </View>
+
         <TouchableOpacity
           style={styles.scanBtn}
           onPress={() => router.push("/(health)/scan" as any)}
@@ -299,7 +540,7 @@ export default function CntsPurchaseOrdersScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Onglets de filtre */}
+      {/* ── Tabs ── */}
       <View style={styles.tabsContainer}>
         {TAB_FILTERS.map((tab) => (
           <TouchableOpacity
@@ -308,6 +549,11 @@ export default function CntsPurchaseOrdersScreen() {
             onPress={() => handleTabPress(tab.value)}
             activeOpacity={0.7}
           >
+            <Ionicons
+              name={tab.icon}
+              size={12}
+              color={activeTab === tab.value ? colors.red : colors.textMuted}
+            />
             <Text
               style={[
                 styles.tabText,
@@ -320,40 +566,33 @@ export default function CntsPurchaseOrdersScreen() {
         ))}
       </View>
 
-      {/* Liste des Bons */}
-      <FlatList
-        data={orders}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            tintColor={colors.red}
-          />
-        }
-        ListEmptyComponent={
-          !isLoading ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons
-                name="document-text-outline"
-                size={48}
-                color={colors.textSubtle}
-              />
-              <Text style={styles.emptyText}>
-                Aucun bon{" "}
-                {activeTab === "PENDING"
-                  ? "en attente"
-                  : activeTab === "EXPIRED"
-                    ? "expiré"
-                    : "utilisé"}
-              </Text>
-            </View>
-          ) : null
-        }
-      />
+      {/* ── Content ── */}
+      {isLoading ? (
+        <>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </>
+      ) : isError ? (
+        renderError()
+      ) : (
+        <FlatList
+          data={orders}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={{ paddingBottom: 24 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.red}
+            />
+          }
+          ListEmptyComponent={ListEmpty}
+        />
+      )}
 
-      {/* Sheet Confirmation Expiration */}
+      {/* ── Sheet Confirmation Expiration ── */}
       <ExpiredOrderConfirmSheet
         visible={isSheetVisible}
         onClose={() => setIsSheetVisible(false)}
