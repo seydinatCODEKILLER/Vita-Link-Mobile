@@ -295,9 +295,7 @@ function RequestListSkeleton({ colors }: { colors: AppColors }) {
           }}
         >
           {/* Stripe mimicking the top status bar */}
-          <View
-            style={{ height: 2.5, backgroundColor: colors.cardBorder }}
-          />
+          <View style={{ height: 2.5, backgroundColor: colors.cardBorder }} />
         </View>
       ))}
     </View>
@@ -364,14 +362,15 @@ export default function BloodRequestListScreen() {
     filterBtn: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 5,
-      paddingVertical: 5,
-      paddingHorizontal: 12,
+      gap: 6,
+      paddingVertical: 6, // ✅ réduit
+      paddingHorizontal: 12, // ✅ réduit
       borderRadius: 20,
       borderWidth: 1,
     },
     filterText: {
-      fontSize: 11,
+      fontSize: 12,
+      fontWeight: "500",
     },
     emptyContainer: {
       alignItems: "center",
@@ -440,10 +439,11 @@ export default function BloodRequestListScreen() {
         style={{ flexGrow: 0 }}
         contentContainerStyle={{
           paddingHorizontal: 20,
-          gap: 6,
-          paddingBottom: 10,
+          gap: 8,
+          paddingBottom: 8, // ✅ réduit
           paddingTop: 2,
           alignItems: "center",
+          height: 44, // ✅ hauteur fixe pour éviter que le ScrollView grandisse
         }}
       >
         {FILTERS.map((f) => {
@@ -460,9 +460,7 @@ export default function BloodRequestListScreen() {
                 styles.filterBtn,
                 {
                   borderColor: isActive ? colors.red + "40" : colors.cardBorder,
-                  backgroundColor: isActive
-                    ? colors.red + "14"
-                    : colors.cardBg,
+                  backgroundColor: isActive ? colors.red + "14" : colors.cardBg,
                 },
               ]}
               activeOpacity={0.7}
