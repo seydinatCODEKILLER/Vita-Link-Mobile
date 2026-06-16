@@ -544,7 +544,7 @@ export default function CntsDashboardScreen() {
             <Text style={styles.sectionLabel}>DEMANDES EN ATTENTE</Text>
             <TouchableOpacity
               onPress={() =>
-                router.push("/(health)/blood-requests/index" as any)
+                router.push("/(health)/blood-requests" as any)
               }
               style={{ marginLeft: "auto" }}
             >

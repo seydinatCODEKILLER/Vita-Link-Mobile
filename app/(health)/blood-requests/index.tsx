@@ -440,10 +440,10 @@ export default function BloodRequestListScreen() {
         contentContainerStyle={{
           paddingHorizontal: 20,
           gap: 8,
-          paddingBottom: 8, // ✅ réduit
+          paddingBottom: 8,
           paddingTop: 2,
           alignItems: "center",
-          height: 44, // ✅ hauteur fixe pour éviter que le ScrollView grandisse
+          height: 44,
         }}
       >
         {FILTERS.map((f) => {
@@ -452,7 +452,7 @@ export default function BloodRequestListScreen() {
             <TouchableOpacity
               key={f.key}
               onPress={() => {
-                if (showSkeleton) return; // Empêche le spam pendant le load
+                if (showSkeleton) return;
                 setActiveFilter(f.key);
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }}

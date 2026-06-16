@@ -682,7 +682,7 @@ export default function HealthLayout() {
 
         {/* ── Bouton "Plus" Ancré sur profile/edit ── */}
         <Tabs.Screen
-          name="profile/edit" // ✅ On utilise un fichier qui existe physiquement
+          name="profile/edit"
           options={{
             title: "Plus",
             tabBarButton: () => (
