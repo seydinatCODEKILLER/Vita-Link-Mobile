@@ -67,7 +67,6 @@ const STEPS = [
 ];
 
 // ─── Step Progress Bar ─────────────────────────────────────────
-// (Le même que tu as déjà)
 function StepProgress({
   current,
   total,

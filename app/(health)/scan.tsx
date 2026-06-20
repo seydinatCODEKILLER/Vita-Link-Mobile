@@ -1,376 +1,82 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Dimensions,
-  StyleSheet,
-} from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { CameraView, Camera } from "expo-camera";
-import { useScanDonation } from "@/src/hooks/useDonations";
-import { useScanPurchaseOrder } from "@/src/hooks/usePurchaseOrders";
+import React from "react";
+import { View, StyleSheet } from "react-native";
+import { CameraView } from "expo-camera";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { useAuthStore } from "@/src/store/auth.store";
-import { useColors, useThemedStyles } from "@/src/theme/useTheme";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
+import { useThemedStyles } from "@/src/theme/useTheme";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const SCAN_SIZE = SCREEN_WIDTH * 0.7;
-
-type ScanMode = "DONATION" | "PURCHASE_ORDER";
+import { useQrScanner } from "@/src/hooks/useQrScanner";
+import {
+  ScanGateScreen,
+  ScanLoadingScreen,
+} from "@/src/components/scan/ScanGateScreen";
+import { ScannerOverlay } from "@/src/components/scan/ScannerOverlay";
+import { ScanSuccessModal } from "@/src/components/scan/ScanSuccessModal";
 
 export default function ScanScreen() {
-  const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const isPending = useIsStructurePending();
-  const colors = useColors();
   const user = useAuthStore((s) => s.user);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [scanned, setScanned] = useState(false);
-  const [successData, setSuccessData] = useState<any>(null);
-  const [scanMode, setScanMode] = useState<ScanMode | null>(null);
-  const [flashOn, setFlashOn] = useState(false);
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.bg },
+  }));
 
-  const isCntsUser =
-    user?.role === "CNTS_ADMIN" || user?.role === "CNTS_AGENT";
+  const isCntsUser = user?.role === "CNTS_ADMIN" || user?.role === "CNTS_AGENT";
 
   const goBack = useSmartBack({
     defaultRoute: "/(health)",
-    routeMap: {
-      profile: "/(health)/profile",
-      alerts: "/(health)/alerts",
-    },
+    routeMap: { profile: "/(health)/profile", alerts: "/(health)/alerts" },
   });
 
-  const { mutateAsync: scanDonation, isPending: isScanningDonation } =
-    useScanDonation();
-  const { mutateAsync: scanPurchaseOrder, isPending: isScanningOrder } =
-    useScanPurchaseOrder();
+  const {
+    hasPermission,
+    scanned,
+    successData,
+    scanMode,
+    flashOn,
+    setFlashOn,
+    handleBarcodeScanned,
+    handleRescan,
+  } = useQrScanner();
 
-  const isScanning = isScanningDonation || isScanningOrder;
-
-  const styles = useThemedStyles((c) => ({
-    container: { flex: 1, backgroundColor: c.bg },
-    centered: {
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 12,
-      padding: 24,
-    },
-    permissionTitle: {
-      color: c.white,
-      fontSize: 18,
-      fontWeight: "700",
-      marginTop: 16,
-      textAlign: "center",
-    },
-    permissionSub: {
-      color: c.textMuted,
-      fontSize: 13,
-      textAlign: "center",
-      lineHeight: 20,
-    },
-    overlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.6)",
-    },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingTop: 10,
-    },
-    headerTitle: { color: "#FFFFFF", fontSize: 18, fontWeight: "700" },
-    headerBtn: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: "rgba(255,255,255,0.15)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    scanArea: { flex: 1, alignItems: "center", justifyContent: "center" },
-    scanFrame: { width: SCAN_SIZE, height: SCAN_SIZE, position: "relative" },
-    corner: {
-      position: "absolute",
-      width: 30,
-      height: 30,
-      borderColor: c.red,
-    },
-    topLeft: {
-      top: 0,
-      left: 0,
-      borderTopWidth: 4,
-      borderLeftWidth: 4,
-      borderTopLeftRadius: 12,
-    },
-    topRight: {
-      top: 0,
-      right: 0,
-      borderTopWidth: 4,
-      borderRightWidth: 4,
-      borderTopRightRadius: 12,
-    },
-    bottomLeft: {
-      bottom: 0,
-      left: 0,
-      borderBottomWidth: 4,
-      borderLeftWidth: 4,
-      borderBottomLeftRadius: 12,
-    },
-    bottomRight: {
-      bottom: 0,
-      right: 0,
-      borderBottomWidth: 4,
-      borderRightWidth: 4,
-      borderBottomRightRadius: 12,
-    },
-    instructions: { alignItems: "center", paddingBottom: 24, gap: 8 },
-    instructionText: { color: "#FFFFFF", fontSize: 14, fontWeight: "500" },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.85)",
-      justifyContent: "flex-end",
-    },
-    successCard: {
-      backgroundColor: c.cardBg,
-      borderTopLeftRadius: 28,
-      borderTopRightRadius: 28,
-      padding: 24,
-      gap: 16,
-      alignItems: "center",
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-    },
-    successIconWrap: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: c.success + "26",
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: -64,
-      borderWidth: 4,
-      borderColor: c.bg,
-    },
-    successTitle: { color: c.success, fontSize: 24, fontWeight: "800" },
-    successSub: {
-      color: c.textMuted,
-      fontSize: 13,
-      textAlign: "center",
-      lineHeight: 20,
-    },
-    donorInfoRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: c.cardBg,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      width: "100%",
-    },
-    donorInfoText: { color: c.white, fontSize: 14, fontWeight: "700" },
-    hospitalRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: c.cardBg,
-      paddingVertical: 10,
-      paddingHorizontal: 16,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      width: "100%",
-    },
-    hospitalText: { color: c.white, fontSize: 14, fontWeight: "700" },
-    pointsRow: {
-      width: "100%",
-      flexDirection: "row",
-      justifyContent: "space-between",
-      backgroundColor: c.amber + "14",
-      borderWidth: 1,
-      borderColor: c.amber + "33",
-      borderRadius: 14,
-      padding: 16,
-    },
-    pointsLabel: { color: c.textMuted, fontSize: 13, fontWeight: "600" },
-    pointsValue: { color: c.amber, fontSize: 18, fontWeight: "900" },
-    gradeBanner: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: c.amber + "1A",
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: c.amber + "4D",
-    },
-    gradeText: { color: c.amber, fontSize: 13, fontWeight: "700" },
-    rescanBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      width: "100%",
-      backgroundColor: c.red,
-      paddingVertical: 16,
-      borderRadius: 16,
-      marginTop: 8,
-    },
-    rescanBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  }));
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === "granted");
-    })();
-  }, []);
-
-  // ── Routeur de Préfixe ──
-  const handleBarcodeScanned = async ({ data }: { data: string }) => {
-    if (scanned || isScanning) return;
-    setScanned(true);
-
-    if (data.startsWith("VITA-")) {
-      return handleDonationScan(data);
-    }
-
-    if (data.startsWith("CMD-")) {
-      return handlePurchaseOrderScan(data);
-    }
-
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    Alert.alert(
-      "QR Code invalide",
-      "Ce code ne correspond ni à un pass donneur ni à un bon de commande Vita-Link.",
-      [{ text: "OK", onPress: () => setScanned(false) }],
-    );
-  };
-
-  // ── Handler Donation ──
-  const handleDonationScan = async (data: string) => {
-    setScanMode("DONATION");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const result = await scanDonation(data);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setSuccessData(result);
-    } catch (error: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const msg =
-        error?.response?.data?.message ||
-        "Erreur lors de la validation du don.";
-      Alert.alert("Échec de la validation", msg, [
-        {
-          text: "OK",
-          onPress: () => {
-            setScanned(false);
-            setScanMode(null);
-          },
-        },
-      ]);
-    }
-  };
-
-  // ── Handler Bon de Commande ──
-  const handlePurchaseOrderScan = async (data: string) => {
-    setScanMode("PURCHASE_ORDER");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const result = await scanPurchaseOrder(data);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setSuccessData(result);
-    } catch (error: any) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const msg =
-        error?.response?.data?.message ||
-        "Erreur lors de la validation du bon.";
-      Alert.alert("Échec de la validation", msg, [
-        {
-          text: "OK",
-          onPress: () => {
-            setScanned(false);
-            setScanMode(null);
-          },
-        },
-      ]);
-    }
-  };
-
-  const handleRescan = () => {
-    setSuccessData(null);
-    setScanMode(null);
-    setScanned(false);
-  };
-
-  // ── Si ce n'est pas un agent CNTS (sécurité UI supplémentaire) ──
+  // ── Garde rôle (sécurité UI supplémentaire) ─────────────────────────────────
   if (!isCntsUser) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Ionicons
-          name="lock-closed-outline"
-          size={64}
-          color={colors.textSubtle}
-        />
-        <Text style={styles.permissionTitle}>Accès restreint</Text>
-        <Text style={styles.permissionSub}>
-          Seuls les agents de la CNTS peuvent valider les dons de sang par scan.
-        </Text>
-      </View>
+      <ScanGateScreen
+        icon="lock-closed-outline"
+        title="Accès restreint"
+        subtitle="Seuls les agents de la CNTS peuvent valider les dons de sang par scan."
+      />
     );
   }
 
-  // ── Structure en attente ──
+  // ── Structure en attente ────────────────────────────────────────────────────
   if (isPending) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Ionicons name="time-outline" size={64} color={colors.textSubtle} />
-        <Text style={styles.permissionTitle}>Structure en attente</Text>
-        <Text style={styles.permissionSub}>
-          Votre CNTS doit être validée avant de pouvoir scanner les pass
-          donneurs.
-        </Text>
-      </View>
+      <ScanGateScreen
+        icon="time-outline"
+        title="Structure en attente"
+        subtitle="Votre CNTS doit être validée avant de pouvoir scanner les pass donneurs."
+      />
     );
   }
 
-  // ── Permissions en attente ──
+  // ── Permission caméra en cours de résolution ────────────────────────────────
   if (hasPermission === null) {
-    return (
-      <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color={colors.red} size="large" />
-      </View>
-    );
+    return <ScanLoadingScreen />;
   }
 
-  // ── Permissions refusées ──
+  // ── Permission caméra refusée ────────────────────────────────────────────────
   if (hasPermission === false) {
     return (
-      <View style={[styles.container, styles.centered]}>
-        <Ionicons name="camera-outline" size={64} color={colors.textSubtle} />
-        <Text style={styles.permissionTitle}>Accès à la caméra requis</Text>
-        <Text style={styles.permissionSub}>
-          Vous devez autoriser l&apos;accès à la caméra pour scanner les pass
-          donneurs.
-        </Text>
-      </View>
+      <ScanGateScreen
+        icon="camera-outline"
+        title="Accès à la caméra requis"
+        subtitle="Vous devez autoriser l'accès à la caméra pour scanner les pass donneurs."
+      />
     );
   }
 
@@ -383,184 +89,21 @@ export default function ScanScreen() {
         barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
         enableTorch={flashOn}
       >
-        <SafeAreaView
-          style={[styles.overlay, { paddingBottom: tabBarHeight }]}
-          edges={["top"]}
-        >
-          {/* ── Header ── */}
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={goBack}
-              style={styles.headerBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="close" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Validation CNTS 🩸</Text>
-            <TouchableOpacity
-              onPress={() => setFlashOn(!flashOn)}
-              style={styles.headerBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={flashOn ? "flash" : "flash-off"}
-                size={22}
-                color="#FFFFFF"
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* ── Zone de viseur ── */}
-          <View style={styles.scanArea}>
-            <View style={styles.scanFrame}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-            </View>
-          </View>
-
-          {/* ── Instructions ── */}
-          <View style={styles.instructions}>
-            <Ionicons name="qr-code-outline" size={24} color="#FFFFFF" />
-            <Text style={styles.instructionText}>
-              Scannez un Pass Donneur ou un Bon de Commande
-            </Text>
-          </View>
-        </SafeAreaView>
+        <ScannerOverlay
+          tabBarHeight={tabBarHeight}
+          flashOn={flashOn}
+          onToggleFlash={() => setFlashOn(!flashOn)}
+          onClose={goBack}
+        />
       </CameraView>
 
-      {/* ── Modal Succès Dynamique ── */}
-      <Modal visible={!!successData} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View
-            style={[styles.successCard, { paddingBottom: 24 + tabBarHeight }]}
-          >
-            <View style={styles.successIconWrap}>
-              <Ionicons
-                name={scanMode === "DONATION" ? "water" : "checkmark-circle"}
-                size={48}
-                color={scanMode === "DONATION" ? colors.red : colors.success}
-              />
-            </View>
-
-            {/* ── SUCCÈS DONATION ── */}
-            {scanMode === "DONATION" && (
-              <>
-                <Text style={styles.successTitle}>Don validé ! 🩸</Text>
-                <Text style={styles.successSub}>
-                  Le don a été enregistré, le stock a été mis à jour et les
-                  points ont été crédités au donneur.
-                </Text>
-
-                <View style={styles.donorInfoRow}>
-                  <Ionicons
-                    name="person-outline"
-                    size={16}
-                    color={colors.white}
-                  />
-                  <Text style={styles.donorInfoText}>
-                    {successData?.donation?.donor?.firstName}{" "}
-                    {successData?.donation?.donor?.lastName} —{" "}
-                    {successData?.donation?.bloodType?.replace("_", "")}
-                  </Text>
-                </View>
-
-                <View style={styles.pointsRow}>
-                  <Text style={styles.pointsLabel}>
-                    Points Jambaar crédités
-                  </Text>
-                  <Text style={styles.pointsValue}>
-                    +{successData?.jambaar?.pointsAwarded} pts
-                  </Text>
-                </View>
-
-                {successData?.jambaar?.gradeChanged && (
-                  <View style={styles.gradeBanner}>
-                    <Ionicons name="trophy" size={16} color={colors.amber} />
-                    <Text style={styles.gradeText}>
-                      Nouveau grade : {successData?.jambaar?.newGrade} !
-                    </Text>
-                  </View>
-                )}
-              </>
-            )}
-
-            {/* ── SUCCÈS BON DE COMMANDE ── */}
-            {scanMode === "PURCHASE_ORDER" && (
-              <>
-                <Text style={[styles.successTitle, { color: colors.success }]}>
-                  Bon validé ! 🏥
-                </Text>
-                <Text style={styles.successSub}>
-                  Remise du sang confirmée. L&apos;hôpital a été notifié en temps
-                  réel.
-                </Text>
-
-                <View style={styles.donorInfoRow}>
-                  <Ionicons
-                    name="water-outline"
-                    size={16}
-                    color={colors.red}
-                  />
-                  <Text style={styles.donorInfoText}>
-                    {successData?.order?.quantity} poche(s) —{" "}
-                    {BLOOD_TYPE_LABELS[successData?.order?.bloodType] ??
-                      successData?.order?.bloodType?.replace("_", " ")}
-                  </Text>
-                </View>
-
-                <View style={styles.hospitalRow}>
-                  <Ionicons
-                    name="business-outline"
-                    size={16}
-                    color={colors.white}
-                  />
-                  <Text style={styles.hospitalText}>
-                    {successData?.order?.hospital?.name}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.pointsRow,
-                    {
-                      backgroundColor: colors.success + "14",
-                      borderColor: colors.success + "33",
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[styles.pointsLabel, { color: colors.textMuted }]}
-                  >
-                    Statut du bon
-                  </Text>
-                  <Text
-                    style={[styles.pointsValue, { color: colors.success }]}
-                  >
-                    UTILISÉ
-                  </Text>
-                </View>
-              </>
-            )}
-
-            {/* ── Bouton Rescan commun ── */}
-            <TouchableOpacity
-              style={[
-                styles.rescanBtn,
-                scanMode === "PURCHASE_ORDER" && {
-                  backgroundColor: colors.success,
-                },
-              ]}
-              onPress={handleRescan}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="scan-outline" size={18} color="#FFFFFF" />
-              <Text style={styles.rescanBtnText}>Scanner un autre</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <ScanSuccessModal
+        visible={!!successData}
+        scanMode={scanMode}
+        successData={successData}
+        tabBarHeight={tabBarHeight}
+        onRescan={handleRescan}
+      />
     </View>
   );
 }

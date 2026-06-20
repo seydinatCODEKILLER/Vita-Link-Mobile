@@ -1,661 +1,65 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams, useNavigation } from "expo-router";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useSmartBack } from "@/src/hooks/useSmartBack";
 import { Image } from "expo-image";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import dayjs from "dayjs";
 import "dayjs/locale/fr";
-import { useColors, useThemedStyles } from "@/src/theme/useTheme";
-import {
-  useDayDetail,
-  useDayRegistrations,
-  useMarkAttendance,
-  useCancelDay,
-} from "@/src/hooks/useDonationDays";
-import {
-  DayRegistration,
-  RegistrationStatus,
-  RegistrationSummary,
-} from "@/src/types/donation-day.types";
+
 import { FormInput } from "@/src/components/ui/FormInput";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
-import { isEventToday } from "@/src/utils/format.utils";
+import { RegistrationCard } from "@/src/components/donation-days/RegistrationCard";
+import { useDayDetailScreen } from "@/src/hooks/useDayDetailScreen";
+import { useDayDetailStyles } from "@/src/hooks/useDayDetailStyles";
+import { useColors } from "@/src/theme/useTheme";
+import { STATS, FILTERS } from "@/src/constants/dayDetailConfig";
 
 dayjs.locale("fr");
 
-// ─── Configuration des statuts ────────────────────────────────
-const REGISTRATION_STATUS_CONFIG = {
-  REGISTERED: {
-    label: "En attente",
-    color: "#F59E0B",
-    icon: "time-outline" as const,
-  },
-  ATTENDED: {
-    label: "Présent",
-    color: "#10B981",
-    icon: "checkmark-circle-outline" as const,
-  },
-  NO_SHOW: {
-    label: "Absent",
-    color: "#EF4444",
-    icon: "close-circle-outline" as const,
-  },
-  CANCELLED: {
-    label: "Annulé",
-    color: "#6B7280",
-    icon: "ban-outline" as const,
-  },
-};
-
-// ─── Carte d'inscription ──────────────────────────────────────
-function RegistrationCard({
-  item,
-  scheduledDate,
-  onMark,
-  colors,
-}: {
-  item: DayRegistration;
-  scheduledDate: string;
-  onMark: (registrationId: string, status: "ATTENDED" | "NO_SHOW") => void;
-  colors: any;
-}) {
-  const statusConf =
-    REGISTRATION_STATUS_CONFIG[item.status] ??
-    REGISTRATION_STATUS_CONFIG.REGISTERED;
-  const initials = `${item.donor.firstName[0]}${item.donor.lastName[0]}`;
-  const canAct = isEventToday(scheduledDate);
-  const eventDateFormatted = dayjs(scheduledDate).format("DD MMMM YYYY");
-
-  const styles = useThemedStyles((c) => ({
-    card: {
-      backgroundColor: c.cardBg,
-      borderRadius: 14,
-      padding: 14,
-      marginHorizontal: 16,
-      marginBottom: 8,
-      borderWidth: 0.5,
-      borderColor: c.cardBorder + "20",
-    },
-    cardTop: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      backgroundColor: statusConf.color + "15",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-    },
-    avatarText: {
-      color: statusConf.color,
-      fontSize: 13,
-      fontWeight: "500",
-    },
-    info: {
-      flex: 1,
-      gap: 4,
-      minWidth: 0,
-    },
-    name: {
-      color: c.white,
-      fontSize: 13,
-      fontWeight: "500",
-    },
-    meta: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    bloodType: {
-      color: statusConf.color,
-      fontSize: 11,
-      fontWeight: "600",
-    },
-    phone: {
-      color: c.textMuted,
-      fontSize: 11,
-    },
-    metaDivider: {
-      width: 3,
-      height: 3,
-      borderRadius: 1.5,
-      backgroundColor: c.textMuted + "30",
-    },
-    statusBadge: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      paddingHorizontal: 9,
-      paddingVertical: 5,
-      borderRadius: 8,
-      backgroundColor: statusConf.color + "12",
-      flexShrink: 0,
-    },
-    statusDot: {
-      width: 5,
-      height: 5,
-      borderRadius: 2.5,
-      backgroundColor: statusConf.color,
-    },
-    statusText: {
-      color: statusConf.color,
-      fontSize: 10,
-      fontWeight: "600",
-    },
-    divider: {
-      height: 0.5,
-      backgroundColor: c.cardBorder + "25",
-      marginVertical: 12,
-    },
-    actionsRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    actionBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 5,
-      paddingVertical: 7,
-      paddingHorizontal: 12,
-      borderRadius: 9,
-    },
-    actionBtnText: {
-      fontSize: 11,
-      fontWeight: "600",
-    },
-    lockedHint: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    lockedText: {
-      color: c.textMuted + "80",
-      fontSize: 11,
-    },
-    lockedDate: {
-      color: c.textMuted,
-      fontWeight: "600",
-      fontSize: 11,
-    },
-    todayBadge: {
-      marginLeft: "auto",
-      paddingHorizontal: 8,
-      paddingVertical: 5,
-      borderRadius: 7,
-      backgroundColor: "#10B981" + "10",
-      borderWidth: 0.5,
-      borderColor: "#10B981" + "25",
-    },
-    todayBadgeText: {
-      color: "#10B981",
-      fontSize: 10,
-      fontWeight: "600",
-    },
-  }));
-
-  const showActions = item.status === "REGISTERED";
-
-  return (
-    <View style={styles.card}>
-      {/* Ligne principale */}
-      <View style={styles.cardTop}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initials}</Text>
-        </View>
-        <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
-            {item.donor.firstName} {item.donor.lastName}
-          </Text>
-          <View style={styles.meta}>
-            <Text style={styles.bloodType}>
-              {item.donor.bloodType?.replace("_POS", "+").replace("_NEG", "-")}
-            </Text>
-            <View style={styles.metaDivider} />
-            <Text style={styles.phone}>{item.donor.phone}</Text>
-          </View>
-        </View>
-        <View style={styles.statusBadge}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>{statusConf.label}</Text>
-        </View>
-      </View>
-
-      {/* Séparateur + Zone d'actions (seulement pour REGISTERED) */}
-      {showActions && (
-        <>
-          <View style={styles.divider} />
-          <View style={styles.actionsRow}>
-            {canAct ? (
-              <>
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { backgroundColor: "#10B981" + "12" },
-                  ]}
-                  onPress={() => onMark(item.id, "ATTENDED")}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="checkmark" size={14} color="#10B981" />
-                  <Text style={[styles.actionBtnText, { color: "#10B981" }]}>
-                    Présent
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    { backgroundColor: "#EF4444" + "12" },
-                  ]}
-                  onPress={() => onMark(item.id, "NO_SHOW")}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="close" size={14} color="#EF4444" />
-                  <Text style={[styles.actionBtnText, { color: "#EF4444" }]}>
-                    Absent
-                  </Text>
-                </TouchableOpacity>
-                <View style={styles.todayBadge}>
-                  <Text style={styles.todayBadgeText}>Aujourd&apos;hui</Text>
-                </View>
-              </>
-            ) : (
-              <View style={styles.lockedHint}>
-                <Ionicons
-                  name="lock-closed-outline"
-                  size={13}
-                  color={colors.textMuted + "60"}
-                />
-                <Text style={styles.lockedText}>
-                  Actions disponibles le{" "}
-                  <Text style={styles.lockedDate}>{eventDateFormatted}</Text>
-                </Text>
-              </View>
-            )}
-          </View>
-        </>
-      )}
-    </View>
-  );
-}
-
-// ─── Écran Principal ──────────────────────────────────────────
 export default function DayDetailScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
-  const tabBarHeight = useBottomTabBarHeight();
-  const goBack = useSmartBack({
-    defaultRoute: "/(health)/journees",
-    routeMap: {
-      journees: "/(health)/journees",
-      edit: `/(health)/journees/${id}/edit`,
-    },
-  });
 
   const {
-    data: day,
-    isLoading: isLoadingDay,
-    isError: isDayError,
-    error: dayError,
-    refetch: refetchDay,
-  } = useDayDetail(id);
+    id,
+    goBack,
+    day,
+    isLoadingDay,
+    hasNetworkError,
+    refetchDay,
+    isLoadingReg,
+    isRegError,
+    regError,
+    refetchReg,
+    isCancelling,
+    activeRegFilter,
+    setActiveRegFilter,
+    isCancelModalVisible,
+    setIsCancelModalVisible,
+    cancelReason,
+    setCancelReason,
+    handleMarkAttendance,
+    handleCancelDay,
+    confirmCancelDay,
+    summary,
+    filteredRegistrations,
+  } = useDayDetailScreen();
 
-  const {
-    data: registrationsData,
-    isLoading: isLoadingReg,
-    isError: isRegError,
-    error: regError,
-    refetch: refetchReg,
-  } = useDayRegistrations(id);
+  const { styles } = useDayDetailStyles();
 
-  const { mutateAsync: markAttendance } = useMarkAttendance();
-  const { mutateAsync: cancelDay, isPending: isCancelling } = useCancelDay();
-
-  const [activeRegFilter, setActiveRegFilter] = useState<
-    RegistrationStatus | "ALL"
-  >("ALL");
-  const [isCancelModalVisible, setIsCancelModalVisible] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
-
-  const navigation = useNavigation();
-
-  useEffect(() => {
-    if (isCancelModalVisible) {
-      const unsubscribe = navigation.addListener("beforeRemove", (e) => {
-        e.preventDefault();
-      });
-      return unsubscribe;
-    }
-  }, [isCancelModalVisible, navigation]);
-
-  const styles = useThemedStyles((c) => ({
-    container: {
-      flex: 1,
-      backgroundColor: c.bg,
-    },
-    // Header
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 16,
-      paddingTop: 8,
-      paddingBottom: 12,
-      gap: 12,
-    },
-    backBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      backgroundColor: c.cardBg,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    headerTitle: {
-      color: c.textMuted,
-      fontSize: 14,
-      fontWeight: "500",
-      flex: 1,
-    },
-    editBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      backgroundColor: c.red + "15",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    // Cover
-    cover: {
-      height: 160,
-      backgroundColor: c.red + "05",
-      marginHorizontal: 16,
-      borderRadius: 16,
-      overflow: "hidden",
-    },
-    coverPlaceholder: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    coverImage: {
-      width: "100%",
-      height: "100%",
-    },
-    // Section info
-    infoSection: {
-      paddingHorizontal: 20,
-      paddingTop: 20,
-      gap: 14,
-    },
-    title: {
-      color: c.white,
-      fontSize: 22,
-      fontWeight: "700",
-      letterSpacing: -0.3,
-      lineHeight: 28,
-    },
-    metaContainer: {
-      gap: 8,
-    },
-    metaRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    metaText: {
-      color: c.textMuted,
-      fontSize: 13,
-      fontWeight: "400",
-    },
-    // Groupes sanguins
-    bloodTypesContainer: {
-      flexDirection: "row",
-      gap: 6,
-      flexWrap: "wrap",
-    },
-    bloodPill: {
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 8,
-      backgroundColor: c.red + "08",
-    },
-    bloodPillText: {
-      color: c.red,
-      fontSize: 11,
-      fontWeight: "600",
-    },
-    // Stats
-    statsRow: {
-      flexDirection: "row",
-      gap: 8,
-    },
-    statCard: {
-      flex: 1,
-      backgroundColor: c.cardBg,
-      borderRadius: 14,
-      padding: 14,
-      alignItems: "center",
-      gap: 4,
-    },
-    statValue: {
-      fontSize: 22,
-      fontWeight: "700",
-      letterSpacing: -0.5,
-    },
-    statLabel: {
-      fontSize: 11,
-      color: c.textMuted,
-      fontWeight: "500",
-    },
-    // Séparateur
-    separator: {
-      height: 1,
-      backgroundColor: c.cardBorder + "30",
-      marginVertical: 8,
-    },
-    // Section inscriptions
-    sectionHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      paddingHorizontal: 20,
-      marginBottom: 12,
-    },
-    sectionTitle: {
-      color: c.white,
-      fontSize: 17,
-      fontWeight: "600",
-      letterSpacing: -0.2,
-    },
-    sectionCount: {
-      color: c.textMuted,
-      fontSize: 13,
-      fontWeight: "500",
-    },
-    // Filtres
-    filtersScroll: {
-      paddingHorizontal: 20,
-      marginBottom: 16,
-    },
-    filtersRow: {
-      flexDirection: "row",
-      gap: 6,
-    },
-    filterChip: {
-      paddingVertical: 7,
-      paddingHorizontal: 14,
-      borderRadius: 100,
-      backgroundColor: c.cardBg,
-    },
-    filterChipActive: {
-      backgroundColor: c.red + "10",
-    },
-    filterChipText: {
-      color: c.textMuted,
-      fontSize: 12,
-      fontWeight: "500",
-    },
-    filterChipTextActive: {
-      color: c.red,
-      fontWeight: "600",
-    },
-    // Bouton annulation
-    cancelButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      paddingVertical: 14,
-      marginHorizontal: 20,
-      marginTop: 20,
-      marginBottom: 40,
-      borderRadius: 14,
-      backgroundColor: c.cardBg,
-    },
-    cancelButtonText: {
-      color: "#EF4444",
-      fontSize: 14,
-      fontWeight: "600",
-    },
-    // Empty state
-    emptyState: {
-      alignItems: "center",
-      paddingTop: 40,
-      paddingHorizontal: 40,
-      gap: 12,
-    },
-    emptyIcon: {
-      width: 56,
-      height: 56,
-      borderRadius: 16,
-      backgroundColor: c.cardBorder + "15",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    emptyText: {
-      color: c.textMuted,
-      fontSize: 14,
-      textAlign: "center",
-      lineHeight: 20,
-    },
-    // Modal
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.6)",
-      justifyContent: "flex-end",
-    },
-    modalContent: {
-      backgroundColor: c.cardBg,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 24,
-      gap: 20,
-    },
-    modalHeader: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-    modalTitle: {
-      color: c.white,
-      fontSize: 18,
-      fontWeight: "700",
-    },
-    modalCloseBtn: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: c.cardBorder + "20",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    modalDescription: {
-      color: c.textMuted,
-      fontSize: 13,
-      lineHeight: 20,
-    },
-    modalActions: {
-      flexDirection: "row",
-      gap: 10,
-    },
-    modalBtnSecondary: {
-      flex: 1,
-      paddingVertical: 14,
-      borderRadius: 14,
-      backgroundColor: c.cardBorder + "20",
-      alignItems: "center",
-    },
-    modalBtnSecondaryText: {
-      color: c.white,
-      fontWeight: "600",
-      fontSize: 14,
-    },
-    modalBtnDanger: {
-      flex: 1,
-      flexDirection: "row",
-      paddingVertical: 14,
-      borderRadius: 14,
-      backgroundColor: "#EF4444",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-    },
-    modalBtnDangerText: {
-      color: "#fff",
-      fontWeight: "700",
-      fontSize: 14,
-    },
-  }));
-
-  const handleMarkAttendance = (
-    registrationId: string,
-    status: "ATTENDED" | "NO_SHOW",
-  ) => {
-    markAttendance({ dayId: id, registrationId, status }).catch(() => {});
-  };
-
-  const handleCancelDay = () => {
-    setCancelReason("");
-    setIsCancelModalVisible(true);
-  };
-
-  const confirmCancelDay = async () => {
-    if (cancelReason.trim().length < 5) {
-      Alert.alert(
-        "Raison requise",
-        "Veuillez saisir une raison d'au moins 5 caractères.",
-      );
-      return;
-    }
-    try {
-      await cancelDay({ dayId: id, cancelReason: cancelReason.trim() });
-      setIsCancelModalVisible(false);
-      router.back();
-    } catch (error) {
-      // Géré globalement
-    }
-  };
-
-  // ── 1. Erreur réseau sans cache (Journée introuvable hors-ligne) ──
-  if (isDayError && !day && isNetworkError(dayError)) {
+  // ── 1. Erreur réseau sans cache ──
+  if (hasNetworkError) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.header}>
@@ -678,7 +82,7 @@ export default function DayDetailScreen() {
     );
   }
 
-  // ── 2. Loading classique ───────────────────────────────────────
+  // ── 2. Loading classique ──
   if (isLoadingDay || !day) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
@@ -689,43 +93,14 @@ export default function DayDetailScreen() {
     );
   }
 
-  const registrations = registrationsData?.registrations ?? [];
-  const summary = registrationsData?.summary ?? {
-    registered: 0,
-    attended: 0,
-    noShow: 0,
-    cancelled: 0,
-  };
-
-  const filteredRegistrations =
-    activeRegFilter === "ALL"
-      ? registrations
-      : registrations.filter((r) => r.status === activeRegFilter);
-
-  const STATS: {
-    key: keyof RegistrationSummary;
-    label: string;
-    color: string;
-  }[] = [
-    { key: "registered", label: "En attente", color: "#F59E0B" },
-    { key: "attended", label: "Présents", color: "#10B981" },
-    { key: "noShow", label: "Absents", color: "#EF4444" },
-  ];
-
-  const FILTERS = [
-    { key: "ALL", label: "Tous" },
-    { key: "REGISTERED", label: "En attente" },
-    { key: "ATTENDED", label: "Présents" },
-    { key: "NO_SHOW", label: "Absents" },
-  ];
-
+  // ── 3. Rendu principal ──
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <FlatList
         data={filteredRegistrations}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: tabBarHeight + 40 }}
+        contentContainerStyle={styles.flatListContent} // ← Propre et centralisé
         ListHeaderComponent={
           <View>
             {/* Header */}
@@ -741,14 +116,11 @@ export default function DayDetailScreen() {
                 Détail de l&apos;événement
               </Text>
 
-              {/* ✅ Bouton Modifier (Visible uniquement si PUBLISHED) */}
               {day.status === "PUBLISHED" && (
                 <TouchableOpacity
                   style={styles.editBtn}
                   onPress={() =>
-                    router.push(
-                      `/(health)/journees/${id}/edit?from=detail` as any,
-                    )
+                    router.push(`/(health)/journees/${id}/edit?from=detail`)
                   }
                   activeOpacity={0.7}
                 >
@@ -893,7 +265,6 @@ export default function DayDetailScreen() {
             item={item}
             scheduledDate={day.scheduledDate}
             onMark={handleMarkAttendance}
-            colors={colors}
           />
         )}
         ListFooterComponent={
@@ -905,12 +276,12 @@ export default function DayDetailScreen() {
               activeOpacity={0.7}
             >
               {isCancelling ? (
-                <ActivityIndicator color="#EF4444" size="small" />
+                <ActivityIndicator color={colors.red} size="small" /> // ← Remplacement de #EF4444
               ) : (
                 <Ionicons
                   name="close-circle-outline"
                   size={20}
-                  color="#EF4444"
+                  color={colors.red} // ← Remplacement de #EF4444
                 />
               )}
               <Text style={styles.cancelButtonText}>
@@ -922,7 +293,6 @@ export default function DayDetailScreen() {
         ListEmptyComponent={
           !isLoadingReg ? (
             isRegError && isNetworkError(regError) ? (
-              // Erreur réseau pour les inscriptions
               <View style={styles.emptyState}>
                 <View style={styles.emptyIcon}>
                   <Ionicons
@@ -956,7 +326,6 @@ export default function DayDetailScreen() {
                 </TouchableOpacity>
               </View>
             ) : (
-              // Vraiment aucun inscrit
               <View style={styles.emptyState}>
                 <View style={styles.emptyIcon}>
                   <Ionicons

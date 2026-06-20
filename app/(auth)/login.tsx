@@ -1,211 +1,34 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   Animated,
   ActivityIndicator,
-  Keyboard,
   TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller } from "react-hook-form";
+
 import { FormInput } from "@/src/components/ui/FormInput";
-import { useLogin } from "@/src/hooks/useAuth";
-import { loginSchema, type LoginValues } from "@/src/validators/auth.schema";
-import { useAuthStore } from "@/src/store/auth.store";
-import { useColors, useThemedStyles } from "@/src/theme/useTheme";
+import { useLoginScreen } from "@/src/hooks/useLoginScreen";
+import { useLoginStyles } from "@/src/hooks/useLoginStyles";
+import { useColors } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { mutateAsync: login, isPending } = useLogin();
-  const user = useAuthStore((s) => s.user);
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
 
-  // ── Redirect si déjà connecté ──
-  useEffect(() => {
-    if (user) {
-      // ✅ FIX : Redirection basée sur les vrais rôles agent, plus de donneur
-      if (user.role === "CNTS_AGENT" || user.role === "CNTS_ADMIN") {
-        router.replace("/(health)");
-      } else if (user.role === "HOSPITAL_AGENT") {
-        router.replace("/(hospital)");
-      } else {
-        // Sécurité : si un donneur ou admin se connecte ici, on le bloque
-        router.replace("/unauthorized");
-      }
-    }
-  }, [user]);
+  const { control, handleSubmit, onSubmit, isPending, fadeAnim, slideAnim } =
+    useLoginScreen();
 
-  // ── Animations d'entrée ──
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(32)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  // ── Form ──
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginValues>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
-  });
-
-  const onSubmit = async (values: LoginValues) => {
-    Keyboard.dismiss();
-    try {
-      await login(values);
-    } catch {
-      // Toast géré dans useLogin → onError
-    }
-  };
-
-  const styles = useThemedStyles((c) => ({
-    container: { flex: 1, backgroundColor: c.bg },
-    safeArea: { flex: 1, paddingHorizontal: 24 },
-    haloBottomLeft: {
-      position: "absolute",
-      bottom: -60,
-      left: -60,
-      width: 220,
-      height: 220,
-      borderRadius: 110,
-      backgroundColor: c.redGlow,
-    },
-    haloTopRight: {
-      position: "absolute",
-      top: -40,
-      right: -40,
-      width: 160,
-      height: 160,
-      borderRadius: 80,
-      backgroundColor: c.haloLight,
-    },
-    backBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      backgroundColor: c.cardBg,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      alignItems: "center",
-      justifyContent: "center",
-      marginTop: 8,
-      marginBottom: 32,
-    },
-    body: { flex: 1 },
-    headerBlock: {
-      marginBottom: 32,
-      gap: 20,
-    },
-    proBadgeRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-    },
-    proIconWrap: {
-      width: 44,
-      height: 44,
-      backgroundColor: c.red,
-      borderRadius: 12,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    proBadgeText: { gap: 2 },
-    proEyebrow: {
-      color: c.textSubtle,
-      fontSize: 9,
-      fontWeight: "600",
-      letterSpacing: 2,
-    },
-    proTitle: {
-      color: c.white,
-      fontSize: 16,
-      fontWeight: "700",
-    },
-    titleBlock: { gap: 6 },
-    title: {
-      color: c.white,
-      fontSize: 28,
-      fontWeight: "800",
-      letterSpacing: -0.5,
-    },
-    subtitle: {
-      color: c.textMuted,
-      fontSize: 14,
-      lineHeight: 21,
-    },
-    formBlock: { marginBottom: 8 },
-    forgotRow: {
-      alignSelf: "flex-end",
-      paddingVertical: 4,
-      marginTop: -4,
-      marginBottom: 8,
-    },
-    forgotText: {
-      color: c.red,
-      fontSize: 13,
-      fontWeight: "600",
-    },
-    ctaBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 10,
-      backgroundColor: c.red,
-      borderRadius: 16,
-      paddingVertical: 17,
-      marginBottom: 24,
-    },
-    ctaBtnDisabled: { opacity: 0.5 },
-    ctaBtnText: {
-      color: c.white,
-      fontSize: 16,
-      fontWeight: "700",
-      letterSpacing: 0.2,
-    },
-    ctaBtnIcon: {
-      width: 28,
-      height: 28,
-      borderRadius: 8,
-      backgroundColor: "rgba(255,255,255,0.18)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    securityRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 6,
-      paddingBottom: 10,
-    },
-    securityText: {
-      color: c.textSubtle,
-      fontSize: 11,
-      letterSpacing: 0.3,
-    },
-  }));
+  const { styles } = useLoginStyles();
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -230,15 +53,11 @@ export default function LoginScreen() {
           <Animated.View
             style={[
               styles.body,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
             ]}
           >
             {/* Header : logo + titre */}
             <View style={styles.headerBlock}>
-              {/* Badge espace pro */}
               <View style={styles.proBadgeRow}>
                 <View style={styles.proIconWrap}>
                   <Ionicons name="business" size={20} color={colors.white} />

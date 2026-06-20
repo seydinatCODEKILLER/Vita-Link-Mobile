@@ -1,248 +1,54 @@
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   Animated,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useSmartBack } from "@/src/hooks/useSmartBack";
-import {
-  useBloodRequestDetail,
-  useCancelBloodRequest,
-} from "@/src/hooks/useBloodRequests";
-import { useIsCnts } from "@/src/hooks/useAuthStore";
-import { useColors, useThemedStyles } from "@/src/theme/useTheme";
-import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
-import { isNetworkError } from "@/src/utils/error.utils";
-import BloodRequestHandleSheet from "@/src/components/ui/BloodRequestHandleSheet";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/fr";
 
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import BloodRequestHandleSheet from "@/src/components/ui/BloodRequestHandleSheet";
+import { RequestDetailSkeleton } from "@/src/components/blood-requests/RequestDetailSkeleton";
+import { RequestDetailHero } from "@/src/components/blood-requests/RequestDetailHero";
+import { useBloodRequestDetailScreen } from "@/src/hooks/useBloodRequestDetailScreen";
+import { useBloodRequestDetailStyles } from "@/src/hooks/useBloodRequestDetailStyles";
+
 dayjs.extend(relativeTime);
 dayjs.locale("fr");
 
-// ─── Skeleton Détail ──────────────────────────────────────
-function DetailSkeleton({ colors }: { colors: any }) {
-  return (
-    <View style={{ paddingHorizontal: 20, gap: 12, opacity: 0.5 }}>
-      {/* Mimic Hero Card */}
-      <View
-        style={{
-          height: 240,
-          borderRadius: 20,
-          borderWidth: 1.5,
-          borderColor: colors.cardBorder,
-          backgroundColor: colors.cardBg,
-          overflow: "hidden",
-        }}
-      >
-        <View style={{ height: 3, backgroundColor: colors.cardBorder }} />
-      </View>
-      {/* Mimic Info Card */}
-      <View
-        style={{
-          height: 150,
-          borderRadius: 18,
-          borderWidth: 1,
-          borderColor: colors.cardBorder,
-          backgroundColor: colors.cardBg,
-        }}
-      />
-    </View>
-  );
-}
-
-// ─── Écran Principal ──────────────────────────────────────
 export default function BloodRequestDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
-  const colors = useColors();
-  const isCnts = useIsCnts();
-  const tabBarHeight = useBottomTabBarHeight();
-  const [isSheetVisible, setIsSheetVisible] = useState(false);
-  const goBack = useSmartBack({
-    defaultRoute: "/(health)/blood-requests",
-    routeMap: {
-      list: "/(health)/blood-requests",
-      dashboard: "/(health)",
-    },
-  });
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
   const {
-    data: request,
-    isLoading,
-    isError,
-    error,
+    id,
+    isCnts,
+    isSheetVisible,
+    setIsSheetVisible,
+    goBack,
+    fadeAnim,
+    request,
     refetch,
-  } = useBloodRequestDetail(id);
-  const { mutateAsync: cancelRequest, isPending: isCancelling } =
-    useCancelBloodRequest();
+    isCancelling,
+    handleCancel,
+    handleOpenSheet,
+    hasNetworkError,
+    isNotFound,
+    showSkeleton,
+    canHandle,
+    isVital,
+    isPending,
+    progressPct,
+  } = useBloodRequestDetailScreen();
 
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const handleCancel = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert("Annuler la demande ?", "Cette action est irréversible.", [
-      { text: "Non", style: "cancel" },
-      {
-        text: "Oui, annuler",
-        style: "destructive",
-        onPress: async () => {
-          await cancelRequest(id);
-          router.back();
-        },
-      },
-    ]);
-  };
-
-  const styles = useThemedStyles((c) => ({
-    container: { flex: 1, backgroundColor: c.bg },
-    navHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 12,
-      paddingHorizontal: 20,
-      paddingTop: 14,
-      paddingBottom: 12,
-    },
-    backBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      backgroundColor: c.cardBg,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    navTitle: {
-      color: c.white,
-      fontSize: 17,
-      fontWeight: "800",
-      letterSpacing: -0.3,
-      flex: 1,
-    },
-    heroCard: {
-      marginHorizontal: 20,
-      marginBottom: 14,
-      borderRadius: 20,
-      backgroundColor: c.cardBg,
-      borderWidth: 1.5,
-      borderColor: c.red + "28",
-      overflow: "hidden",
-    },
-    infoCard: {
-      marginHorizontal: 20,
-      marginBottom: 12,
-      borderRadius: 18,
-      backgroundColor: c.cardBg,
-      borderWidth: 1,
-      borderColor: c.cardBorder,
-      overflow: "hidden",
-    },
-    infoSection: { padding: 16 },
-    infoLabel: {
-      fontSize: 10,
-      fontWeight: "700",
-      letterSpacing: 0.8,
-      color: c.textSubtle,
-      textTransform: "uppercase",
-      marginBottom: 6,
-    },
-    infoValue: {
-      color: c.white,
-      fontSize: 15,
-      fontWeight: "700",
-      marginBottom: 3,
-    },
-    infoSub: { color: c.textSubtle, fontSize: 12 },
-    separator: {
-      height: 1,
-      backgroundColor: c.cardBorder,
-      marginHorizontal: 16,
-    },
-    contextCard: {
-      marginHorizontal: 20,
-      marginBottom: 12,
-      borderRadius: 14,
-      backgroundColor: c.red + "08",
-      borderWidth: 1,
-      borderColor: c.red + "18",
-      padding: 14,
-    },
-    notesCard: {
-      marginHorizontal: 20,
-      marginBottom: 12,
-      borderRadius: 14,
-      backgroundColor: c.success + "07",
-      borderWidth: 1,
-      borderColor: c.success + "18",
-      padding: 14,
-    },
-    sectionTitle: {
-      fontSize: 10,
-      fontWeight: "800",
-      letterSpacing: 0.9,
-      textTransform: "uppercase",
-      marginBottom: 7,
-    },
-    sectionText: {
-      color: c.textMuted,
-      fontSize: 13,
-      lineHeight: 20,
-    },
-    cancelBtn: {
-      marginHorizontal: 20,
-      marginTop: 4,
-      marginBottom: 20, // ✅ AJOUT : marge basse pour le bouton annuler
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      paddingVertical: 14,
-      borderRadius: 14,
-      backgroundColor: c.red + "0D",
-      borderWidth: 1,
-      borderColor: c.red + "28",
-    },
-    fab: {
-      position: "absolute",
-      right: 22,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderRadius: 18,
-      backgroundColor: c.red,
-      shadowColor: c.red,
-      shadowOpacity: 0.35,
-      shadowRadius: 14,
-      shadowOffset: { width: 0, height: 6 },
-      elevation: 8,
-    },
-    emptyText: { color: c.white, textAlign: "center", marginTop: 40 },
-  }));
+  const { styles, colors, tabBarHeight } = useBloodRequestDetailStyles();
 
   // ── 1. Erreur réseau SANS data en cache ──
-  if (isError && isNetworkError(error) && !request) {
+  if (hasNetworkError) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.navHeader}>
@@ -259,7 +65,7 @@ export default function BloodRequestDetailScreen() {
   }
 
   // ── 2. Erreur 404 ou autre (non réseau) SANS data ──
-  if (isError && !request) {
+  if (isNotFound) {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         <View style={styles.navHeader}>
@@ -275,26 +81,7 @@ export default function BloodRequestDetailScreen() {
     );
   }
 
-  // ── 3. Chargement initial SANS data en cache ──
-  const showSkeleton = isLoading && !request;
-
-  // Si on a la data, on la prépare
-  const isPending = request?.status === "PENDING";
-  const canHandle = isCnts && isPending;
-  const isVital = request?.urgencyLevel === "VITAL";
-  const progressPct = request
-    ? request.quantityProvided > 0
-      ? Math.min(
-          Math.round((request.quantityProvided / request.quantityNeeded) * 100),
-          100,
-        )
-      : 0
-    : 0;
-  const statusLabel = isPending
-    ? "En attente"
-    : request?.status.replace(/_/g, " ");
-  const statusColor = isPending ? colors.amber : colors.success;
-
+  // ── 3. Rendu principal ──
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
@@ -313,202 +100,17 @@ export default function BloodRequestDetailScreen() {
 
         {/* ── Skeleton ou Contenu ── */}
         {showSkeleton ? (
-          <DetailSkeleton colors={colors} />
+          <RequestDetailSkeleton />
         ) : (
           request && (
             <Animated.View style={{ opacity: fadeAnim }}>
               {/* ── Hero card ── */}
-              <View style={styles.heroCard}>
-                <View style={{ height: 3, backgroundColor: colors.red }} />
-                <View style={{ padding: 18 }}>
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "flex-start",
-                      marginBottom: 14,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: colors.red,
-                        fontSize: 52,
-                        fontWeight: "900",
-                        letterSpacing: -3,
-                        lineHeight: 52,
-                      }}
-                    >
-                      {request.bloodType.replace("_", "")}
-                    </Text>
-                    <View style={{ alignItems: "flex-end", gap: 8 }}>
-                      {isVital && (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            backgroundColor: colors.red + "14",
-                            borderWidth: 1,
-                            borderColor: colors.red + "30",
-                            paddingHorizontal: 10,
-                            paddingVertical: 5,
-                            borderRadius: 9,
-                          }}
-                        >
-                          <Ionicons name="flash" size={11} color={colors.red} />
-                          <Text
-                            style={{
-                              color: colors.red,
-                              fontSize: 10,
-                              fontWeight: "900",
-                              letterSpacing: 0.8,
-                            }}
-                          >
-                            VITAL
-                          </Text>
-                        </View>
-                      )}
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          alignItems: "center",
-                          gap: 5,
-                          backgroundColor: statusColor + "14",
-                          paddingHorizontal: 11,
-                          paddingVertical: 5,
-                          borderRadius: 20,
-                        }}
-                      >
-                        <View
-                          style={{
-                            width: 5,
-                            height: 5,
-                            borderRadius: 3,
-                            backgroundColor: statusColor,
-                          }}
-                        />
-                        <Text
-                          style={{
-                            color: statusColor,
-                            fontSize: 10,
-                            fontWeight: "700",
-                          }}
-                        >
-                          {statusLabel}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "baseline",
-                      gap: 6,
-                      marginBottom: 6,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        color: colors.white,
-                        fontSize: 28,
-                        fontWeight: "900",
-                        letterSpacing: -1,
-                      }}
-                    >
-                      {request.quantityNeeded}
-                    </Text>
-                    <Text
-                      style={{
-                        color: colors.textSubtle,
-                        fontSize: 13,
-                        fontWeight: "600",
-                      }}
-                    >
-                      poches nécessaires
-                    </Text>
-                  </View>
-
-                  {request.quantityProvided > 0 && (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 14,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: 4,
-                          backgroundColor: colors.success,
-                        }}
-                      />
-                      <Text
-                        style={{
-                          color: colors.success,
-                          fontSize: 12,
-                          fontWeight: "600",
-                        }}
-                      >
-                        {request.quantityProvided} poches déjà fournies
-                      </Text>
-                    </View>
-                  )}
-
-                  {request.quantityProvided > 0 && (
-                    <View>
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          marginBottom: 6,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 10,
-                            fontWeight: "700",
-                            letterSpacing: 0.6,
-                            color: colors.textSubtle,
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          Progression
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: 10,
-                            fontWeight: "700",
-                            color: colors.success,
-                          }}
-                        >
-                          {progressPct}%
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: colors.cardBorder,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <View
-                          style={{
-                            height: "100%",
-                            width: `${progressPct}%`,
-                            borderRadius: 3,
-                            backgroundColor: colors.success,
-                          }}
-                        />
-                      </View>
-                    </View>
-                  )}
-                </View>
-              </View>
+              <RequestDetailHero
+                request={request}
+                isVital={isVital}
+                isPending={isPending}
+                progressPct={progressPct}
+              />
 
               {/* ── Info card: hospital + date ── */}
               <View style={styles.infoCard}>
@@ -595,10 +197,7 @@ export default function BloodRequestDetailScreen() {
       {/* ── FAB Traiter (CNTS) ── */}
       {canHandle && (
         <TouchableOpacity
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setIsSheetVisible(true);
-          }}
+          onPress={handleOpenSheet}
           style={[styles.fab, { bottom: tabBarHeight + 20 }]}
         >
           <Ionicons name="construct-outline" size={20} color="#fff" />
@@ -608,7 +207,7 @@ export default function BloodRequestDetailScreen() {
         </TouchableOpacity>
       )}
 
-      {/* ✅ CORRECTION : On ne monte le Sheet QUE si request est défini */}
+      {/* ✅ On ne monte le Sheet QUE si request est défini */}
       {request && (
         <BloodRequestHandleSheet
           visible={isSheetVisible}

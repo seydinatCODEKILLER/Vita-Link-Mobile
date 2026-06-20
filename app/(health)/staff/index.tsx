@@ -1,414 +1,35 @@
 import React from "react";
-import { View, Text, FlatList, TouchableOpacity, Alert } from "react-native";
+import { View, Text, FlatList, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
-import { useAuthStore } from "@/src/store/auth.store";
-import { useMyStaff, useRemoveStaff } from "@/src/hooks/useStaff";
-import { StaffMember } from "@/src/types/healthStructure.type";
-import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
-import { useSmartBack } from "@/src/hooks/useSmartBack";
-import { useColors, useThemedStyles } from "@/src/theme/useTheme";
-import { AppColors } from "@/src/theme/colors";
+import { useColors } from "@/src/theme/useTheme"; // ← Autonome
 
-// ─── Imports pour l'erreur réseau ─────────────────────────────
-import { isNetworkError } from "@/src/utils/error.utils";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { StaffSkeleton } from "@/src/components/staff/StaffSkeleton";
+import { StaffRow } from "@/src/components/staff/StaffRow";
 
-// ─── Config Avatar Colors (Dynamique) ────────────────────────
-const getAvatarColors = (colors: AppColors) => [
-  { bg: colors.success + "14", text: colors.success },
-  { bg: "#60A5FA14", text: "#60A5FA" },
-  { bg: colors.red + "12", text: colors.red },
-  { bg: colors.amber + "14", text: colors.amber },
-];
+import { useStaffScreen } from "@/src/hooks/useStaffScreen";
+import { useStaffStyles } from "@/src/hooks/useStaffStyles";
+import { StaffMember } from "@/src/types/healthStructure.type";
 
-const getRoleConfig = (
-  colors: AppColors,
-): Record<string, { label: string; color: string }> => ({
-  CNTS_ADMIN: { label: "Admin CNTS", color: colors.amber },
-  CNTS_AGENT: { label: "Agent CNTS", color: colors.success },
-  HOSPITAL_AGENT: { label: "Agent Hôpital", color: "#60A5FA" },
-});
-
-// ─── Skeleton Staff ────────────────────────────────────────────
-function StaffSkeleton({ colors }: { colors: AppColors }) {
-  const styles = useThemedStyles((c) => ({
-    cardBg: {
-      backgroundColor: c.cardBg,
-      borderRadius: 16,
-      borderWidth: 0.5,
-      borderColor: c.cardBorder,
-    },
-    line: {
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: c.cardBorder,
-    },
-  }));
-
-  return (
-    <View style={{ paddingHorizontal: 20, gap: 9, opacity: 0.6 }}>
-      {/* Fake Section */}
-      <View
-        style={[
-          styles.line,
-          { width: "30%", height: 8, marginTop: 6, marginBottom: 10 },
-        ]}
-      />
-      {[1, 2].map((i) => (
-        <View
-          key={`dir-${i}`}
-          style={[
-            styles.cardBg,
-            {
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 13,
-              padding: 13,
-            },
-          ]}
-        >
-          <View
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 14,
-              backgroundColor: colors.cardBorder,
-            }}
-          />
-          <View style={{ flex: 1, gap: 6 }}>
-            <View style={[styles.line, { width: "50%" }]} />
-            <View style={[styles.line, { width: "70%", height: 8 }]} />
-          </View>
-        </View>
-      ))}
-      {/* Fake Section 2 */}
-      <View
-        style={[
-          styles.line,
-          { width: "40%", height: 8, marginTop: 16, marginBottom: 10 },
-        ]}
-      />
-      {[1, 2, 3].map((i) => (
-        <View
-          key={`agt-${i}`}
-          style={[
-            styles.cardBg,
-            {
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 13,
-              padding: 13,
-            },
-          ]}
-        >
-          <View
-            style={{
-              width: 46,
-              height: 46,
-              borderRadius: 14,
-              backgroundColor: colors.cardBorder,
-            }}
-          />
-          <View style={{ flex: 1, gap: 6 }}>
-            <View style={[styles.line, { width: "60%" }]} />
-            <View style={[styles.line, { width: "80%", height: 8 }]} />
-          </View>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-// ─── StaffRow ─────────────────────────────────────────────────
-function StaffRow({
-  member,
-  avatarColorIndex,
-  isDirector,
-  onDelete,
-}: {
-  member: StaffMember;
-  avatarColorIndex: number;
-  isDirector: boolean;
-  onDelete: (id: string, name: string) => void;
-}) {
-  const colors = useColors();
-  const AVATAR_COLORS = getAvatarColors(colors);
-  const ROLE_CONFIG = getRoleConfig(colors);
-
-  const roleConf = ROLE_CONFIG[member.role] ?? {
-    label: "Agent",
-    color: colors.textMuted,
-  };
-
-  const isAdmin = member.isStructureAdmin;
-  const avatarColor = isAdmin
-    ? { bg: colors.amber + "14", text: colors.amber }
-    : AVATAR_COLORS[avatarColorIndex % AVATAR_COLORS.length];
-
-  const initials = `${member.firstName[0]}${member.lastName[0]}`.toUpperCase();
-
-  const styles = useThemedStyles((c) => ({
-    card: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 13,
-      backgroundColor: c.cardBg,
-      borderRadius: 16,
-      borderWidth: 0.5,
-      borderColor: c.cardBorder,
-      padding: 13,
-      marginBottom: 9,
-    },
-    avatar: {
-      width: 46,
-      height: 46,
-      borderRadius: 14,
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-    },
-    avatarText: { fontSize: 16, fontWeight: "900" },
-    info: { flex: 1, gap: 3 },
-    nameRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 7,
-      flexWrap: "wrap",
-    },
-    name: { color: c.white, fontSize: 15, fontWeight: "700" },
-    directorPill: {
-      backgroundColor: c.amber + "13",
-      borderWidth: 0.5,
-      borderColor: c.amber + "30",
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 6,
-    },
-    directorPillText: { color: c.amber, fontSize: 10, fontWeight: "700" },
-    email: { color: c.textMuted, fontSize: 12 },
-    deleteBtn: {
-      width: 36,
-      height: 36,
-      borderRadius: 11,
-      backgroundColor: c.red + "08",
-      borderWidth: 0.5,
-      borderColor: c.red + "22",
-      alignItems: "center",
-      justifyContent: "center",
-      flexShrink: 0,
-    },
-  }));
-
-  return (
-    <View style={styles.card}>
-      <View style={[styles.avatar, { backgroundColor: avatarColor.bg }]}>
-        <Text style={[styles.avatarText, { color: avatarColor.text }]}>
-          {initials}
-        </Text>
-      </View>
-
-      <View style={styles.info}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name} numberOfLines={1}>
-            {member.firstName} {member.lastName}
-          </Text>
-          <View
-            style={{
-              paddingHorizontal: 8,
-              paddingVertical: 2,
-              borderRadius: 6,
-              backgroundColor: roleConf.color + "13",
-              borderWidth: 0.5,
-              borderColor: roleConf.color + "30",
-            }}
-          >
-            <Text
-              style={{ color: roleConf.color, fontSize: 10, fontWeight: "700" }}
-            >
-              {roleConf.label}
-            </Text>
-          </View>
-        </View>
-        <Text style={styles.email} numberOfLines={1}>
-          {member.email}
-        </Text>
-      </View>
-
-      {!isAdmin && isDirector && (
-        <TouchableOpacity
-          style={styles.deleteBtn}
-          onPress={() =>
-            onDelete(member.id, `${member.firstName} ${member.lastName}`)
-          }
-          activeOpacity={0.7}
-        >
-          <Ionicons name="trash-outline" size={16} color={colors.red} />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-}
-
-// ─── Écran Principal ───────────────────────────────────────────
 export default function StaffScreen() {
-  const router = useRouter();
   const colors = useColors();
-  const currentUser = useAuthStore((s) => s.user);
-  const tabBarHeight = useBottomTabBarHeight();
-  const isPending = useIsStructurePending();
+  const {
+    goBack,
+    staff,
+    isLoading,
+    isError,
+    hasNetworkError,
+    refetch,
+    isPending,
+    isDirector,
+    directors,
+    agents,
+    handleDeleteStaff,
+    handleAddStaff,
+  } = useStaffScreen();
 
-  const goBack = useSmartBack({
-    defaultRoute: "/(health)/profile",
-    routeMap: {
-      profile: "/(health)/profile",
-      dashboard: "/(health)",
-    },
-  });
-
-  // ─── RÉCUPÉRATION DES DONNées ET ERREURS ────────────────────
-  const { data: staff, isLoading, isError, error, refetch } = useMyStaff();
-
-  const { mutateAsync: removeStaff } = useRemoveStaff();
-
-  // ─── LOGIQUE D'ERREUR RÉSEAU ────────────────────────────────
-  const hasNetworkError = isError && isNetworkError(error);
-
-  const isDirector = currentUser?.isStructureAdmin ?? false;
-
-  const directors = staff?.filter((m) => m.isStructureAdmin) ?? [];
-  const agents = staff?.filter((m) => !m.isStructureAdmin) ?? [];
-
-  const handleDeleteStaff = (userId: string, name: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    Alert.alert(
-      "Retirer cet agent ?",
-      `Voulez-vous vraiment retirer ${name} de votre structure ? Il perdra l'accès au tableau de bord médical.`,
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Retirer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await removeStaff(userId);
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success,
-              );
-            } catch (error: any) {
-              Alert.alert(
-                "Erreur",
-                error?.response?.data?.message ||
-                  "Impossible de retirer cet agent.",
-              );
-            }
-          },
-        },
-      ],
-    );
-  };
-
-  const handleAddStaff = () => {
-    if (isPending) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      Alert.alert(
-        "Structure en attente de validation",
-        "Votre structure doit être approuvée par nos équipes avant de pouvoir ajouter des agents.",
-        [{ text: "Compris", style: "default" }],
-      );
-      return;
-    }
-    router.push("/(health)/staff/add?from=staff" as any);
-  };
-
-  const styles = useThemedStyles((c) => ({
-    container: { flex: 1, backgroundColor: c.bg },
-    centered: { alignItems: "center", justifyContent: "center" },
-    listContent: { paddingHorizontal: 20, paddingTop: 4 },
-    header: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-    },
-    backBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      backgroundColor: c.cardBg,
-      borderWidth: 0.5,
-      borderColor: c.cardBorder,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    headerCenter: { alignItems: "center", gap: 2 },
-    headerTitle: { color: c.white, fontSize: 18, fontWeight: "800" },
-    headerCount: { color: c.textMuted, fontSize: 11, fontWeight: "600" },
-    pendingBanner: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      marginHorizontal: 20,
-      marginBottom: 12,
-      backgroundColor: c.amber + "08",
-      borderWidth: 0.5,
-      borderColor: c.amber + "22",
-      borderRadius: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-    },
-    pendingBannerText: {
-      color: c.amber,
-      fontSize: 12,
-      fontWeight: "600",
-      flex: 1,
-    },
-    sectionLabel: {
-      color: c.textSubtle,
-      fontSize: 10,
-      fontWeight: "700",
-      letterSpacing: 1.5,
-      marginBottom: 10,
-      marginTop: 6,
-    },
-    emptyState: {
-      alignItems: "center",
-      paddingTop: 60,
-      gap: 12,
-      paddingHorizontal: 20,
-    },
-    emptyTitle: { color: c.white, fontSize: 16, fontWeight: "700" },
-    emptySub: {
-      color: c.textMuted,
-      fontSize: 13,
-      textAlign: "center",
-      lineHeight: 20,
-    },
-    fab: {
-      position: "absolute",
-      right: 22,
-      width: 56,
-      height: 56,
-      borderRadius: 18,
-      backgroundColor: c.red,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: c.red,
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.28,
-      shadowRadius: 14,
-      elevation: 10,
-    },
-    fabDisabled: {
-      backgroundColor: c.cardBorder,
-      shadowOpacity: 0,
-      elevation: 0,
-    },
-  }));
+  const { styles } = useStaffStyles();
 
   const renderHeader = () => (
     <>
@@ -443,7 +64,7 @@ export default function StaffScreen() {
     return (
       <SafeAreaView style={styles.container} edges={["top"]}>
         {renderHeader()}
-        <StaffSkeleton colors={colors} />
+        <StaffSkeleton />
       </SafeAreaView>
     );
   }
@@ -477,10 +98,7 @@ export default function StaffScreen() {
         keyExtractor={(item, i) =>
           item.type === "section" ? `section-${i}` : item.member.id
         }
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: tabBarHeight + 80 },
-        ]}
+        contentContainerStyle={[styles.listContent, styles.listContentPadding]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={renderHeader}
         renderItem={({ item }) => {
@@ -527,11 +145,7 @@ export default function StaffScreen() {
 
       {/* ── FAB ── */}
       <TouchableOpacity
-        style={[
-          styles.fab,
-          { bottom: tabBarHeight + 20 },
-          isPending && styles.fabDisabled,
-        ]}
+        style={[styles.fab, styles.fabBottom, isPending && styles.fabDisabled]}
         onPress={handleAddStaff}
         activeOpacity={isPending ? 0.6 : 0.85}
       >

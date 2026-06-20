@@ -76,3 +76,8 @@ export const calculateStockLevel = (quantity: number): BloodStockLevel => {
   if (quantity <= 30) return "ADEQUATE";
   return "SURPLUS";
 };
+
+// ─── À ajouter dans format.utils.ts ──────────────────────────────────────────
+export function pluralize(count: number, word: string): string {
+  return count > 1 ? `${word}s` : word;
+}
