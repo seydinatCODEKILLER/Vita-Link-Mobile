@@ -340,8 +340,6 @@ export const useSocket = () => {
       },
     );
 
-    // useSocket.ts
-
     // ── CNTS : Alerte de confirmation requise ──
     socket.on("purchase_order:expired_confirm_required", (data: any) => {
       if (user.role !== "CNTS_ADMIN" && user.role !== "CNTS_AGENT") return;

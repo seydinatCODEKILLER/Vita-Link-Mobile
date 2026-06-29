@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Modal,
   View,
   Text,
   TouchableOpacity,
@@ -35,11 +36,7 @@ export default function ExpiredOrderConfirmSheet({
 
   const styles = useThemedStyles((c) => ({
     overlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
+      flex: 1,
       backgroundColor: "rgba(0,0,0,0.65)",
       justifyContent: "flex-end",
     },
@@ -205,164 +202,176 @@ export default function ExpiredOrderConfirmSheet({
       : colors.red;
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.card}>
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <View style={styles.headerIconWrap}>
-            <Ionicons name="timer-outline" size={20} color={colors.amber} />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>Bon expiré</Text>
-            <Text style={styles.headerSub}>
-              Confirmez l&apos;état de la livraison
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.divider} />
-
-        {/* ── Description ── */}
-        <Text style={styles.description}>
-          Ce bon n&apos;a pas été scanné dans les délais. Indiquez si le sang a
-          physiquement quitté votre structure afin d&apos;ajuster les stocks.
-        </Text>
-
-        {/* ── Code badge ── */}
-        <View style={styles.codeBadge}>
-          <Ionicons name="qr-code-outline" size={14} color={colors.red} />
-          <Text style={styles.codeText}>{order.code}</Text>
-          <Text style={styles.codeSub}>
-            — {order.quantity} poche{order.quantity > 1 ? "s" : ""}{" "}
-            {order.bloodType.replaceAll("_", " ")}
-          </Text>
-        </View>
-
-        {/* ── Choix Oui / Non ── */}
-        <View style={styles.choiceRow}>
-          {/* Oui — sang remis */}
-          <TouchableOpacity
-            style={[
-              styles.choiceBtn,
-              {
-                backgroundColor: isYes ? colors.success + "14" : colors.cardBg,
-                borderColor: isYes ? colors.success + "4D" : colors.cardBorder,
-                borderWidth: isYes ? 1.5 : 0.5,
-              },
-            ]}
-            onPress={() => setWasDelivered(true)}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name="checkmark-circle-outline"
-              size={22}
-              color={isYes ? colors.success : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.choiceBtnLabel,
-                { color: isYes ? colors.success : colors.white },
-              ]}
-            >
-              Oui, sang remis
-            </Text>
-            <Text
-              style={[
-                styles.choiceBtnSub,
-                { color: isYes ? colors.success + "99" : colors.textMuted },
-              ]}
-            >
-              Marquer USED
-            </Text>
-          </TouchableOpacity>
-
-          {/* Non — restitué */}
-          <TouchableOpacity
-            style={[
-              styles.choiceBtn,
-              {
-                backgroundColor: isNo ? colors.red + "14" : colors.cardBg,
-                borderColor: isNo ? colors.red + "4D" : colors.cardBorder,
-                borderWidth: isNo ? 1.5 : 0.5,
-              },
-            ]}
-            onPress={() => setWasDelivered(false)}
-            activeOpacity={0.75}
-          >
-            <Ionicons
-              name="arrow-undo-outline"
-              size={22}
-              color={isNo ? colors.red : colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.choiceBtnLabel,
-                { color: isNo ? colors.red : colors.white },
-              ]}
-            >
-              Non, restitué
-            </Text>
-            <Text
-              style={[
-                styles.choiceBtnSub,
-                { color: isNo ? colors.red + "99" : colors.textMuted },
-              ]}
-            >
-              Remettre en stock
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* ── Notes ── */}
-        <TextInput
-          style={styles.input}
-          placeholder="Notes optionnelles (ex : ambulancier venu sans smartphone…)"
-          placeholderTextColor={colors.textMuted}
-          multiline
-          value={cntsNotes}
-          onChangeText={setCntsNotes}
-        />
-
-        {/* ── Bouton Confirmer ── */}
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            {
-              backgroundColor: submitBg,
-              borderColor: submitBorder,
-              opacity: !hasChoice || isPending ? 0.5 : 1,
-            },
-          ]}
-          disabled={!hasChoice || isPending}
-          onPress={() => wasDelivered !== null && handleConfirm(wasDelivered)}
-          activeOpacity={0.8}
-        >
-          {isPending ? (
-            <ActivityIndicator color={submitColor} size="small" />
-          ) : (
-            <>
-              <Ionicons
-                name={
-                  !hasChoice
-                    ? "checkmark-outline"
-                    : isYes
-                      ? "checkmark-done-outline"
-                      : "arrow-undo-outline"
-                }
-                size={18}
-                color={submitColor}
-              />
-              <Text style={[styles.submitText, { color: submitColor }]}>
-                {!hasChoice
-                  ? "Confirmer"
-                  : isYes
-                    ? "Confirmer la remise"
-                    : "Restituer le stock"}
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={styles.card}>
+          {/* ── Header ── */}
+          <View style={styles.header}>
+            <View style={styles.headerIconWrap}>
+              <Ionicons name="timer-outline" size={20} color={colors.amber} />
+            </View>
+            <View>
+              <Text style={styles.headerTitle}>Bon expiré</Text>
+              <Text style={styles.headerSub}>
+                Confirmez l&apos;état de la livraison
               </Text>
-            </>
-          )}
-        </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* ── Description ── */}
+          <Text style={styles.description}>
+            Ce bon n&apos;a pas été scanné dans les délais. Indiquez si le sang
+            a physiquement quitté votre structure afin d&apos;ajuster les
+            stocks.
+          </Text>
+
+          {/* ── Code badge ── */}
+          <View style={styles.codeBadge}>
+            <Ionicons name="qr-code-outline" size={14} color={colors.red} />
+            <Text style={styles.codeText}>{order.code}</Text>
+            <Text style={styles.codeSub}>
+              — {order.quantity} poche{order.quantity > 1 ? "s" : ""}{" "}
+              {order.bloodType.replaceAll("_", " ")}
+            </Text>
+          </View>
+
+          {/* ── Choix Oui / Non ── */}
+          <View style={styles.choiceRow}>
+            {/* Oui — sang remis */}
+            <TouchableOpacity
+              style={[
+                styles.choiceBtn,
+                {
+                  backgroundColor: isYes
+                    ? colors.success + "14"
+                    : colors.cardBg,
+                  borderColor: isYes
+                    ? colors.success + "4D"
+                    : colors.cardBorder,
+                  borderWidth: isYes ? 1.5 : 0.5,
+                },
+              ]}
+              onPress={() => setWasDelivered(true)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={22}
+                color={isYes ? colors.success : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.choiceBtnLabel,
+                  { color: isYes ? colors.success : colors.white },
+                ]}
+              >
+                Oui, sang remis
+              </Text>
+              <Text
+                style={[
+                  styles.choiceBtnSub,
+                  { color: isYes ? colors.success + "99" : colors.textMuted },
+                ]}
+              >
+                Marquer USED
+              </Text>
+            </TouchableOpacity>
+
+            {/* Non — restitué */}
+            <TouchableOpacity
+              style={[
+                styles.choiceBtn,
+                {
+                  backgroundColor: isNo ? colors.red + "14" : colors.cardBg,
+                  borderColor: isNo ? colors.red + "4D" : colors.cardBorder,
+                  borderWidth: isNo ? 1.5 : 0.5,
+                },
+              ]}
+              onPress={() => setWasDelivered(false)}
+              activeOpacity={0.75}
+            >
+              <Ionicons
+                name="arrow-undo-outline"
+                size={22}
+                color={isNo ? colors.red : colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.choiceBtnLabel,
+                  { color: isNo ? colors.red : colors.white },
+                ]}
+              >
+                Non, restitué
+              </Text>
+              <Text
+                style={[
+                  styles.choiceBtnSub,
+                  { color: isNo ? colors.red + "99" : colors.textMuted },
+                ]}
+              >
+                Remettre en stock
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ── Notes ── */}
+          <TextInput
+            style={styles.input}
+            placeholder="Notes optionnelles (ex : ambulancier venu sans smartphone…)"
+            placeholderTextColor={colors.textMuted}
+            multiline
+            value={cntsNotes}
+            onChangeText={setCntsNotes}
+          />
+
+          {/* ── Bouton Confirmer ── */}
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              {
+                backgroundColor: submitBg,
+                borderColor: submitBorder,
+                opacity: !hasChoice || isPending ? 0.5 : 1,
+              },
+            ]}
+            disabled={!hasChoice || isPending}
+            onPress={() => wasDelivered !== null && handleConfirm(wasDelivered)}
+            activeOpacity={0.8}
+          >
+            {isPending ? (
+              <ActivityIndicator color={submitColor} size="small" />
+            ) : (
+              <>
+                <Ionicons
+                  name={
+                    !hasChoice
+                      ? "checkmark-outline"
+                      : isYes
+                        ? "checkmark-done-outline"
+                        : "arrow-undo-outline"
+                  }
+                  size={18}
+                  color={submitColor}
+                />
+                <Text style={[styles.submitText, { color: submitColor }]}>
+                  {!hasChoice
+                    ? "Confirmer"
+                    : isYes
+                      ? "Confirmer la remise"
+                      : "Restituer le stock"}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </Modal>
   );
 }
