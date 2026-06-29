@@ -1,23 +1,23 @@
-import React from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/fr";
+import relativeTime from "dayjs/plugin/relativeTime";
+import React from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { useColors } from "@/src/theme/useTheme";
-import { FILTERS, getStatusConfig } from "@/src/constants/alertsList";
 import { StructureAlertCard } from "@/src/components/alerts/StructureAlertCard";
+import { FILTERS, getStatusConfig } from "@/src/constants/alertsList";
 import { useStructureAlerts } from "@/src/hooks/useStructureAlerts";
-import { useAlertsListStyles } from "@/src/hooks/useAlertsListStyles";
+import { useAlertsListStyles } from "@/src/styles/useAlertsListStyles";
+import { useColors } from "@/src/theme/useTheme";
 
 dayjs.extend(relativeTime);
 dayjs.locale("fr");

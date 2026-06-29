@@ -1,21 +1,21 @@
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
   Animated,
+  FlatList,
   ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 
-import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
-import { RequestListSkeleton } from "@/src/components/blood-requests/RequestListSkeleton";
 import { RequestCard } from "@/src/components/blood-requests/RequestCard";
-import { useBloodRequestListScreen } from "@/src/hooks/useBloodRequestListScreen";
-import { useBloodRequestListStyles } from "@/src/hooks/useBloodRequestListStyles";
+import { RequestListSkeleton } from "@/src/components/blood-requests/RequestListSkeleton";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { FILTERS } from "@/src/constants/bloodRequestConfig";
+import { useBloodRequestListScreen } from "@/src/hooks/useBloodRequestListScreen";
+import { useBloodRequestListStyles } from "@/src/styles/useBloodRequestListStyles";
 
 export default function BloodRequestListScreen() {
   const {

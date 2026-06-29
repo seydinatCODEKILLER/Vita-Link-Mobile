@@ -13,7 +13,7 @@ import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { DonationDayCard } from "@/src/components/donation-days/DonationDayCard";
 import { DonationDaySkeleton } from "@/src/components/donation-days/DonationDaySkeleton";
 import { useDonationDaysScreen } from "@/src/hooks/useDonationDaysScreen";
-import { useDonationDayStyles } from "@/src/hooks/useDonationDayStyles";
+import { useDonationDayStyles } from "@/src/styles/useDonationDayStyles";
 import { DAY_FILTERS } from "@/src/constants/donationDayConfig";
 
 export default function JourneesScreen() {

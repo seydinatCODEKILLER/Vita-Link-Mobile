@@ -23,7 +23,7 @@ import { isNetworkError } from "@/src/utils/error.utils";
 import { ProfileRow } from "@/src/components/profile/ProfileRow";
 import { StructureHeroCard } from "@/src/components/profile/StructureHeroCard";
 import { useProfileScreen } from "@/src/hooks/useProfileScreen";
-import { useProfileStyles } from "@/src/hooks/useProfileStyles";
+import { useProfileStyles } from "@/src/styles/useProfileStyles";
 
 export default function HealthProfileScreen() {
   const router = useRouter();

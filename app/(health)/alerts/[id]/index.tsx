@@ -1,28 +1,28 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useLocalSearchParams } from "expo-router";
 import React from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
   Animated,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams } from "expo-router";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
-import { useColors } from "@/src/theme/useTheme";
-import { useIsCnts } from "@/src/hooks/useAuthStore";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { useIsCnts } from "@/src/hooks/useAuthStore";
+import { useColors } from "@/src/theme/useTheme";
 
-import { useAlertDetailScreen } from "@/src/hooks/useAlertDetailScreen";
-import { useAlertDetailStyles } from "@/src/hooks/useAlertDetailStyles";
 import { AlertDetailHeader } from "@/src/components/alerts/AlertDetailHeader";
 import { AlertDetailSkeleton } from "@/src/components/alerts/AlertDetailSkeleton";
 import { AlertHeroCard } from "@/src/components/alerts/AlertHeroCard";
-import { EscalationBanner } from "@/src/components/alerts/EscalationBanner";
 import { AlertInfoGrid } from "@/src/components/alerts/AlertInfoGrid";
 import { AlertProgressCard } from "@/src/components/alerts/AlertProgressCard";
+import { EscalationBanner } from "@/src/components/alerts/EscalationBanner";
+import { useAlertDetailScreen } from "@/src/hooks/useAlertDetailScreen";
+import { useAlertDetailStyles } from "@/src/styles/useAlertDetailStyles";
 
 export default function AlertDetailScreen() {
   const { id: alertId } = useLocalSearchParams<{ id: string }>();

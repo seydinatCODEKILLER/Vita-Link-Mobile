@@ -1,8 +1,8 @@
-import React from "react";
-import { View, Text } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { useAlertDetailStyles } from "@/src/styles/useAlertDetailStyles";
 import { useColors } from "@/src/theme/useTheme";
-import { useAlertDetailStyles } from "@/src/hooks/useAlertDetailStyles";
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { Text, View } from "react-native";
 
 // Constante centralisée pour éviter les rgba hardcodés éparpillés
 const VITAL_COLOR = {

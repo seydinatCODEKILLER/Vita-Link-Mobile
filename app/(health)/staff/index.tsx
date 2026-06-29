@@ -1,15 +1,15 @@
-import React from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/src/theme/useTheme"; // ← Autonome
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { FlatList, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
-import { StaffSkeleton } from "@/src/components/staff/StaffSkeleton";
 import { StaffRow } from "@/src/components/staff/StaffRow";
+import { StaffSkeleton } from "@/src/components/staff/StaffSkeleton";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 
 import { useStaffScreen } from "@/src/hooks/useStaffScreen";
-import { useStaffStyles } from "@/src/hooks/useStaffStyles";
+import { useStaffStyles } from "@/src/styles/useStaffStyles";
 import { StaffMember } from "@/src/types/healthStructure.type";
 
 export default function StaffScreen() {

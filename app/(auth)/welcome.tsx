@@ -1,17 +1,17 @@
-import React from "react";
-import { View, Text, TouchableOpacity, Animated } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useColors } from "@/src/theme/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { useColors } from "@/src/theme/useTheme";
+import React from "react";
+import { Animated, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ThemeToggle } from "@/src/components/ui/ThemeToggle";
-import { VitaLinkLogo } from "@/src/components/welcome/VitaLinkLogo";
 import { ActionButton } from "@/src/components/welcome/ActionButton";
 import { HeroOrb } from "@/src/components/welcome/HeroOrb";
+import { VitaLinkLogo } from "@/src/components/welcome/VitaLinkLogo";
 
 import { useWelcomeScreen } from "@/src/hooks/useWelcomeScreen";
-import { useWelcomeStyles } from "@/src/hooks/useWelcomeStyles";
+import { useWelcomeStyles } from "@/src/styles/useWelcomeStyles";
 
 export default function WelcomeScreen() {
   const colors = useColors();

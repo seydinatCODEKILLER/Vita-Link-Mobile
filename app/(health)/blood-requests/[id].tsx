@@ -1,24 +1,24 @@
-import React from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
-  ActivityIndicator,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import dayjs from "dayjs";
-import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/fr";
+import relativeTime from "dayjs/plugin/relativeTime";
+import React from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
-import BloodRequestHandleSheet from "@/src/components/ui/BloodRequestHandleSheet";
-import { RequestDetailSkeleton } from "@/src/components/blood-requests/RequestDetailSkeleton";
 import { RequestDetailHero } from "@/src/components/blood-requests/RequestDetailHero";
+import { RequestDetailSkeleton } from "@/src/components/blood-requests/RequestDetailSkeleton";
+import BloodRequestHandleSheet from "@/src/components/ui/BloodRequestHandleSheet";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { useBloodRequestDetailScreen } from "@/src/hooks/useBloodRequestDetailScreen";
-import { useBloodRequestDetailStyles } from "@/src/hooks/useBloodRequestDetailStyles";
+import { useBloodRequestDetailStyles } from "@/src/styles/useBloodRequestDetailStyles";
 
 dayjs.extend(relativeTime);
 dayjs.locale("fr");

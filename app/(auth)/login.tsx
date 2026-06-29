@@ -1,24 +1,24 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import React from "react";
+import { Controller } from "react-hook-form";
 import {
-  View,
+  ActivityIndicator,
+  Animated,
+  Keyboard,
   Text,
   TouchableOpacity,
-  Animated,
-  ActivityIndicator,
   TouchableWithoutFeedback,
-  Keyboard,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { StatusBar } from "expo-status-bar";
-import { Controller } from "react-hook-form";
 
 import { FormInput } from "@/src/components/ui/FormInput";
 import { useLoginScreen } from "@/src/hooks/useLoginScreen";
-import { useLoginStyles } from "@/src/hooks/useLoginStyles";
-import { useColors } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
+import { useLoginStyles } from "@/src/styles/useLoginStyles";
+import { useColors } from "@/src/theme/useTheme";
 
 export default function LoginScreen() {
   const router = useRouter();

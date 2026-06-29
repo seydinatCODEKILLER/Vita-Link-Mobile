@@ -1,23 +1,23 @@
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
   ActivityIndicator,
   Animated,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 
-import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { BLOOD_TYPE_LABELS } from "@/src/utils/format.utils";
 
-import { useAlertDashboardScreen } from "@/src/hooks/useAlertDashboardScreen";
-import { useAlertDashboardStyles } from "@/src/hooks/useAlertDashboardStyles";
 import { DashboardSkeleton } from "@/src/components/alerts/DashboardSkeleton";
-import { SummaryCard } from "@/src/components/alerts/SummaryCard";
 import { DonorResponseRow } from "@/src/components/alerts/DonorResponseRow";
+import { SummaryCard } from "@/src/components/alerts/SummaryCard";
+import { useAlertDashboardScreen } from "@/src/hooks/useAlertDashboardScreen";
+import { useAlertDashboardStyles } from "@/src/styles/useAlertDashboardStyles";
 
 const VITAL_COLOR = {
   bg: "rgba(220,30,30,0.15)",

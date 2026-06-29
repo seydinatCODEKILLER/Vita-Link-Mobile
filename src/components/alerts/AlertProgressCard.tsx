@@ -1,8 +1,8 @@
-import React from "react";
-import { View, Text } from "react-native";
+import { useAlertDetailStyles } from "@/src/styles/useAlertDetailStyles";
 import { useColors } from "@/src/theme/useTheme";
-import { useAlertDetailStyles } from "@/src/hooks/useAlertDetailStyles";
 import { pluralize } from "@/src/utils/format.utils";
+import React from "react";
+import { Text, View } from "react-native";
 
 interface AlertProgressCardProps {
   quantityConfirmed: number;

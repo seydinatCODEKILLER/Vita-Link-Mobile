@@ -1,10 +1,10 @@
-import React from "react";
-import { View, Text, TouchableOpacity } from "react-native";
+import { useAlertDetailStyles } from "@/src/styles/useAlertDetailStyles";
+import { useColors } from "@/src/theme/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { useColors } from "@/src/theme/useTheme";
-import { useAlertDetailStyles } from "@/src/hooks/useAlertDetailStyles";
+import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 
 export function AlertDetailHeader() {
   const router = useRouter();

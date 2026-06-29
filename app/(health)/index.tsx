@@ -28,7 +28,7 @@ import {
   DashboardSkeleton,
 } from "@/src/components/dashboard/BloodStockRow";
 import { useDashboardScreen } from "@/src/hooks/useDashboardScreen";
-import { useDashboardStyles } from "@/src/hooks/useDashboardStyles";
+import { useDashboardStyles } from "@/src/styles/useDashboardStyles";
 
 dayjs.extend(relativeTime);
 dayjs.locale("fr");

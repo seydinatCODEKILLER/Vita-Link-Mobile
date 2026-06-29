@@ -1,15 +1,15 @@
-import React, { useState } from "react";
-import { View, TouchableOpacity, Text } from "react-native";
-import { Tabs, usePathname } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { InAppAlert } from "@/src/components/ui/InAppAlert";
 import { MoreSheet } from "@/src/components/navigation/MoreSheet";
-import { useHealthLayout } from "@/src/hooks/useHealthLayout";
+import { InAppAlert } from "@/src/components/ui/InAppAlert";
 import {
   PRIMARY_TABS,
   SECONDARY_TABS,
 } from "@/src/constants/healthTabs.config";
-import { useTabStyles } from "@/src/hooks/useTabStyles";
+import { useHealthLayout } from "@/src/hooks/useHealthLayout";
+import { useTabStyles } from "@/src/styles/useTabStyles";
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs, usePathname } from "expo-router";
+import React, { useState } from "react";
+import { Text, TouchableOpacity, View } from "react-native";
 
 export default function HealthLayout() {
   const pathname = usePathname();

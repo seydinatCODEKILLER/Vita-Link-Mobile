@@ -20,7 +20,7 @@ import { BloodStockLevel } from "@/src/types/shared.types";
 import { StockCard } from "@/src/components/stock/StockCard";
 import { UpdateStockModal } from "@/src/components/stock/UpdateStockModal";
 import { useStockUpdate } from "@/src/hooks/useStockUpdate";
-import { useStockScreenStyles } from "@/src/hooks/useStockScreenStyles";
+import { useStockScreenStyles } from "@/src/styles/useStockScreenStyles";
 import {
   BLOOD_TYPES_CONFIG,
   calculateStockLevel,

@@ -1,19 +1,19 @@
-import React from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Animated,
-  ScrollView,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useThemeStore } from "@/src/store/theme.store";
+import { useColors } from "@/src/theme/useTheme";
 import { Ionicons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
-import { useColors } from "@/src/theme/useTheme";
-import { useThemeStore } from "@/src/store/theme.store";
+import React from "react";
+import {
+  Animated,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { usePendingReviewScreen } from "@/src/hooks/usePendingReviewScreen";
-import { usePendingReviewStyles } from "@/src/hooks/usePendingReviewStyles";
+import { usePendingReviewStyles } from "@/src/styles/usePendingReviewStyles";
 
 export default function PendingReviewScreen() {
   const colors = useColors();

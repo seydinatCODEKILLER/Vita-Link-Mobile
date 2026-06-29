@@ -24,7 +24,7 @@ import { ServicePills } from "@/src/components/alerts/create/ServicePills";
 import { RadiusSlider } from "@/src/components/alerts/create/RadiusSlider";
 import { ExpirationInfoCard } from "@/src/components/alerts/create/ExpirationInfoCard";
 import { useCreateAlertForm } from "@/src/hooks/useCreateAlertForm";
-import { useCreateAlertStyles } from "@/src/hooks/useCreateAlertStyles";
+import { useCreateAlertStyles } from "@/src/styles/useCreateAlertStyles";
 
 export default function CreateAlertScreen() {
   const colors = useColors();

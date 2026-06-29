@@ -21,7 +21,7 @@ import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
 import { isNetworkError } from "@/src/utils/error.utils";
 import { RegistrationCard } from "@/src/components/donation-days/RegistrationCard";
 import { useDayDetailScreen } from "@/src/hooks/useDayDetailScreen";
-import { useDayDetailStyles } from "@/src/hooks/useDayDetailStyles";
+import { useDayDetailStyles } from "@/src/styles/useDayDetailStyles";
 import { useColors } from "@/src/theme/useTheme";
 import { STATS, FILTERS } from "@/src/constants/dayDetailConfig";
 
