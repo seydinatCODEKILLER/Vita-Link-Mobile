@@ -11,6 +11,8 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";
 import { useConfirmExpiredOrder } from "@/src/hooks/usePurchaseOrders";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface Props {
   visible: boolean;
@@ -31,6 +33,8 @@ export default function ExpiredOrderConfirmSheet({
   const colors = useColors();
   const [wasDelivered, setWasDelivered] = useState<boolean | null>(null);
   const [cntsNotes, setCntsNotes] = useState("");
+  const tabBarHeight = useBottomTabBarHeight();
+  const insets = useSafeAreaInsets();
 
   const { mutateAsync: confirmExpiry, isPending } = useConfirmExpiredOrder();
 
@@ -45,7 +49,7 @@ export default function ExpiredOrderConfirmSheet({
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
       padding: 24,
-      paddingBottom: 36,
+      paddingBottom: tabBarHeight + insets.bottom + 20,
       borderWidth: 0.5,
       borderColor: c.cardBorder,
     },

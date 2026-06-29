@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 
 import ExpiredOrderConfirmSheet from "@/src/components/ui/ExpiredOrderConfirmSheet";
 import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
@@ -43,7 +42,6 @@ export default function CntsPurchaseOrdersScreen() {
 
   const styles = usePurchaseOrdersStyles();
   const colors = useColors();
-  const tabBarHeight = useBottomTabBarHeight();
 
   // ── Error State ──
   if (isError) {
@@ -156,7 +154,7 @@ export default function CntsPurchaseOrdersScreen() {
               onConfirmExpired={handleConfirmExpired}
             />
           )}
-          contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
+          contentContainerStyle={{ paddingBottom:  16 }}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
