@@ -20,7 +20,7 @@ import { useAuthStore } from "@/src/store/auth.store";
 import {
   BLOOD_TYPE_LABELS,
   calculateStockLevel,
-} from "@/src/utils/format.utils"; // ✅ Import de la fonction partagée
+} from "@/src/utils/format.utils";
 import { BloodStockLevel, BloodType } from "@/src/types/shared.types";
 import { useIsStructurePending } from "@/src/hooks/useIsStructurePending";
 import { useColors, useThemedStyles } from "@/src/theme/useTheme";

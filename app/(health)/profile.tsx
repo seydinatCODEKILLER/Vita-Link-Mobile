@@ -17,6 +17,8 @@ import { useMyStructure } from "@/src/hooks/useHealthStructure";
 import { useColors } from "@/src/theme/useTheme";
 import { useThemeStore } from "@/src/store/theme.store";
 import { ThemeToggle } from "@/src/components/ui/ThemeToggle";
+import { NetworkErrorScreen } from "@/src/components/ui/NetworkErrorScreen";
+import { isNetworkError } from "@/src/utils/error.utils";
 
 import { ProfileRow } from "@/src/components/profile/ProfileRow";
 import { StructureHeroCard } from "@/src/components/profile/StructureHeroCard";
@@ -28,11 +30,32 @@ export default function HealthProfileScreen() {
   const colors = useColors();
   const theme = useThemeStore((s) => s.theme);
   const user = useAuthStore((s) => s.user);
-  const { data: structure, isLoading: isStructureLoading } = useMyStructure();
+  const {
+    data: structure,
+    isLoading: isStructureLoading,
+    isError,
+    error,
+    refetch,
+  } = useMyStructure();
 
   const { fadeAnim, slideAnim, isLoggingOut, handleLogout } =
     useProfileScreen();
   const styles = useProfileStyles();
+
+  // ── 1. Erreur réseau sans cache ──
+  if (isError && isNetworkError(error) && !structure) {
+    return (
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>
+            Notre <Text style={{ color: colors.red }}>CNTS</Text>
+          </Text>
+          <ThemeToggle size={40} />
+        </View>
+        <NetworkErrorScreen onRetry={refetch} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
