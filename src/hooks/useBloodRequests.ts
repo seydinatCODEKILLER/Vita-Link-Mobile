@@ -8,9 +8,10 @@ import {
 
 export const useBloodRequests = (filters?: ListBloodRequestsFilters) => {
   return useQuery({
-    queryKey: [...QUERY_KEYS.bloodRequests(), filters],
+    queryKey: QUERY_KEYS.bloodRequests(filters),
     queryFn: () => bloodRequestsApi.getRequests(filters),
-    staleTime: 15_000,
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
   });
 };
 
@@ -34,14 +35,12 @@ export const useHandleBloodRequest = () => {
       payload: HandleRequestPayload;
     }) => bloodRequestsApi.handleRequest(id, payload),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequestsAll });
       queryClient.invalidateQueries({
         queryKey: QUERY_KEYS.bloodRequest(variables.id),
       });
-      // On invalide aussi le stock car FULFILL/PARTIAL décrémente le stock
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodStocks });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
-      // Si escalation, la liste des alertes va changer
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboardAll });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
     },
   });
@@ -53,7 +52,7 @@ export const useCancelBloodRequest = () => {
   return useMutation({
     mutationFn: (id: string) => bloodRequestsApi.cancelRequest(id),
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequestsAll });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequest(id) });
     },
   });

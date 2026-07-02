@@ -17,7 +17,7 @@ export const useScanDonation = () => {
         queryKey: QUERY_KEYS.structureDonations,
       });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodStocks });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboardAll });
     },
   });
 };

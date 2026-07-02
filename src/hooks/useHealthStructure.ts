@@ -41,7 +41,10 @@ export const useUpdateMyStructure = () => {
 
 export function useAffiliatedHospitals(filters?: { status?: string }) {
   return useQuery<AffiliatedHospital[]>({
-    queryKey: [QUERY_KEYS.myStructure, "affiliated-hospitals", filters],
+    // ✅ FIX : spread de QUERY_KEYS.myStructure au lieu de l'imbriquer.
+    // Avant : [QUERY_KEYS.myStructure, ...] créait [["health-structures","me"], ...]
+    // ce qui cassait le matching par préfixe avec invalidateQueries({ queryKey: QUERY_KEYS.myStructure }).
+    queryKey: [...QUERY_KEYS.myStructure, "affiliated-hospitals", filters],
     queryFn: () => healthStructuresApi.getAffiliatedHospitals(filters),
     staleTime: 60_000,
   });
@@ -49,7 +52,7 @@ export function useAffiliatedHospitals(filters?: { status?: string }) {
 
 export const useAvailableCnts = () => {
   return useQuery({
-    queryKey: ["availableCnts"],
+    queryKey: QUERY_KEYS.availableCnts,
     queryFn: healthStructuresApi.getAvailableCnts,
     staleTime: 1000 * 60 * 10,
   });

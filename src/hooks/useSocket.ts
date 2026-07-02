@@ -81,11 +81,13 @@ export const useSocket = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
 
       if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.cntsDashboardAll,
+        });
       }
       if (user.role === "HOSPITAL_AGENT") {
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.hospitalDashboard(),
+          queryKey: QUERY_KEYS.hospitalDashboardAll,
         });
       }
     });
@@ -105,11 +107,13 @@ export const useSocket = () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
 
       if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.cntsDashboardAll,
+        });
       }
       if (user.role === "HOSPITAL_AGENT") {
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.hospitalDashboard(),
+          queryKey: QUERY_KEYS.hospitalDashboardAll,
         });
       }
     });
@@ -149,8 +153,10 @@ export const useSocket = () => {
         },
       );
 
-      queryClient.refetchQueries({ queryKey: ["dashboard", "cnts"] });
-      queryClient.refetchQueries({ queryKey: ["dashboard", "hospital"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboardAll });
+      queryClient.invalidateQueries({
+        queryKey: QUERY_KEYS.hospitalDashboardAll,
+      });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myStructureStats });
     });
 
@@ -203,7 +209,9 @@ export const useSocket = () => {
         });
 
         queryClient.invalidateQueries({ queryKey: QUERY_KEYS.myAlerts });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.cntsDashboardAll,
+        });
       },
     );
 
@@ -231,8 +239,12 @@ export const useSocket = () => {
           receivedAt: new Date(),
         });
 
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.cntsDashboard() });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.bloodRequestsAll,
+        });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.cntsDashboardAll,
+        });
       },
     );
 
@@ -254,9 +266,9 @@ export const useSocket = () => {
         receivedAt: new Date(),
       });
 
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequestsAll });
       queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.hospitalDashboard(),
+        queryKey: QUERY_KEYS.hospitalDashboardAll,
       });
     });
 
@@ -286,13 +298,14 @@ export const useSocket = () => {
           receivedAt: new Date(),
         });
 
-        // Rafraîchir la liste des demandes et le dashboard hospitalier
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.purchaseOrders(),
+          queryKey: QUERY_KEYS.bloodRequestsAll,
         });
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.hospitalDashboard(),
+          queryKey: QUERY_KEYS.purchaseOrdersAll,
+        });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.hospitalDashboardAll,
         });
       },
     );
@@ -323,24 +336,26 @@ export const useSocket = () => {
 
         // Les deux rôles ont besoin de rafraîchir leurs données
         queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.purchaseOrders(),
+          queryKey: QUERY_KEYS.purchaseOrdersAll,
         });
-        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
+        queryClient.invalidateQueries({
+          queryKey: QUERY_KEYS.bloodRequestsAll,
+        });
 
         if (user.role === "CNTS_ADMIN" || user.role === "CNTS_AGENT") {
           queryClient.invalidateQueries({
-            queryKey: QUERY_KEYS.cntsDashboard(),
+            queryKey: QUERY_KEYS.cntsDashboardAll,
           });
         }
         if (user.role === "HOSPITAL_AGENT") {
           queryClient.invalidateQueries({
-            queryKey: QUERY_KEYS.hospitalDashboard(),
+            queryKey: QUERY_KEYS.hospitalDashboardAll,
           });
         }
       },
     );
 
-    // ── CNTS : Alerte de confirmation requise ──
+    // ── 13. CNTS : Alerte de confirmation requise ──
     socket.on("purchase_order:expired_confirm_required", (data: any) => {
       if (user.role !== "CNTS_ADMIN" && user.role !== "CNTS_AGENT") return;
 
@@ -352,10 +367,10 @@ export const useSocket = () => {
         data: { orderId: data.orderId, type: "expired_confirm" },
         receivedAt: new Date(),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchaseOrders() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchaseOrdersAll });
     });
 
-    // ── Hôpital : Stock restitué car non retiré ──
+    // ── 14. Hôpital : Stock restitué car non retiré ──
     socket.on("purchase_order:cancelled_stock_restored", (data: any) => {
       if (user.role !== "HOSPITAL_AGENT") return;
 
@@ -367,8 +382,8 @@ export const useSocket = () => {
         data: { orderId: data.orderId, type: "order_cancelled" },
         receivedAt: new Date(),
       });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchaseOrders() });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequests() });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.purchaseOrdersAll });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.bloodRequestsAll });
     });
 
     socketRef.current = socket;
